@@ -1,0 +1,22 @@
+Puzzle Infrastructure: Simon Tatham
+(http://www.chiark.greenend.org.uk/~sgtatham/)
+
+Puzzles: Simon Tatham, Richard Boulton, James Harvey,
+Mike Pinna, Jonas Kolker, Dariusz Olszewski, Michael 
+Schierl, Lambros Lambrou
+Maze3D Puzzle: Edward Macnaghten.
+
+GP2X / SDL Port /
+implementation of Mosco: ledow (www.ledow.org.uk/gp2x)
+
+Menu graphics/code: juanvvc
+
+Music: Mr Lou (www.dewfall.dk)
+
+SDL: www.libsdl.org
+SDL_gfx: Andreas Schiffler (www.ferzkopp.net)
+Fast SDL Events: Bob Pendleton (Bob@Pendleton.com)
+INI Parser: Nicolas Devillard (ndevilla.free.fr)
+Fonts: DejaVu Project (dejavu.sourceforge.net)
+
+

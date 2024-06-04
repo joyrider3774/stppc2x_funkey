@@ -985,6 +985,11 @@ static char *solve_game(game_state *state, game_state *currstate,
     return NULL;
 }
 
+static int game_can_format_as_text_now(game_params *params)
+{
+    return TRUE;
+}
+
 static char *game_text_format(game_state *state)
 {
     return NULL;
@@ -1110,8 +1115,8 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
         int cx, cy;
         double angle;
 
-        cx = state->squares[state->current].x * GRID_SCALE + ds->ox;
-        cy = state->squares[state->current].y * GRID_SCALE + ds->oy;
+        cx = (int)(state->squares[state->current].x * GRID_SCALE) + ds->ox;
+        cy = (int)(state->squares[state->current].y * GRID_SCALE) + ds->oy;
 
         if (x == cx && y == cy)
             return NULL;               /* clicked in exact centre!  */
@@ -1471,7 +1476,7 @@ static void game_set_size(drawing *dr, game_drawstate *ds,
 {
     struct bbox bb = find_bbox(params);
 
-    ds->gridscale = tilesize;
+    ds->gridscale = (float)tilesize;
     ds->ox = (int)(-(bb.l - solids[params->solid]->border) * ds->gridscale);
     ds->oy = (int)(-(bb.u - solids[params->solid]->border) * ds->gridscale);
 }
@@ -1498,7 +1503,8 @@ static game_drawstate *game_new_drawstate(drawing *dr, game_state *state)
 {
     struct game_drawstate *ds = snew(struct game_drawstate);
 
-    ds->ox = ds->oy = ds->gridscale = 0.0F;/* not decided yet */
+    ds->ox = ds->oy = 0;
+    ds->gridscale = 0.0F; /* not decided yet */
 
     return ds;
 }
@@ -1715,7 +1721,7 @@ const struct game thegame = {
     dup_game,
     free_game,
     FALSE, solve_game,
-    FALSE, game_text_format,
+    FALSE, game_can_format_as_text_now, game_text_format,
     new_ui,
     free_ui,
     encode_ui,

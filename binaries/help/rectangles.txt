@@ -1,0 +1,12 @@
+Rectangles
+===========================================
+
+Divide the grid into rectangles.  Each rectangle
+must contain a number and the area of that 
+rectangle should be equal to that number.
+
+So a 4 would be inside a 2x2 or a 4x1 rectangle.
+
+A-click on the lines between squares to build up 
+the edges of the rectangles.
+A-drag to draw a rectangle directly onto the grid.

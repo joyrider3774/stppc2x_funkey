@@ -21,7 +21,9 @@
     A(lightup) \
     A(loopy) \
     A(map) \
+    A(maze3d) \
     A(mines) \
+    A(mosco) \
     A(net) \
     A(netslide) \
     A(pattern) \
@@ -30,6 +32,8 @@
     A(samegame) \
     A(sixteen) \
     A(slant) \
+    A(slide) \
+    A(sokoban) \
     A(solo) \
     A(tents) \
     A(twiddle) \

@@ -371,6 +371,11 @@ static char *solve_game(game_state *state, game_state *currstate,
     return dupstr("S");
 }
 
+static int game_can_format_as_text_now(game_params *params)
+{
+    return TRUE;
+}
+
 static char *game_text_format(game_state *state)
 {
     return NULL;
@@ -643,7 +648,7 @@ static char *interpret_move(game_state *from, game_ui *ui, game_drawstate *ds,
     /*
      * Enable or disable labels on colours.
      */
-    if (button == 'l' || button == 'L') {
+    if (button == 'l' || button == 'L' || button == MIDDLE_BUTTON) {
         ui->show_labels = !ui->show_labels;
         return "";
     }
@@ -753,8 +758,7 @@ static char *interpret_move(game_state *from, game_ui *ui, game_drawstate *ds,
         if (button == CURSOR_LEFT && ui->peg_cur > 0)
             ui->peg_cur--;
         ret = "";
-    } else if (button == CURSOR_SELECT || button == ' ' || button == '\r' ||
-               button == '\n') {
+    } else if (IS_CURSOR_SELECT(button)) {
         ui->display_cur = 1;
         if (ui->peg_cur == from->params.npegs) {
             ret = encode_move(from, ui);
@@ -988,9 +992,9 @@ static float *game_colours(frontend *fe, int *ncolours)
 
     /* We also want to be able to tell the difference between BACKGROUND
      * and EMPTY, for similar distinguishing-hint reasons. */
-    ret[COL_EMPTY * 3 + 0] = ret[COL_BACKGROUND * 3 + 0] * 2.0 / 3.0;
-    ret[COL_EMPTY * 3 + 1] = ret[COL_BACKGROUND * 3 + 1] * 2.0 / 3.0;
-    ret[COL_EMPTY * 3 + 2] = ret[COL_BACKGROUND * 3 + 2] * 2.0 / 3.0;
+    ret[COL_EMPTY * 3 + 0] = ret[COL_BACKGROUND * 3 + 0] * 2.0F / 3.0F;
+    ret[COL_EMPTY * 3 + 1] = ret[COL_BACKGROUND * 3 + 1] * 2.0F / 3.0F;
+    ret[COL_EMPTY * 3 + 2] = ret[COL_BACKGROUND * 3 + 2] * 2.0F / 3.0F;
 
     *ncolours = NCOLOURS;
     return ret;
@@ -1339,7 +1343,7 @@ const struct game thegame = {
     dup_game,
     free_game,
     TRUE, solve_game,
-    FALSE, game_text_format,
+    FALSE, game_can_format_as_text_now, game_text_format,
     new_ui,
     free_ui,
     encode_ui,

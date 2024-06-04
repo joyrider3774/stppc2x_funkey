@@ -764,7 +764,7 @@ static int try_solve_light(game_state *state, int ox, int oy,
                            unsigned int flags, int lights)
 {
     ll_data lld;
-    int sx,sy,n = 0;
+    int sx = 0, sy = 0, n = 0;
 
     if (lights > 0) return 0;
     if (flags & F_BLACK) return 0;
@@ -1705,6 +1705,11 @@ done:
     return move;
 }
 
+static int game_can_format_as_text_now(game_params *params)
+{
+    return TRUE;
+}
+
 /* 'borrowed' from slant.c, mainly. I could have printed it one
  * character per cell (like debug_state) but that comes out tiny.
  * 'L' is used for 'light here' because 'O' looks too much like '0'
@@ -1835,13 +1840,13 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
         cx = FROMCOORD(x);
         cy = FROMCOORD(y);
         action = (button == LEFT_BUTTON) ? FLIP_LIGHT : FLIP_IMPOSSIBLE;
-    } else if (button == CURSOR_SELECT ||
+    } else if (button == CURSOR_SELECT || button == CURSOR_SELECT2 ||
                button == 'i' || button == 'I' ||
                button == ' ' || button == '\r' || button == '\n') {
         ui->cur_visible = 1;
         cx = ui->cur_x;
         cy = ui->cur_y;
-        action = (button == 'i' || button == 'I') ?
+        action = (button == 'i' || button == 'I' || button == CURSOR_SELECT2) ?
             FLIP_IMPOSSIBLE : FLIP_LIGHT;
     } else if (button == CURSOR_UP || button == CURSOR_DOWN ||
                button == CURSOR_RIGHT || button == CURSOR_LEFT) {
@@ -2166,8 +2171,8 @@ static void game_print_size(game_params *params, float *x, float *y)
      * I'll use 6mm squares by default.
      */
     game_compute_size(params, 600, &pw, &ph);
-    *x = pw / 100.0;
-    *y = ph / 100.0;
+    *x = pw / 100.0F;
+    *y = ph / 100.0F;
 }
 
 static void game_print(drawing *dr, game_state *state, int tilesize)
@@ -2240,7 +2245,7 @@ const struct game thegame = {
     dup_game,
     free_game,
     TRUE, solve_game,
-    TRUE, game_text_format,
+    TRUE, game_can_format_as_text_now, game_text_format,
     new_ui,
     free_ui,
     encode_ui,

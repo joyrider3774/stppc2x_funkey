@@ -1369,6 +1369,11 @@ static char *solve_game(game_state *state, game_state *currstate,
     }
 }
 
+static int game_can_format_as_text_now(game_params *params)
+{
+    return TRUE;
+}
+
 static char *game_text_format(game_state *state)
 {
     int w = state->p.w, h = state->p.h;
@@ -1798,7 +1803,8 @@ static void game_compute_size(game_params *params, int tilesize,
 			      int *x, int *y)
 {
     /* fool the macros */
-    struct dummy { int tilesize; } dummy = { tilesize }, *ds = &dummy;
+    struct dummy { int tilesize; } dummy, *ds = &dummy;
+    dummy.tilesize = tilesize;
 
     *x = TLBORDER + BRBORDER + TILESIZE * params->w;
     *y = TLBORDER + BRBORDER + TILESIZE * params->h;
@@ -2068,7 +2074,7 @@ const struct game thegame = {
     dup_game,
     free_game,
     TRUE, solve_game,
-    FALSE, game_text_format,
+    FALSE, game_can_format_as_text_now, game_text_format,
     new_ui,
     free_ui,
     encode_ui,

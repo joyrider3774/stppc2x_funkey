@@ -1812,7 +1812,11 @@ static char *minegen(int w, int h, int n, int x, int y, int unique,
 	    ctx->allow_big_perturbs = (ntries > 100);
 
 	    while (1) {
-		memset(solvegrid, -2, w*h);
+                int i;
+//		memset(solvegrid, (unsigned int) -2, w*h);
+                for(i=0;i<w*h;i++)
+                    solvegrid[i]=-2;
+
 		solvegrid[y*w+x] = mineopen(ctx, x, y);
 		assert(solvegrid[y*w+x] == 0); /* by deliberate arrangement */
 
@@ -2185,7 +2189,9 @@ static game_state *new_game(midend *me, game_params *params, char *desc)
     state->layout->refcount = 1;
 
     state->grid = snewn(wh, signed char);
-    memset(state->grid, -2, wh);
+//    memset(state->grid, (unsigned int) -2, wh);
+    for(i=0;i<wh;i++)
+        state->grid[i]=-2;
 
     if (*desc == 'r') {
 	desc++;
@@ -2310,6 +2316,11 @@ static char *solve_game(game_state *state, game_state *currstate,
     }
 
     return dupstr("S");
+}
+
+static int game_can_format_as_text_now(game_params *params)
+{
+    return TRUE;
 }
 
 static char *game_text_format(game_state *state)
@@ -2728,6 +2739,7 @@ static float *game_colours(frontend *fe, int *ncolours)
 static game_drawstate *game_new_drawstate(drawing *dr, game_state *state)
 {
     struct game_drawstate *ds = snew(struct game_drawstate);
+    int i;
 
     ds->w = state->w;
     ds->h = state->h;
@@ -2736,7 +2748,9 @@ static game_drawstate *game_new_drawstate(drawing *dr, game_state *state)
     ds->grid = snewn(ds->w * ds->h, signed char);
     ds->bg = -1;
 
-    memset(ds->grid, -99, ds->w * ds->h);
+//    memset(ds->grid, (unsigned int) -99, ds->w * ds->h);
+    for(i=0;i<(ds->w * ds->h);i++)
+        ds->grid[i]=-99;
 
     return ds;
 }
@@ -3091,7 +3105,7 @@ const struct game thegame = {
     dup_game,
     free_game,
     TRUE, solve_game,
-    TRUE, game_text_format,
+    TRUE, game_can_format_as_text_now, game_text_format,
     new_ui,
     free_ui,
     encode_ui,

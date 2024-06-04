@@ -853,6 +853,11 @@ static char *solve_game(game_state *state, game_state *currstate,
     return ret;
 }
 
+static int game_can_format_as_text_now(game_params *params)
+{
+    return TRUE;
+}
+
 static char *game_text_format(game_state *state)
 {
     return NULL;
@@ -900,8 +905,7 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
     int w = state->w, h = state->h, wh = w * h;
     char buf[80], *nullret = NULL;
 
-    if (button == LEFT_BUTTON || button == CURSOR_SELECT ||
-        button == ' ' || button == '\r' || button == '\n') {
+    if (button == LEFT_BUTTON || IS_CURSOR_SELECT(button)) {
         int tx, ty;
         if (button == LEFT_BUTTON) {
             tx = FROMCOORD(x), ty = FROMCOORD(y);
@@ -931,8 +935,7 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
             }
         }
     }
-    else if (button == CURSOR_UP || button == CURSOR_DOWN ||
-	     button == CURSOR_RIGHT || button == CURSOR_LEFT) {
+    else if (IS_CURSOR_MOVE(button)) {
         int dx = 0, dy = 0;
         switch (button) {
         case CURSOR_UP:         dy = -1; break;
@@ -1096,12 +1099,12 @@ static void draw_tile(drawing *dr, game_drawstate *ds,
 
 	coords[0] = bx + TILE_SIZE;
 	coords[1] = by;
-	coords[2] = bx + TILE_SIZE * animtime;
-	coords[3] = by + TILE_SIZE * animtime;
+	coords[2] = bx + (int)((float)TILE_SIZE * animtime);
+	coords[3] = by + (int)((float)TILE_SIZE * animtime);
 	coords[4] = bx;
 	coords[5] = by + TILE_SIZE;
-	coords[6] = bx + TILE_SIZE - TILE_SIZE * animtime;
-	coords[7] = by + TILE_SIZE - TILE_SIZE * animtime;
+	coords[6] = bx + TILE_SIZE - (int)((float)TILE_SIZE * animtime);
+	coords[7] = by + TILE_SIZE - (int)((float)TILE_SIZE * animtime);
 
 	colour = (tile & 1 ? COL_WRONG : COL_RIGHT);
 	if (animtime < 0.5)
@@ -1182,7 +1185,7 @@ static void game_redraw(drawing *dr, game_drawstate *ds, game_state *oldstate,
     }
 
     if (flashtime)
-	flashframe = flashtime / FLASH_FRAME;
+	flashframe = (int)(flashtime / FLASH_FRAME);
     else
 	flashframe = -1;
 
@@ -1281,7 +1284,7 @@ const struct game thegame = {
     dup_game,
     free_game,
     TRUE, solve_game,
-    FALSE, game_text_format,
+    FALSE, game_can_format_as_text_now, game_text_format,
     new_ui,
     free_ui,
     encode_ui,

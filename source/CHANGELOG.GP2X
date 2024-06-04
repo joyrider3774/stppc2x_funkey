@@ -1,4 +1,478 @@
-2008-05-06:
+2008-10-04:
+ - Various memory cleanups in Mosco.
+
+2008-10-01:
+ - Further work on the new game.  It now highlights all
+   user errors in a nice way, without interfering with
+   games that are in progress.
+ - Added basic (cheating) solve support to Mosco.
+   It generates a grid at random, generates the clues
+   and stores a copy of the grid used at the start of 
+   each game.  When asked to solve, it just copies that 
+   grid over, which obviously fits the clues.  Nothing says 
+   that the player could have actually deduced the answer
+   yet, though.
+
+2008-09-30:
+ - Further work on the new game, it now generates a valid
+   random game and is "playable" but doesn't detect 
+   end-of-game or solve itself yet.
+ - Small bugfix for PC control of Vol+ keys (in debug).
+ - Small bugfix for menus (only present in dev versions).
+ - Added end-of-game detection for Mosco.
+ - Added "user hints" to Mosco.
+ - Added full undo/redo support to Mosco.
+ - Added error-highlighting when the user makes a mistake in 
+   Mosco (grid and clues).
+ - Have worked out solution strategies for both the solve 
+   and hint functions, and to make sure the puzzle is 
+   solveable in Mosco.
+
+2008-09-29:
+ - Started work on a new game - Mosco.
+
+2008-09-28:
+ - Trial of Senor Quack's new SDL library.
+   Problems with cursor display.
+
+2008-09-27:
+ - Added mouse control to main game list.
+   The mouse cursor doesn't appear.  On F-100, it looks and 
+   works just the same as it always did.  On F-200, it 
+   hopefully allows full touchscreen control on the menus
+   (select game, scroll games, start, exit).
+ - De-anti-aliased circles because otherwise they look crap
+   (I put this code back in at one point but have decided to
+   remove it again... option?).
+ - Moved a load of if statements into switch...case's;
+
+2008-09-23:
+ - Changed a few error messages.
+ - Changed the colour of the statusbar text to show up 
+   properly in certain entirely unnecessary circumstances.
+
+2008-09-22:
+ - Changes to various games to bring more use to the "middle
+   mouse button" and similar unused keys - they are now mapped
+   to functions such as "backspace" (to remove digits in 
+   numeric game), provide hints, show numeric labels etc.
+
+2008-09-21:
+ - Added a keyboard icon to show when cursor key emulation is
+   on, just in case it confuses people who switch it on and
+   forget (your mouse cursor disappears and input doesn't
+   work at all in some games!).
+ - Updated Maze3D for proper cursor-key control (adding 
+   "forward" and "mark" buttons to cursor select keys).
+ - Updated Light-up for proper cursor-key control (adding
+   "mark as impossible" to secondary cursor select key).
+ - Updated Net for proper cursor-key control (adding rotate
+   counter-clockwide to secondary cursor select key). 
+
+2008-09-20:
+ - Updated screenshots of changes / new games.
+ - Put a "show locked regions" option into map properly.
+ - Fixed a bug related to autosaves.  If autosave was disabled
+   but an autosave existed, it always loaded it in.  I might
+   need to make this an option because some people might want
+   to start with an autosave every game but not autosave over 
+   it (e.g. if you had a particularly good game but was lazy
+   about saving it and didn't want to overwrite the autosave).
+ - Made it an option. :-)
+ - Tweaked the version number string so it displays in more
+   places.
+ - Fixed a small bug in untangle / maze3d (in fact, any 
+   solveable game, but most you wouldn't notice)... the code 
+   could sometimes forget that the solve keys were still held 
+   down which meant that the next Solve press would do weird 
+   things (Maze would solve/unsolve very quickly, untangle
+   would animate cleanly the first time and just "jump" to the
+   answer the next time).
+ - More game documentation updates.
+ - Fix for the music track which didn't properly move on to
+   the next track because of a line that went astray somewhere.
+ - Added more thorough checks for tracks that don't exist.
+ - Fixed display of loading screen on large-screen games.
+ - Added preliminary code for pretty-scaled large-screen games
+   (so that the lines in solo show up, etc.).  Works but has
+   a few quirks with speed and dragging of mouse.
+ - Fixed a long-standing bug where large status-bar texts would
+   not update the screen properly and so looks as if they're not
+   printed.
+ - Fixed one of loopy's error messages to fit inside the screen.
+ - Changed some of Solo's parameters to try to make it draw nicer
+   on a small screen.
+ - Added SLOW_SYSTEM define to remove some game configurations 
+   which are unplayable on the GP2X anyway and set defaults for
+   some to smaller, easier versions.
+ - Change some custom tokenisation code to use strtok instead.
+
+2008-09-19:
+ - Updated to latest SVN (loopy bugfix for small "cairo" 
+   games).  Seems to be slightly buggy if a 3 x 3 is chosen.
+   It doesn't accept the config but it also doesn't return 
+   a useable error message.
+
+2008-09-18:
+ - Fixed a bug in the GP2X version that wasn't showing up in
+   the PC version - a custom cursor doesn't work properly
+   in SDL, and can cause crashes when changing resolution
+   :-(
+ - Used the original MP3 files which work better on the GP2X.
+ - Fixed a bug with cursors lingering on menu screens.
+ - Updated to SVN Slant which seems to work fine.
+ - Replaced another instance of fe->paused which could lead
+   to a silent crash if X was pressed many times on the main
+   menu.
+ - Added code to replace wrapper script - now any command
+   line argument will stop the program respawning the menu at
+   exit, otherwise it will always run /usr/bin/gp2xmenu.
+ - Changed the description of loopy slightly to fit in with
+   the new version.
+
+2008-09-17:
+ - Updated loopy to latest SVN - removes a graphical artifact.
+ - Looked at latest SVN's Slant implementation - I think we'll
+   wait to see if any more patches for this go in before we
+   include it to make sure it's stable as it affects a lot of
+   the slant code.
+
+2008-09-14:
+ - Patched blackbox so that the min and max number of balls
+   are configurable as two seperate items, rather than the
+   PC versions which have "X-Y" as an option.  There is a 
+   little bit of compatibility code to load old blackbox.ini's
+   properly, though.
+ - Checked the other games to make sure there's nothing
+   similar to the blackbox configuration option lurking 
+   anywhere.
+ - Added multiple music tracks, fading from one track to the
+   next, a menu to select which tracks to play and to test
+   the tracks individually, and a way to save the track list
+   so that only your favourite tracks play on startup etc.
+ - Added volume control in menu.
+
+2008-09-13:
+ - Added more loopy presets (some are designed for small
+   screens, some aren't, but they all work so I put them
+   in because the small ones are easier to learn from).
+ - Revamped preset menu to scroll through presets instead.
+ - Revamped main game list to scroll through games properly.
+ - Added option to delete a save game (click on the skull
+   in the save menu twice in succession to actually delete).
+ - Added cursor-key emulation mode as an option.  This allows
+   easier control in some games, e.g. Sokoban, etc. because
+   the joystick will act like a joystick instead of a mouse
+   cursor.
+ - Added global config screen, saving and loading.
+ - Added auto-save on exit of each game.
+   The auto-save file can be deleted from the save menu
+   or skipped on load up by holding L or R when starting a game.
+ - Fix display of certain menus in "large screen mode".
+ - Fix statusbar background if printing on menu (Quit, mainly).
+ - Added hourglass.
+ - Added a credit screen for the musician (Mr Lou).
+
+2008-09-11:
+ - Simplified Makefile a bit now that we build monolithic 
+   executables by default.
+ - Added Makefile lines to add in sound support.
+ - Added Makefile lines to compile with gcc and link with
+   g++ (because smpeg wanted g++ to resolve links).
+ - Updated to latest SVN (some unimportant loopy changes)
+ - Added credits menu.
+ - Tweaked floating-point config option kludges.
+ - Added global settings menu.
+ - Started on "autosave" implementation.
+
+2008-09-10:
+ - Fixed the timer persisting into the game list menu.  Noted
+   most especially because of the only game that uses "realtime"
+   timers to time the game - mines - that wasn't working at all
+   before.
+ - More audio routines.
+
+2008-09-08:
+ - Fixed mines!  memset(..., -n, ...) isn't valid on ARM for any 
+   n which isn't 1 (e.g. -2 and -99 in this case), because it's
+   treated as an unsigned number for filling the memory.  On ARM
+   this corrupts things because it has a different representation.
+   Patched and tested working.
+ - Added a screenshot feature on F-100 stick-click (or 'e' on the
+   PC version, purely to show off that mines is now working!
+ - Changed the data file (galaxies disappeared somehow and mines
+   was still marked as non-working).
+ - Updated screenshot feature to snap only the puzzle area if
+   we are ingame and L or R is pressed while pressing stick-click.
+ - Updated screenshot feature to add multiple sequential 
+   screenshots.
+
+2008-09-07:
+ - Upgraded to SVN version 8167.
+     This introduces a new version of loopy and some infrastructure
+     changes.  The new loopy is much more difficult, with so many 
+     presets that they go off the screen!  If people need them, I 
+     have added the old presets back into the list.  You'll probably
+     find that old savegames aren't compatible.
+ - Extended the presets list to cope with that many presets.
+ - Updated all game instructions to be a bit clearer.
+
+2008-09-06:
+ - Removed a few lines that were unnecessary (legacy GTK-only code)
+ - Added deletion of the game configuration file from inside the
+   list of games - this lets users fix the games if they accidentally
+   set too large an option under a game and it take too long to 
+   generate.  By pressing L&R on the game menu, the config file for
+   the currently selected game will be deleted and thus that game will
+   run with default settings next time it is run.
+ - Later on I changed it so that holding L or R while starting a game
+   would skip the config entirely.
+ - Revamped the emulation of the GP2X buttons when run on a PC.
+ - Numerous source formatting changes
+ - Fixed a palette crash introduced by myself, but only symptomatic
+   on games which don't define a pure black or white colour.
+   (Thanks again Valgrind!)
+ - Played with background music.
+      - Asked for explicit permission from an artist on 
+        indiegamemusic.com
+      - Implemented test code, which works on both GP2X and PC but is
+        slightly laggy when the GP2X is busy.
+      - However, SMPEG on Open2x libs needs to be compiled against 
+        using g++, where the games need to be compiled against 
+        gcc... you can work around it but it's a pain in the backside.
+        (e.g. compile only sdl.c using g++).
+ - As part of the above, added a load of casts to the source code and
+   changed a few unsigned's to signed's and vice versa.
+ - Finally fixed the off-by-one that was causing problems with drawing
+   of "rectangles" (the shape, not the game, and they form the most 
+   part of all puzzle elements even if the end-result doesn't look like
+   a rectangle).  Basically - everything looks "perfect" now.
+ - Fixed a display problem with the "pie" sections in inertia.
+   Turns out, I was filling all circles that were supposed to be
+   transparent with a random colour from RAM.  Oops.
+ - Anti-aliased circles now that the off-by-ones stop it looking silly.
+
+2008-09-02:
+ - More Valgrind pickups on non-freed data.  At least one of them
+   left fonts loaded, which could take up 200,000 bytes of so or RAM.
+   No doubt glibc would free the memory on quit anyway but it's just 
+   good sense to manage the memory properly.
+ - Found a bug related to pause mode de-synchs between two different
+   variables that would let keys be entered on the game menu.
+
+2008-09-01:
+ - Implemented the Save/Load menu, with nine visible save slots.
+   The L, R and X keys can still be used as a "quicksave" of sorts.
+
+2008-08-31:
+ - Did a quick Valgrind Memcheck run on the code... it:
+     - found a real problem with the palette allocation for "black" 
+       that somehow never affected anything
+     - found a potential problem with the INIParser source not 
+       clearing memory before using it.
+     - found several small variables that were never free'd
+     - found some variables that, although they were free'd and then 
+       reallocated quickly (e.g. when loading another game), were used 
+       by other threads in that small period of time.
+     - brought an incorrect #ifdef'd bit of code that was causing
+       palette problems on certain builds to my attention.
+     - helped enormously while I rearranged a large portion of the 
+       code to simplify jumping in ind out of different games.
+ - Did a quick Valgrind Heapcheck run on the code.
+     - Very little memory is leaked, or accumulates over games.  What 
+       is leaked is from SDL itself or similar.  A single session that
+       played over 50 games of various types never went much past 5Mb
+       heap usage with the default options.
+ - More menu integration.
+ - Updated some of the game help files (now that I know how to play 
+   the damn games).
+ - Edited the Makefiles to counteract one compilation bug, to provide
+   a debug, non-optimised, non-threaded version for PC debuggers like
+   Valgrind and to suit the new "combined" executable more.
+ - Moved a lot of unnecessary messages inside DEBUG_ preprocessor
+   ifdef's.
+
+2008-08-30:
+ - More work on preset-menu integration and loading of presets.
+ - A few small bugfixes for various menu problems.
+
+2008-08-29:
+ - Bug fix for the "changing resolutions as the root user" crash - I'm
+   thick and don't read the docs carefully enough.  Never FreeSurface 
+   the main SDLSurface returned from SDL_SetVideoMode.
+ - More movement of code to fit into the multi-menu idea.  All seems 
+   to be working.
+
+2008-08-28:
+ - Bug fix for poorly-nested threading that caused crashes (introduced
+   with new menus).
+ - Bug fix for debug-printing of config options containing the '%'
+   character.
+ - Added some simpler parsing of the datafile for the preview menu.
+ - Added the about dialog into the main code, including the revision of 
+   the SVN version number of the Puzzle collection that was used.
+ - Modified Makefile environment slightly to make PC / GP2X compiling 
+   closer, without needing old Makefile legacy commands.
+
+2008-08-02:
+ - Menu now in mainline code, along with specialised handling of large
+   screen games.
+ - Fixed a couple of "uninitialised variable" bugs that showed up with
+   the menu changes.
+
+2008-07-29:
+ - Began incorporating menu into program code.
+
+2008-07-23:
+ - Added preliminary preset code.
+ - Updated files to latest SVN to enable use of "which_preset" function
+        Also updates Jigsaw Sudoku etc.
+ - Updated solo to use a larger screen, to fix the "thick lines" problem 
+   that makes Jigsaw Sudoku unplayable.
+
+2008-07-08:
+ - Fixed the splashscreen initial draw (black screen in some cases)
+ - Removed all non-event input code.
+ - Factored out mouse acceleration and increased it.
+ - Factored out some screen positions and scaled up screens for
+   larger games.
+ - Added test code to distinguish map's "immutable" regions.  Appears to
+   work but looks ugly.
+ - Tests with Senor Quack's updates SDL library for optimised F-200 
+   touchscreen input.
+
+2008-06-04 - BETA5:
+ - Implemented a threaded splashscreen to show the difference 
+   between "crashed" and "taking a long time to load".
+ - Stopped use of 2 uninitialised variables that was spotted by 
+   accident when inserting threading code and not warned by
+   GCC.  
+	Turns out that the threading code left some memory non-
+	zeroed and that found a couple of bugs where things 
+	were used before they were initialised properly.
+
+2008-06-03:
+ - Changed internal functions to use "htmlhelp_topic" in places.
+	This tends to be a nicer filename for the game, whereas 
+	"name" tends to be a better display-name for it.  This 
+	means having to move text files, save games, ini files 
+	with the old names across to the new names.
+   	But it gives a much more consistent file naming scheme.
+
+2008-06-02:
+ - Rejigged the Makefiles for various reasons.
+ - Combined all the games into one executable.
+	All games now take up about 1Mb together instead of about 
+	0.75Mb each.
+	Individual games are still available and best for development.
+ - Factored out screen size to a variable, so that the combined
+   executable can change screen size on the fly in future (mainly for
+   Maze 3D).
+ - Re-jigged startup sequence to get to a screen of some kind faster.
+ - Added PNG loading screen.
+	Mainly for Slide, which pauses an incredibly long time 
+	sometimes.
+
+2008-06-01:
+ - LOST SOME SOURCE CODE.  BUGGER.
+	Fortunately, most of it is quite simple to reproduce once it's
+	been done once.
+ - Reimplemented all of the features lost.
+ - Factored out font-caching code.
+ - Fixed a bug in colour allocation that could occasionally and randomly
+   cause a crash on exit.
+ - Added another "unfinished" game - Sokoban.
+	It needed a little patching because it required keyboard input 
+	(up, down, left, right) rather than mouse, but I fixed that.
+	Simon Tatham admits in his documentation that it's "too easy"
+	because it is difficult to generate a random Sokoban game (hence 
+	why it was left unfinished).  But, hey, it works so why not?
+	People can edit the savefiles manually and distribute them as 
+	"levels" if necessary.
+	
+2008-05-31:
+ - Added preliminary code to change GP2X CPU speed.  Not yet used.
+ - Updated DejaVu fonts to latest versions (2.25).
+ - Implemented preliminary routines to change the cursor to a rendered 
+   character from the fonts.  Not yet used.
+ - Added lots of missing free()'s
+ 	Not that you'd ever have an effect from hitting them unless you
+	kept your GP2X on for days at a time, running the games on and 
+	off.
+ - Factored out a lot of options for SDL events to allow greater testing.
+ - Removed the "Press X to Enter <digit>" options from games that don't 
+   require digit entry.
+ - Started work on a single combined executable.  Not yet complete.
+
+2008-05-30:
+ - Fixed up Maze3D to conform a bit more with the puzzle API
+	Now provides proper checking of the game configuration,
+	has better colours for use on the GP2X, etc.
+ - Removed some code that was sending empty mouse movements to games
+	If the button isn't held down, the games don't care/don't notice
+	the mouse movement.  SDL does all the cursor jiggery-pokery so 
+	we get a speedup by not telling the midend when the cursor is just
+	moving without any buttons held down.
+
+2008-05-29:
+ - Stopped the long startup for the pause-menu on first press.
+	By pre-caching font required, along with statusbar font at the 
+	beginning of execution.
+ - Added Maze3D game (from http://eddy.edlsystems.com/maze3d/)
+	Works but requires a "larger" screen, so the scaling is enforced
+	and subsequently it doesn't display properly.
+	Pretty amazing, considering it was last updated in Jan 2006 and all
+	it needed to compile was a "gamename" put into a structure, because
+	of an API difference since then...
+ - Added Slide game (from the /unfinished/ directory of STPPC)
+	Works fine but sometimes startup/new game times can be long.
+ - Seperated out more debug flags.
+ - Implemented support for "Large screen" games (640x480 instead of 320x240).
+
+2008-05-28:
+ - Reorganised all of the folders.
+	YOU WILL NEED TO COPY THE GAMES PROPERLY as the folder layout has 
+	changed.  If you need to do this, the easiest way is to back up any
+	save games/INI files on your GP2X and then delete the STPPC2x folder 
+	and copy it over again from the new ZIP file.
+ - Relicenced under GPL (v2).
+ - Improved mouse AGAIN.
+	Using proper SDL events, using threads, using fastevents,
+	used a touchscreen "emulator" to test (not perfect).  Now it's much 
+	"fairer" to all forms of input.  However, touchscreen may still be 
+	an issue, especially with recent changes to the new F-200's that seem 
+	to handle the screen differently.  There's now a much greater chance of
+	it working, though.  Eventually, at least. ;-)
+ - Added FastEvents code to speed things up a little / reduce CPU use.
+ - Added in juanvvc's menu, with some changes:
+	Added ability to scroll off top/bottom of the screen.
+	Edited the code to stop a crash when running on PC (ShowCursor before 
+	SetVideoMode).
+	Changed some text for clarity, in the code and the datafile.
+	Changed main icon.
+	Anti-aliased fonts.
+	Changed some pathnames to make more sense.
+ - Compile using -O3 by default.
+	There were no regressions that I saw due to this being in place.
+ - Changed background colour.
+	White lines are now more easy to see in Bridges, Inertia etc.
+	The GP2X just seems to be colour-inaccurate (tilt the GP2X screen up on 
+	the older versions and you can see the white lines were always drawn 
+	but showed as nearly the same colour as the background).
+ - Got rid of a bit of unnecessary floating-point arithmetic.
+ - Made the main SDL loop sleep a little more.
+
+2008-05-14:
+ - Changed SDL to use EventThread (which, for some reason, I assumed to be on).
+	This helps touchscreen work better but it still might not be perfect.
+	My "emulator" shows that it might not always release the button properly.
+	If this is the case, pressing the A button fixes it.
+ - Edited lightup.c to clear up a tiny warning when compiling using -O3.
+ - Testing and preliminary integration of juanvvc's menu.
+ - Factored out timer intervals into defines so they can be changed easily.
+	Changed the default values, too.
+
+2008-05-06 - BETA 4:
  - Fixed a centered text bug (only present in the menus).
  - Fixed the blit rubbish which resulted from the drag-crash bugfix?
  - Fixed timers in paused (only affects mines at this point anyway)

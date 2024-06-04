@@ -1,0 +1,242 @@
+# Makefile for PC (Linux) version of puzzles under SDL.
+#
+
+# You can define this path to point at your tools if you need to
+# TOOLPATH = /opt/gcc/bin
+CC = $(TOOLPATH)cc
+CPP = $(TOOLPATH)g++
+OPTIMISATION = -O0
+#OPTIMISATION = -O3
+DEBUG = -g
+#DEBUG = 
+STRIP = echo
+#STRIP = strip
+UPX = echo
+#UPX = /usr/local/sbin/upx
+CFLAGS = -DCOMBINED -DSLOW_SYSTEM $(OPTIMISATION) -Wall -Werror $(DEBUG) -I/usr/include 
+XLDFLAGS =  -lm -ldl -lSDL -lSDL_gfx -lSDL_ttf -lSDL_image -lSDL_mixer -lsmpeg -lmad 
+ULDFLAGS =#
+INSTALL=install
+INSTALL_PROGRAM=$(INSTALL)
+INSTALL_DATA=$(INSTALL)
+prefix=/usr/local
+exec_prefix=$(prefix)
+bindir=$(exec_prefix)/bin
+gamesdir=$(exec_prefix)/games
+mandir=$(prefix)/man
+man1dir=$(mandir)/man1
+
+all: stppc2x
+
+stppc2x: blackbox.o bridges.o combi.o cube.o dictionary.o divvy.o dominosa.o drawing.o dsf.o \
+		fastevents.o fifteen.o filling.o flip.o galaxies.o grid.o guess.o inertia.o \
+		iniparser.o latin.o lightup.o list.o loopy.o malloc.o map.o maxflow.o maze3d.o \
+		maze3dc.o midend.o mines.o misc.o mosco.o net.o netslide.o pattern.o pegs.o printing.o \
+		ps.o random.o rect.o samegame.o sdl.o sixteen.o slant.o slide.o sokoban.o \
+		solo.o tents.o tree234.o twiddle.o unequal.o untangle.o version.o 
+	$(CPP) -o $@ $(XLDFLAGS) blackbox.o bridges.o combi.o cube.o dictionary.o divvy.o dominosa.o drawing.o dsf.o \
+		fastevents.o fifteen.o filling.o flip.o galaxies.o grid.o guess.o inertia.o \
+		iniparser.o latin.o lightup.o list.o loopy.o malloc.o map.o maxflow.o maze3d.o \
+		maze3dc.o midend.o mines.o misc.o mosco.o net.o netslide.o pattern.o pegs.o printing.o \
+		ps.o random.o rect.o samegame.o sdl.o sixteen.o slant.o slide.o sokoban.o \
+		solo.o tents.o tree234.o twiddle.o unequal.o untangle.o version.o 
+	$(STRIP) stppc2x
+	$(UPX) stppc2x
+
+blackbox.o: ./blackbox.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+blackbox-icon.o: icons/blackbox-icon.c
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+bridges.o: ./bridges.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+bridges-icon.o: icons/bridges-icon.c
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+combi.o: ./combi.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+cube.o: ./cube.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+cube-icon.o: icons/cube-icon.c
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+divvy.o: ./divvy.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+dominosa.o: ./dominosa.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+dominosa-icon.o: icons/dominosa-icon.c
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+drawing.o: ./drawing.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+dsf.o: ./dsf.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+fifteen.o: ./fifteen.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+fifteen-icon.o: icons/fifteen-icon.c
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+filling.o: ./filling.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+filling-icon.o: icons/filling-icon.c
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+filling2.o: ./filling.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -DSTANDALONE_SOLVER -c $< -o $@
+flip.o: ./flip.c ./puzzles.h ./tree234.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+flip-icon.o: icons/flip-icon.c
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+galaxies.o: ./galaxies.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+galaxies-icon.o: icons/galaxies-icon.c
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+galaxie4.o: ./galaxies.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -DSTANDALONE_PICTURE_GENERATOR -c $< -o $@
+galaxie2.o: ./galaxies.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -DSTANDALONE_SOLVER -c $< -o $@
+grid.o: ./grid.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+guess.o: ./guess.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+guess-icon.o: icons/guess-icon.c
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+inertia.o: ./inertia.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+inertia-icon.o: icons/inertia-icon.c
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+latin.o: ./latin.c ./puzzles.h ./tree234.h ./maxflow.h ./latin.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+latin4.o: ./latin.c ./puzzles.h ./tree234.h ./maxflow.h ./latin.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -DSTANDALONE_LATIN_TEST -c $< -o $@
+latin2.o: ./latin.c ./puzzles.h ./tree234.h ./maxflow.h ./latin.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -DSTANDALONE_SOLVER -c $< -o $@
+lightup.o: ./lightup.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+lightup-icon.o: icons/lightup-icon.c
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+lightup2.o: ./lightup.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -DSTANDALONE_SOLVER -c $< -o $@
+list.o: ./list.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+loopy.o: ./loopy.c ./grid.h ./puzzles.h ./tree234.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+loopy-icon.o: icons/loopy-icon.c
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+malloc.o: ./malloc.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+map.o: ./map.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+map-icon.o: icons/map-icon.c
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+map2.o: ./map.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -DSTANDALONE_SOLVER -c $< -o $@
+maxflow.o: ./maxflow.c ./maxflow.h ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+maze3d.o: maze3d.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+maze3dc.o: maze3dc.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+midend.o: ./midend.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+mines.o: ./mines.c ./tree234.h ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+mines-icon.o: icons/mines-icon.c
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+mines2.o: ./mines.c ./tree234.h ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -DSTANDALONE_OBFUSCATOR -c $< -o $@
+misc.o: ./misc.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+mosco.o: ./mosco.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+net.o: ./net.c ./puzzles.h ./tree234.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+net-icon.o: icons/net-icon.c
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+netslide.o: ./netslide.c ./puzzles.h ./tree234.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+netslide-icon.o: icons/netslide-icon.c
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+no-icon.o: ./no-icon.c
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+nullfe.o: ./nullfe.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+nullgame.o: ./nullgame.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+osx.o: ./osx.m ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+pattern.o: ./pattern.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+pattern-icon.o: icons/pattern-icon.c
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+pattern2.o: ./pattern.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -DSTANDALONE_SOLVER -c $< -o $@
+pegs.o: ./pegs.c ./puzzles.h ./tree234.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+pegs-icon.o: icons/pegs-icon.c
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+printing.o: ./printing.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+ps.o: ./ps.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+random.o: ./random.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+rect.o: ./rect.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+rect-icon.o: icons/rect-icon.c
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+samegame.o: ./samegame.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+samegame-icon.o: icons/samegame-icon.c
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+sdl.o: ./sdl.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+iniparser.o: ./iniparser.c ./iniparser.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+fastevents.o: ./fastevents.c ./fastevents.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+dictionary.o: ./dictionary.c ./dictionary.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+sixteen.o: ./sixteen.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+sixteen-icon.o: icons/sixteen-icon.c
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+slant.o: ./slant.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+slant-icon.o: icons/slant-icon.c
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+slant2.o: ./slant.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -DSTANDALONE_SOLVER -c $< -o $@
+slide.o: ./slide.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+sokoban.o: ./sokoban.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+solo.o: ./solo.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+solo-icon.o: icons/solo-icon.c
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+solo2.o: ./solo.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -DSTANDALONE_SOLVER -c $< -o $@
+tents.o: ./tents.c ./puzzles.h ./maxflow.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+tents-icon.o: icons/tents-icon.c
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+tents2.o: ./tents.c ./puzzles.h ./maxflow.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -DSTANDALONE_SOLVER -c $< -o $@
+tree234.o: ./tree234.c ./tree234.h ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+twiddle.o: ./twiddle.c ./puzzles.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+twiddle-icon.o: icons/twiddle-icon.c
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+unequal.o: ./unequal.c ./puzzles.h ./latin.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+unequal-icon.o: icons/unequal-icon.c
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+unequal2.o: ./unequal.c ./puzzles.h ./latin.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -DSTANDALONE_SOLVER -c $< -o $@
+untangle.o: ./untangle.c ./puzzles.h ./tree234.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+untangle-icon.o: icons/untangle-icon.c
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+version.o: 
+	$(CC) $(COMPAT) $(XFLAGS) $(CFLAGS) `cat version.def` -c version.c;
+windows.o: ./windows.c ./puzzles.h ./resource.h
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+
+clean:
+	rm *.o

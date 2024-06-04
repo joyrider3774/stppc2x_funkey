@@ -335,6 +335,11 @@ static struct space *sp2dot(game_state *state, int x, int y)
 
 #define IS_VERTICAL_EDGE(x) ((x % 2) == 0)
 
+static int game_can_format_as_text_now(game_params *params)
+{
+    return TRUE;
+}
+
 static char *game_text_format(game_state *state)
 {
     int maxlen = (state->sx+1)*state->sy, x, y;
@@ -2408,7 +2413,7 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
     int px, py;
     struct space *sp, *dot;
 
-    if (button == 'H' || button == 'h') {
+    if (button == 'H' || button == 'h' || button == MIDDLE_BUTTON) {
         char *ret;
         game_state *tmp = dup_game(state);
         solver_obvious(tmp);
@@ -3425,7 +3430,7 @@ const struct game thegame = {
 #else
     TRUE, solve_game,
 #endif
-    TRUE, game_text_format,
+    TRUE, game_can_format_as_text_now, game_text_format,
     new_ui,
     free_ui,
     encode_ui,

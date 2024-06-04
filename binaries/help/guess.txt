@@ -1,0 +1,19 @@
+Guess
+=====
+
+Guess the secret colour code.  Enter your guesses 
+by placing colours into the grid, using the top line
+for your first guess, then test your guess.  
+
+In the result, black dots mean that you have a 
+correct colour in the correct position, white dots 
+mean you have a correct colour in an incorrect position.
+
+Hold A and move the joystick to drag the colours to 
+the positions.
+
+Press A on the four blue circles once you have 
+entered your guess to see the results.
+
+Press B on a circle in your guess to automatically
+copy it each time.

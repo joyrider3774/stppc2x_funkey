@@ -1,0 +1,12 @@
+Galaxies
+========
+
+Divide the grid into regions that can be symmetrically
+rotated 180 degrees around their central circle.
+
+A-click between two squares to draw a line and box off
+the regions you want.
+
+B-drag from a circle to place a pointer so that you 
+can remember a certain square is associated with that
+circle.

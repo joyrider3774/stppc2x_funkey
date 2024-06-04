@@ -31,7 +31,7 @@ struct midend {
     const game *ourgame;
 
     game_params **presets;
-    char **preset_names;
+    char **preset_names, **preset_encodings;
     int npresets, presetsize;
 
     /*
@@ -115,6 +115,7 @@ midend *midend_new(frontend *fe, const game *ourgame,
     me->oldstate = NULL;
     me->presets = NULL;
     me->preset_names = NULL;
+    me->preset_encodings = NULL;
     me->npresets = me->presetsize = 0;
     me->anim_time = me->anim_pos = 0.0F;
     me->flash_time = me->flash_pos = 0.0F;
@@ -186,9 +187,11 @@ void midend_free(midend *me)
 	for (i = 0; i < me->npresets; i++) {
 	    sfree(me->presets[i]);
 	    sfree(me->preset_names[i]);
+	    sfree(me->preset_encodings[i]);
 	}
 	sfree(me->presets);
 	sfree(me->preset_names);
+	sfree(me->preset_encodings);
     }
     if (me->ui)
         me->ourgame->free_ui(me->ui);
@@ -332,9 +335,9 @@ void midend_new_game(midend *me)
             char newseed[16];
             int i;
             newseed[15] = '\0';
-            newseed[0] = '1' + random_upto(me->random, 9);
+            newseed[0] = '1' + (char)random_upto(me->random, 9);
             for (i = 1; i < 15; i++)
-                newseed[i] = '0' + random_upto(me->random, 10);
+                newseed[i] = '0' + (char)random_upto(me->random, 10);
             sfree(me->seedstr);
             me->seedstr = dupstr(newseed);
 
@@ -680,6 +683,14 @@ int midend_process_key(midend *me, int x, int y, int button)
      * like a left click for the benefit of users of other
      * implementations. So the last of the above points is modified
      * in the presence of an (optional) button priority order.
+     *
+     * A further addition: we translate certain keyboard presses to
+     * cursor key 'select' buttons, so that a) frontends don't have
+     * to translate these themselves (like they do for CURSOR_UP etc),
+     * and b) individual games don't have to hard-code button presses
+     * of '\n' etc for keyboard-based cursors. The choice of buttons
+     * here could eventually be controlled by a runtime configuration
+     * option.
      */
     if (IS_MOUSE_DRAG(button) || IS_MOUSE_RELEASE(button)) {
         if (me->pressed_mouse_button) {
@@ -708,6 +719,14 @@ int midend_process_key(midend *me, int x, int y, int button)
             (me, x, y, (me->pressed_mouse_button +
                         (LEFT_RELEASE - LEFT_BUTTON)));
     }
+
+    /*
+     * Translate keyboard presses to cursor selection.
+     */
+    if (button == '\n' || button == '\r')
+      button = CURSOR_SELECT;
+    if (button == ' ')
+      button = CURSOR_SELECT2;
 
     /*
      * Now send on the event we originally received.
@@ -813,9 +832,9 @@ float *midend_colours(midend *me, int *ncolours)
 	    buf[k] = '\0';
             if ((e = getenv(buf)) != NULL &&
                 sscanf(e, "%2x%2x%2x", &r, &g, &b) == 3) {
-                ret[i*3 + 0] = r / 255.0;
-                ret[i*3 + 1] = g / 255.0;
-                ret[i*3 + 2] = b / 255.0;
+                ret[i*3 + 0] = r / 255.0F;
+                ret[i*3 + 1] = g / 255.0F;
+                ret[i*3 + 2] = b / 255.0F;
             }
         }
     }
@@ -836,10 +855,14 @@ int midend_num_presets(midend *me)
                                       game_params *);
                 me->preset_names = sresize(me->preset_names, me->presetsize,
                                            char *);
+                me->preset_encodings = sresize(me->preset_encodings,
+					       me->presetsize, char *);
             }
 
             me->presets[me->npresets] = preset;
             me->preset_names[me->npresets] = name;
+            me->preset_encodings[me->npresets] =
+		me->ourgame->encode_params(preset, TRUE);;
             me->npresets++;
         }
     }
@@ -890,10 +913,14 @@ int midend_num_presets(midend *me)
                                           game_params *);
                     me->preset_names = sresize(me->preset_names,
                                                me->presetsize, char *);
+                    me->preset_encodings = sresize(me->preset_encodings,
+						   me->presetsize, char *);
                 }
 
                 me->presets[me->npresets] = preset;
                 me->preset_names[me->npresets] = dupstr(name);
+                me->preset_encodings[me->npresets] =
+		    me->ourgame->encode_params(preset, TRUE);
                 me->npresets++;
             }
         }
@@ -908,6 +935,22 @@ void midend_fetch_preset(midend *me, int n,
     assert(n >= 0 && n < me->npresets);
     *name = me->preset_names[n];
     *params = me->presets[n];
+}
+
+int midend_which_preset(midend *me)
+{
+    char *encoding = me->ourgame->encode_params(me->params, TRUE);
+    int i, ret;
+
+    ret = -1;
+    for (i = 0; i < me->npresets; i++)
+	if (!strcmp(encoding, me->preset_encodings[i])) {
+	    ret = i;
+	    break;
+	}
+
+    sfree(encoding);
+    return ret;
 }
 
 int midend_wants_statusbar(midend *me)
@@ -1171,9 +1214,18 @@ char *midend_set_config(midend *me, int which, config_item *cfg)
     return NULL;
 }
 
+int midend_can_format_as_text_now(midend *me)
+{
+    if (me->ourgame->can_format_as_text_ever)
+	return me->ourgame->can_format_as_text_now(me->params);
+    else
+	return FALSE;
+}
+
 char *midend_text_format(midend *me)
 {
-    if (me->ourgame->can_format_as_text && me->statepos > 0)
+    if (me->ourgame->can_format_as_text_ever && me->statepos > 0 &&
+	me->ourgame->can_format_as_text_now(me->params))
 	return me->ourgame->text_format(me->states[me->statepos-1].state);
     else
 	return NULL;
@@ -1252,7 +1304,7 @@ char *midend_rewrite_statusbar(midend *me, char *text)
 	char timebuf[100], *ret;
 	int min, sec;
 
-	sec = me->elapsed;
+	sec = (int)me->elapsed;
 	min = sec / 60;
 	sec %= 60;
 	sprintf(timebuf, "[%d:%02d] ", min, sec);
@@ -1556,7 +1608,7 @@ char *midend_deserialise(midend *me,
                 uistr = val;
                 val = NULL;
             } else if (!strcmp(key, "TIME")) {
-                elapsed = atof(val);
+                elapsed = (float)atof(val);
             } else if (!strcmp(key, "NSTATES")) {
                 nstates = atoi(val);
                 if (nstates <= 0) {

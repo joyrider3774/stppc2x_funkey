@@ -1,0 +1,14 @@
+Mosco
+=====
+
+A puzzle taken from Ivan Moscovich's "Magic Arrow Tile
+Puzzles".  Given a grid, fill it with arrows so that
+the clues around the edges match the number of arrows
+pointing at them.  There are a limited number of each
+"type" of arrow (up, down, up-left, etc.) depending on
+the size of the grid.
+
+A-Click to change the arrow in a square.
+B-Click on the outside edges of a square to insert a 
+"guess" arrow to help you solve the puzzle.
+Y-Click to clear a square of all arrows.

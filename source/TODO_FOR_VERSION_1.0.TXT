@@ -1,0 +1,65 @@
+//Mouse in gamelist menu
+Make delete autosave do the double-check.
+Bug in dragging in pattern when using scaled large screen
+//Build a clean version, put it in a clean set of dirs and test thoroughly.
+//Wrapper script (or put in a command-line argument that STOPS it re-spawning the menu)
+//Get new screenshots of tents (stray dots) and loopy (new version)
+//Re-write text for loopy
+//Map - make the handles optional
+//Make 640x480's play on a rotozoom screen?
+
+// Check out new slant code (8187)
+// Music selection & smooth fading between tracks
+// Blackbox's 4-10 configuration option
+// Add tags with author, track, etc. back into oggs
+// Timer bugs in "solve on Untangle" (make sure mines timer still works and doesn't persist out of menu)
+// Auto-save game persistence (save on good exit, save on game change).
+// Resolve order issues for autosave games and configs when loading
+//  - If we load autosave first, the config will not match the game
+//  - If we load config first, it will be overwritten by autosave
+//  - Also, if we have an autosave, we need to be able to physically delete it
+//    (when autosave is turned off?)
+// Preset menu - scroll presets
+// SETTINGSMENU - saveing of "autosave" setting to ini, and others.
+Mouse jumps when entering menus - makes you hit the wrong menu item
+// Mines timers persists into menu
+// Cursor input (use Select key to switch between control schemes?)
+// Deleting save games
+// Menu layout for 640x480  (especially Saves and Presets).
+// Send ASSERTS.TXT to ST?
+Replace fe->paused with current_screen != INGAME throughout and remove fe->paused.
+// When setting new config options, ask for verification on exit of the menu?
+Check mouse action as a F-200 (does it need the bit I stripped out to see F-200 mouse "clicks" 
+properly?)
+Fix F-200 (merge & rewrite input layer?) - check senorduck's sdl.
+Downclocking - Doesn't save much?
+// Copy game as string to "clipboard"
+Interruptible generation
+Double-check loading thread func spacing on screen
+
+// Undo/Redo keys (automatically gives us "undo restart game")
+// Deleting default config (press a button in the menu?)
+// - Make it so that you can hold a key on the gamelist menu to "ignore" the config instead?
+// Check drawing functions for that off-by-one
+// Add config presets (need to update to latest SVN to get which_preset)
+// Fix menu so that stray keypresses/ mouse presses don't trigger the previous game to redraw.
+// (rare crash related to the about menu, or did I imagine it?)
+// Unusual crashes after many threads?
+// Merge menu
+// Fix map to show "locked" countries
+// Fix black edges coming out of loading screen
+// Fix Maze3D menu text size
+
+// Multi-layered menu 
+  0 - (GAMES) Select game, Quit
+  1 - (MAIN) New, Save, Load, Help, Restart, Game Config, Settings, Quit to menu
+      (SAVE/LOAD) Slots, Save, Load, Delete slot
+  2 - (CONFIG) Load config, Save config, Load preset, Reset to default
+  3 - (HELP) Game help, Key help?
+  4 - (KEYS)
+  5 - (SETTINGS) Screen size, input layer, music on/off, volume etc.
+
+// Check out background musics from indiegamemusic.com
+// http://www.indiegamemusic.com/viewtrack.php?id=53 (Abnormal Perfection)
+
+// Upload SVN code

@@ -1,0 +1,19 @@
+Same Game
+===========================================
+
+Clear the grid of all squares.
+
+You can only clear a group of squares if there 
+are two or more same-coloured squares touching 
+each other.
+
+When cleared, the rest of the squares will 
+"fall" down and left.  If you can't clear any
+more groups, the game is over.  If there are
+any squares left on the grid, you have lost.
+
+Your score depends on how many groups you clear
+and how large they were.  Larger groups score 
+more
+
+A-click to remove a group of squares.

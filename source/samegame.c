@@ -1022,6 +1022,11 @@ static char *solve_game(game_state *state, game_state *currstate,
     return NULL;
 }
 
+static int game_can_format_as_text_now(game_params *params)
+{
+    return TRUE;
+}
+
 static char *game_text_format(game_state *state)
 {
     char *ret, *p;
@@ -1121,7 +1126,7 @@ static char *sel_movedesc(game_ui *ui, game_state *state)
 	if (ui->tiles[i] & TILE_SELECTED) {
 	    sprintf(buf, "%s%d", sep, i);
 	    sep = ",";
-	    if (retlen + strlen(buf) >= retsize) {
+	    if (retlen + (int)strlen(buf) >= retsize) {
 		retsize = retlen + strlen(buf) + 256;
 		ret = sresize(ret, retsize, char);
 	    }
@@ -1272,8 +1277,7 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
 
     if (button == RIGHT_BUTTON || button == LEFT_BUTTON) {
 	tx = FROMCOORD(x); ty= FROMCOORD(y);
-    } else if (button == CURSOR_UP || button == CURSOR_DOWN ||
-	       button == CURSOR_LEFT || button == CURSOR_RIGHT) {
+    } else if (IS_CURSOR_MOVE(button)) {
 	int dx = 0, dy = 0;
 	ui->displaysel = 1;
 	dx = (button == CURSOR_LEFT) ? -1 : ((button == CURSOR_RIGHT) ? +1 : 0);
@@ -1281,8 +1285,7 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
 	ui->xsel = (ui->xsel + state->params.w + dx) % state->params.w;
 	ui->ysel = (ui->ysel + state->params.h + dy) % state->params.h;
 	return ret;
-    } else if (button == CURSOR_SELECT || button == ' ' || button == '\r' ||
-	       button == '\n') {
+    } else if (IS_CURSOR_SELECT(button)) {
 	ui->displaysel = 1;
 	tx = ui->xsel;
 	ty = ui->ysel;
@@ -1294,7 +1297,7 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
     if (COL(state, tx, ty) == 0) return NULL;
 
     if (ISSEL(ui,tx,ty)) {
-	if (button == RIGHT_BUTTON)
+	if (button == RIGHT_BUTTON || button == CURSOR_SELECT2)
 	    sel_clear(ui, state);
 	else
 	    ret = sel_movedesc(ui, state);
@@ -1416,9 +1419,9 @@ static float *game_colours(frontend *fe, int *ncolours)
     ret[COL_HIGHLIGHT * 3 + 1] = 1.0F;
     ret[COL_HIGHLIGHT * 3 + 2] = 1.0F;
 
-    ret[COL_LOWLIGHT * 3 + 0] = ret[COL_BACKGROUND * 3 + 0] * 2.0 / 3.0;
-    ret[COL_LOWLIGHT * 3 + 1] = ret[COL_BACKGROUND * 3 + 1] * 2.0 / 3.0;
-    ret[COL_LOWLIGHT * 3 + 2] = ret[COL_BACKGROUND * 3 + 2] * 2.0 / 3.0;
+    ret[COL_LOWLIGHT * 3 + 0] = ret[COL_BACKGROUND * 3 + 0] * 2.0F / 3.0F;
+    ret[COL_LOWLIGHT * 3 + 1] = ret[COL_BACKGROUND * 3 + 1] * 2.0F / 3.0F;
+    ret[COL_LOWLIGHT * 3 + 2] = ret[COL_BACKGROUND * 3 + 2] * 2.0F / 3.0F;
 
     *ncolours = NCOLOURS;
     return ret;
@@ -1641,7 +1644,7 @@ const struct game thegame = {
     dup_game,
     free_game,
     FALSE, solve_game,
-    TRUE, game_text_format,
+    TRUE, game_can_format_as_text_now, game_text_format,
     new_ui,
     free_ui,
     encode_ui,

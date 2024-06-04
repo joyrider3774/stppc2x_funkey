@@ -75,7 +75,7 @@ enum {
 };
 
 struct game_params {
-    int w, h, n, diff;
+    int w, h, n, diff, show_immutables;
 };
 
 struct map {
@@ -110,24 +110,26 @@ static game_params *default_params(void)
     ret->n = 30;
     ret->diff = DIFF_NORMAL;
 
+    ret->show_immutables=FALSE;
+
     return ret;
 }
 
 static const struct game_params map_presets[] = {
 #ifdef PORTRAIT_SCREEN
-    {16, 18, 30, DIFF_EASY},
-    {16, 18, 30, DIFF_NORMAL},
-    {16, 18, 30, DIFF_HARD},
-    {16, 18, 30, DIFF_RECURSE},
-    {25, 30, 75, DIFF_NORMAL},
-    {25, 30, 75, DIFF_HARD},
+    {16, 18, 30, DIFF_EASY, 0},
+    {16, 18, 30, DIFF_NORMAL, 0},
+    {16, 18, 30, DIFF_HARD, 0},
+    {16, 18, 30, DIFF_RECURSE 0},
+    {25, 30, 75, DIFF_NORMAL, 0},
+    {25, 30, 75, DIFF_HARD, 0},
 #else
-    {20, 15, 30, DIFF_EASY},
-    {20, 15, 30, DIFF_NORMAL},
-    {20, 15, 30, DIFF_HARD},
-    {20, 15, 30, DIFF_RECURSE},
-    {30, 25, 75, DIFF_NORMAL},
-    {30, 25, 75, DIFF_HARD},
+    {20, 15, 30, DIFF_EASY, 0},
+    {20, 15, 30, DIFF_NORMAL, 0},
+    {20, 15, 30, DIFF_HARD, 0},
+    {20, 15, 30, DIFF_RECURSE, 0},
+    {30, 25, 75, DIFF_NORMAL, 0},
+    {30, 25, 75, DIFF_HARD, 0},
 #endif
 };
 
@@ -143,7 +145,7 @@ static int game_fetch_preset(int i, char **name, game_params **params)
     *ret = map_presets[i];
 
     sprintf(str, "%dx%d, %d regions, %s", ret->w, ret->h, ret->n,
-	    map_diffnames[ret->diff]);
+        map_diffnames[ret->diff]);
 
     *name = dupstr(str);
     *params = ret;
@@ -190,14 +192,19 @@ static void decode_params(game_params *params, char const *string)
 		params->diff = i;
 	if (*p) p++;
     }
+    if(*p == 'i') {
+        p++;
+        params->show_immutables=atoi(p);
+        while (*p && isdigit((unsigned char)*p)) p++;
+    }
 }
 
 static char *encode_params(game_params *params, int full)
 {
     char ret[400];
 
-    sprintf(ret, "%dx%dn%d", params->w, params->h, params->n);
-    if (full)
+    sprintf(ret, "%dx%dn%di%d", params->w, params->h, params->n, params->show_immutables);
+    if(full)
 	sprintf(ret + strlen(ret), "d%c", map_diffchars[params->diff]);
 
     return dupstr(ret);
@@ -208,7 +215,7 @@ static config_item *game_configure(game_params *params)
     config_item *ret;
     char buf[80];
 
-    ret = snewn(5, config_item);
+    ret = snewn(6, config_item);
 
     ret[0].name = "Width";
     ret[0].type = C_STRING;
@@ -233,10 +240,15 @@ static config_item *game_configure(game_params *params)
     ret[3].sval = DIFFCONFIG;
     ret[3].ival = params->diff;
 
-    ret[4].name = NULL;
-    ret[4].type = C_END;
+    ret[4].name = "Show Locked Regions";
+    ret[4].type = C_BOOLEAN;
     ret[4].sval = NULL;
-    ret[4].ival = 0;
+    ret[4].ival = params->show_immutables;
+
+    ret[5].name = NULL;
+    ret[5].type = C_END;
+    ret[5].sval = NULL;
+    ret[5].ival = 0;
 
     return ret;
 }
@@ -249,6 +261,7 @@ static game_params *custom_params(config_item *cfg)
     ret->h = atoi(cfg[1].sval);
     ret->n = atoi(cfg[2].sval);
     ret->diff = cfg[3].ival;
+    ret->show_immutables=cfg[4].ival;
 
     return ret;
 }
@@ -2247,6 +2260,11 @@ static char *solve_game(game_state *state, game_state *currstate,
     return dupstr(aux);
 }
 
+static int game_can_format_as_text_now(game_params *params)
+{
+    return TRUE;
+}
+
 static char *game_text_format(game_state *state)
 {
     return NULL;
@@ -2345,7 +2363,7 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
     /*
      * Enable or disable numeric labels on regions.
      */
-    if (button == 'l' || button == 'L') {
+    if (button == 'l' || button == 'L' || button == MIDDLE_BUTTON) {
         ui->show_numbers = !ui->show_numbers;
         return "";
     }
@@ -2736,7 +2754,7 @@ static void draw_square(drawing *dr, game_drawstate *ds,
     /*
      * Draw region numbers, if desired.
      */
-    if (show_numbers) {
+    if (show_numbers || params->show_immutables) {
         oldj = -1;
         for (i = 0; i < 2; i++) {
             j = map->map[(i?BE:TE)*wh+y*w+x];
@@ -2749,11 +2767,22 @@ static void draw_square(drawing *dr, game_drawstate *ds,
             if (xo >= 0 && xo <= 2 && yo >= 0 && yo <= 2) {
                 char buf[80];
                 sprintf(buf, "%d", j);
-                draw_text(dr, (COORD(x)*2+TILESIZE*xo)/2,
+                if(show_numbers)
+                {
+                    draw_text(dr, (COORD(x)*2+TILESIZE*xo)/2,
+                              (COORD(y)*2+TILESIZE*yo)/2,
+                              FONT_VARIABLE, 3*TILESIZE/5,
+                              ALIGN_HCENTRE|ALIGN_VCENTRE,
+                              COL_GRID, buf);
+                }
+                else if(params->show_immutables && (map->immutable[j]==TRUE))
+                {
+                    draw_text(dr, (COORD(x)*2+TILESIZE*xo)/2,
                           (COORD(y)*2+TILESIZE*yo)/2,
                           FONT_VARIABLE, 3*TILESIZE/5,
                           ALIGN_HCENTRE|ALIGN_VCENTRE,
-                          COL_GRID, buf);
+                          COL_GRID, "o");
+                };
             }
         }
     }
@@ -3122,7 +3151,7 @@ const struct game thegame = {
     dup_game,
     free_game,
     TRUE, solve_game,
-    FALSE, game_text_format,
+    FALSE, game_can_format_as_text_now, game_text_format,
     new_ui,
     free_ui,
     encode_ui,

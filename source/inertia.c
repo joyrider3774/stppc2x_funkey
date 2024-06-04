@@ -1445,6 +1445,11 @@ static char *solve_game(game_state *state, game_state *currstate,
     return soln;
 }
 
+static int game_can_format_as_text_now(game_params *params)
+{
+    return TRUE;
+}
+
 static char *game_text_format(game_state *state)
 {
     return NULL;
@@ -1575,7 +1580,8 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
         dir = 1;
     else if (button == (MOD_NUM_KEYPAD | '3'))
         dir = 3;
-    else if (button == ' ' && state->soln && state->solnpos < state->soln->len)
+    else if (IS_CURSOR_SELECT(button) &&
+             state->soln && state->solnpos < state->soln->len)
 	dir = state->soln->list[state->solnpos];
 
     if (dir < 0)
@@ -2184,7 +2190,7 @@ const struct game thegame = {
     dup_game,
     free_game,
     TRUE, solve_game,
-    FALSE, game_text_format,
+    FALSE, game_can_format_as_text_now, game_text_format,
     new_ui,
     free_ui,
     encode_ui,

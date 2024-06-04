@@ -1,0 +1,20 @@
+Map
+===
+
+Drag and drop the colours into each region so that
+every region is coloured and no two neighbouring 
+regions have the same colour.  It's always possible 
+with just four colours.
+
+The "pencilled" colours help you try out colours 
+without committing to them.  You can have a region
+which contains multiple "pencilled" colours.
+
+Move the joystick while pressing A to drag a colour 
+from one region to another.
+
+Move the joystick while pressing B to drag a 
+"pencilled" colour from one region to another.
+
+Drag from a white region to clear a colour.
+You cannot change the initial regions.

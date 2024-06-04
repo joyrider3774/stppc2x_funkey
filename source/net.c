@@ -232,7 +232,7 @@ static void decode_params(game_params *ret, char const *string)
 	    ret->wrapping = TRUE;
 	} else if (*p == 'b') {
 	    p++;
-            ret->barrier_probability = atof(p);
+            ret->barrier_probability = (float)atof(p);
 	    while (*p && (*p == '.' || isdigit((unsigned char)*p))) p++;
 	} else if (*p == 'a') {
             p++;
@@ -1782,6 +1782,11 @@ static char *solve_game(game_state *state, game_state *currstate,
     return ret;
 }
 
+static int game_can_format_as_text_now(game_params *params)
+{
+    return TRUE;
+}
+
 static char *game_text_format(game_state *state)
 {
     return NULL;
@@ -2072,14 +2077,14 @@ static char *interpret_move(game_state *state, game_ui *ui,
     } else if (button == 'a' || button == 's' || button == 'd' ||
 	       button == 'A' || button == 'S' || button == 'D' ||
                button == 'f' || button == 'F' ||
-	       button == CURSOR_SELECT) {
+	       button == CURSOR_SELECT  || button == CURSOR_SELECT2) {
 	tx = ui->cur_x;
 	ty = ui->cur_y;
 	if (button == 'a' || button == 'A' || button == CURSOR_SELECT)
 	    action = ROTATE_LEFT;
 	else if (button == 's' || button == 'S')
 	    action = TOGGLE_LOCK;
-	else if (button == 'd' || button == 'D')
+	else if (button == 'd' || button == 'D' || button == CURSOR_SELECT2)
 	    action = ROTATE_RIGHT;
         else if (button == 'f' || button == 'F')
             action = ROTATE_180;
@@ -2858,8 +2863,8 @@ static void game_print_size(game_params *params, float *x, float *y)
      * I'll use 8mm squares by default.
      */
     game_compute_size(params, 800, &pw, &ph);
-    *x = pw / 100.0;
-    *y = ph / 100.0;
+    *x = pw / 100.0F;
+    *y = ph / 100.0F;
 }
 
 static void draw_diagram(drawing *dr, game_drawstate *ds, int x, int y,
@@ -3005,7 +3010,7 @@ const struct game thegame = {
     dup_game,
     free_game,
     TRUE, solve_game,
-    FALSE, game_text_format,
+    FALSE, game_can_format_as_text_now, game_text_format,
     new_ui,
     free_ui,
     encode_ui,

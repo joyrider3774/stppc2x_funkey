@@ -46,6 +46,7 @@ enum {
     CURSOR_LEFT,
     CURSOR_RIGHT,
     CURSOR_SELECT,
+    CURSOR_SELECT2,
     
     /* made smaller because of 'limited range of datatype' errors. */
     MOD_CTRL       = 0x1000,
@@ -60,6 +61,9 @@ enum {
                                (unsigned)(RIGHT_DRAG - LEFT_DRAG))
 #define IS_MOUSE_RELEASE(m) ( (unsigned)((m) - LEFT_RELEASE) <= \
                                (unsigned)(RIGHT_RELEASE - LEFT_RELEASE))
+#define IS_CURSOR_MOVE(m) ( (m) == CURSOR_UP || (m) == CURSOR_DOWN || \
+                            (m) == CURSOR_RIGHT || (m) == CURSOR_LEFT )
+#define IS_CURSOR_SELECT(m) ( (m) == CURSOR_SELECT || (m) == CURSOR_SELECT2)
 
 /*
  * Flags in the back end's `flags' word.
@@ -72,6 +76,8 @@ enum {
 #define REQUIRE_RBUTTON ( 1 << 10 )
 /* Pocket PC: Game requires numeric input */
 #define REQUIRE_NUMPAD ( 1 << 11 )
+/* GP2X: Requires at least a 640x480 resolution */
+#define REQUIRE_LARGE_SCREEN ( 1 << 12 )
 /* end of `flags' word definitions */
 
 #ifdef _WIN32_WCE
@@ -235,12 +241,14 @@ void midend_timer(midend *me, float tplus);
 int midend_num_presets(midend *me);
 void midend_fetch_preset(midend *me, int n,
                          char **name, game_params **params);
+int midend_which_preset(midend *me);
 int midend_wants_statusbar(midend *me);
 enum { CFG_SETTINGS, CFG_SEED, CFG_DESC, CFG_FRONTEND_SPECIFIC };
 config_item *midend_get_config(midend *me, int which, char **wintitle);
 char *midend_set_config(midend *me, int which, config_item *cfg);
 char *midend_game_id(midend *me, char *id);
 char *midend_get_game_id(midend *me);
+int midend_can_format_as_text_now(midend *me);
 char *midend_text_format(midend *me);
 char *midend_solve(midend *me);
 void midend_supersede_game_desc(midend *me, char *desc, char *privdesc);
@@ -295,6 +303,17 @@ void shuffle(void *array, int nelts, int eltsize, random_state *rs);
 void draw_rect_outline(drawing *dr, int x, int y, int w, int h,
                        int colour);
 
+void move_cursor(int button, int *x, int *y, int maxw, int maxh, int wrap);
+
+/* Used in netslide.c and sixteen.c for cursor movement around edge. */
+int c2pos(int w, int h, int cx, int cy);
+void pos2c(int w, int h, int pos, int *cx, int *cy);
+
+/* Draws text with an 'outline' formed by offsetting the text
+ * by one pixel; useful for highlighting. Outline is omitted if -1. */
+void draw_text_outline(drawing *dr, int x, int y, int fonttype,
+                       int fontsize, int align,
+                       int text_colour, int outline_colour, char *text);
 /*
  * dsf.c
  */
@@ -418,7 +437,8 @@ struct game {
     int can_solve;
     char *(*solve)(game_state *orig, game_state *curr,
                    char *aux, char **error);
-    int can_format_as_text;
+    int can_format_as_text_ever;
+    int (*can_format_as_text_now)(game_params *params);
     char *(*text_format)(game_state *state);
     game_ui *(*new_ui)(game_state *state);
     void (*free_ui)(game_ui *ui);

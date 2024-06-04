@@ -57,6 +57,11 @@ static game_params *default_params(void)
 
 static int game_fetch_preset(int i, char **name, game_params **params)
 {
+    if (i == 0) {
+	*params = default_params();
+	*name = dupstr("4x4");
+	return TRUE;
+    }
     return FALSE;
 }
 
@@ -376,6 +381,11 @@ static char *solve_game(game_state *state, game_state *currstate,
 			char *aux, char **error)
 {
     return dupstr("S");
+}
+
+static int game_can_format_as_text_now(game_params *params)
+{
+    return TRUE;
 }
 
 static char *game_text_format(game_state *state)
@@ -853,7 +863,7 @@ const struct game thegame = {
     dup_game,
     free_game,
     TRUE, solve_game,
-    TRUE, game_text_format,
+    TRUE, game_can_format_as_text_now, game_text_format,
     new_ui,
     free_ui,
     encode_ui,

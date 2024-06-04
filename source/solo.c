@@ -3,26 +3,6 @@
  *
  * TODO:
  *
- *  - Jigsaw Sudoku is currently an undocumented feature enabled
- *    by setting r (`Rows of sub-blocks' in the GUI configurer) to
- *    1. The reason it's undocumented is because they're rather
- *    erratic to generate, because gridgen tends to hang up for
- *    ages. I think this is because some jigsaw block layouts
- *    simply do not admit very many valid filled grids (and
- *    perhaps some have none at all).
- *     + To fix this, I think probably the solution is a change in
- * 	 grid generation policy: gridgen needs to have less of an
- * 	 all-or-nothing attitude and instead make only a limited
- * 	 amount of effort to construct a filled grid before giving
- * 	 up and trying a new layout. (Come to think of it, this
- * 	 same change might also make 5x5 standard Sudoku more
- * 	 practical to generate, if correctly tuned.)
- *     + If I get this fixed, other work needed on jigsaw mode is:
- * 	  * introduce a GUI config checkbox. game_configure()
- * 	    ticks this box iff r==1; if it's ticked in a call to
- * 	    custom_params(), we replace (c, r) with (c*r, 1).
- *        * document it.
- *
  *  - reports from users are that `Trivial'-mode puzzles are still
  *    rather hard compared to newspapers' easy ones, so some better
  *    low-end difficulty grading would be nice
@@ -130,7 +110,8 @@ typedef unsigned char digit;
 #define PREFERRED_TILE_SIZE 32
 #define TILE_SIZE (ds->tilesize)
 #define BORDER (TILE_SIZE / 2)
-#define GRIDEXTRA (TILE_SIZE / 32)
+//#define GRIDEXTRA (TILE_SIZE / 32)
+#define GRIDEXTRA 2
 
 #define FLASH_TIME 0.4F
 
@@ -258,6 +239,9 @@ static int game_fetch_preset(int i, char **name, game_params **params)
         { "3x3 Advanced X", { 3, 3, SYMM_ROT2, DIFF_SET, TRUE } },
         { "3x3 Extreme", { 3, 3, SYMM_ROT2, DIFF_EXTREME, FALSE } },
         { "3x3 Unreasonable", { 3, 3, SYMM_ROT2, DIFF_RECURSIVE, FALSE } },
+        { "9 Jigsaw Basic", { 9, 1, SYMM_ROT2, DIFF_SIMPLE, FALSE } },
+        { "9 Jigsaw Basic X", { 9, 1, SYMM_ROT2, DIFF_SIMPLE, TRUE } },
+        { "9 Jigsaw Advanced", { 9, 1, SYMM_ROT2, DIFF_SET, FALSE } },
 #ifndef SLOW_SYSTEM
         { "3x4 Basic", { 3, 4, SYMM_ROT2, DIFF_SIMPLE, FALSE } },
         { "4x4 Basic", { 4, 4, SYMM_ROT2, DIFF_SIMPLE, FALSE } },
@@ -376,7 +360,7 @@ static config_item *game_configure(game_params *params)
     config_item *ret;
     char buf[80];
 
-    ret = snewn(6, config_item);
+    ret = snewn(7, config_item);
 
     ret[0].name = "Columns of sub-blocks";
     ret[0].type = C_STRING;
@@ -395,22 +379,27 @@ static config_item *game_configure(game_params *params)
     ret[2].sval = NULL;
     ret[2].ival = params->xtype;
 
-    ret[3].name = "Symmetry";
-    ret[3].type = C_CHOICES;
-    ret[3].sval = ":None:2-way rotation:4-way rotation:2-way mirror:"
+    ret[3].name = "Jigsaw (irregularly shaped sub-blocks)";
+    ret[3].type = C_BOOLEAN;
+    ret[3].sval = NULL;
+    ret[3].ival = (params->r == 1);
+
+    ret[4].name = "Symmetry";
+    ret[4].type = C_CHOICES;
+    ret[4].sval = ":None:2-way rotation:4-way rotation:2-way mirror:"
         "2-way diagonal mirror:4-way mirror:4-way diagonal mirror:"
         "8-way mirror";
-    ret[3].ival = params->symm;
+    ret[4].ival = params->symm;
 
-    ret[4].name = "Difficulty";
-    ret[4].type = C_CHOICES;
-    ret[4].sval = ":Trivial:Basic:Intermediate:Advanced:Extreme:Unreasonable";
-    ret[4].ival = params->diff;
+    ret[5].name = "Difficulty";
+    ret[5].type = C_CHOICES;
+    ret[5].sval = ":Trivial:Basic:Intermediate:Advanced:Extreme:Unreasonable";
+    ret[5].ival = params->diff;
 
-    ret[5].name = NULL;
-    ret[5].type = C_END;
-    ret[5].sval = NULL;
-    ret[5].ival = 0;
+    ret[6].name = NULL;
+    ret[6].type = C_END;
+    ret[6].sval = NULL;
+    ret[6].ival = 0;
 
     return ret;
 }
@@ -422,8 +411,12 @@ static game_params *custom_params(config_item *cfg)
     ret->c = atoi(cfg[0].sval);
     ret->r = atoi(cfg[1].sval);
     ret->xtype = cfg[2].ival;
-    ret->symm = cfg[3].ival;
-    ret->diff = cfg[4].ival;
+    if (cfg[3].ival) {
+	ret->c *= ret->r;
+	ret->r = 1;
+    }
+    ret->symm = cfg[4].ival;
+    ret->diff = cfg[5].ival;
 
     return ret;
 }
@@ -1897,13 +1890,28 @@ struct gridgen_usage {
     random_state *rs;
 };
 
+static void gridgen_place(struct gridgen_usage *usage, int x, int y, digit n,
+			  int placing)
+{
+    int cr = usage->cr;
+    usage->row[y*cr+n-1] = usage->col[x*cr+n-1] =
+	usage->blk[usage->blocks->whichblock[y*cr+x]*cr+n-1] = placing;
+    if (usage->diag) {
+	if (ondiag0(y*cr+x))
+	    usage->diag[n-1] = placing;
+	if (ondiag1(y*cr+x))
+	    usage->diag[cr+n-1] = placing;
+    }
+    usage->grid[y*cr+x] = placing ? n : 0;
+}
+
 /*
  * The real recursive step in the generating function.
  *
  * Return values: 1 means solution found, 0 means no solution
  * found on this branch.
  */
-static int gridgen_real(struct gridgen_usage *usage, digit *grid)
+static int gridgen_real(struct gridgen_usage *usage, digit *grid, int *steps)
 {
     int cr = usage->cr;
     int i, j, n, sx, sy, bestm, bestr, ret;
@@ -1913,10 +1921,15 @@ static int gridgen_real(struct gridgen_usage *usage, digit *grid)
      * Firstly, check for completion! If there are no spaces left
      * in the grid, we have a solution.
      */
-    if (usage->nspaces == 0) {
-        memcpy(grid, usage->grid, cr * cr);
+    if (usage->nspaces == 0)
 	return TRUE;
-    }
+
+    /*
+     * Next, abandon generation if we went over our steps limit.
+     */
+    if (*steps <= 0)
+	return FALSE;
+    (*steps)--;
 
     /*
      * Otherwise, there must be at least one space. Find the most
@@ -1984,35 +1997,18 @@ static int gridgen_real(struct gridgen_usage *usage, digit *grid)
 	n = digits[i];
 
 	/* Update the usage structure to reflect the placing of this digit. */
-	usage->row[sy*cr+n-1] = usage->col[sx*cr+n-1] =
-	    usage->blk[usage->blocks->whichblock[sy*cr+sx]*cr+n-1] = TRUE;
-	if (usage->diag) {
-	    if (ondiag0(sy*cr+sx))
-		usage->diag[n-1] = TRUE;
-	    if (ondiag1(sy*cr+sx))
-		usage->diag[cr+n-1] = TRUE;
-	}
-	usage->grid[sy*cr+sx] = n;
+	gridgen_place(usage, sx, sy, n, TRUE);
 	usage->nspaces--;
 
 	/* Call the solver recursively. Stop when we find a solution. */
-	if (gridgen_real(usage, grid))
+	if (gridgen_real(usage, grid, steps)) {
             ret = TRUE;
+	    break;
+	}
 
 	/* Revert the usage structure. */
-	usage->row[sy*cr+n-1] = usage->col[sx*cr+n-1] =
-	    usage->blk[usage->blocks->whichblock[sy*cr+sx]*cr+n-1] = FALSE;
-	if (usage->diag) {
-	    if (ondiag0(sy*cr+sx))
-		usage->diag[n-1] = FALSE;
-	    if (ondiag1(sy*cr+sx))
-		usage->diag[cr+n-1] = FALSE;
-	}
-	usage->grid[sy*cr+sx] = 0;
+	gridgen_place(usage, sx, sy, n, FALSE);
 	usage->nspaces++;
-
-        if (ret)
-            break;
     }
 
     sfree(digits);
@@ -2024,7 +2020,7 @@ static int gridgen_real(struct gridgen_usage *usage, digit *grid)
  * grid, which is simply an array of cr*cr digits.
  */
 static int gridgen(int cr, struct block_structure *blocks, int xtype,
-		   digit *grid, random_state *rs)
+		   digit *grid, random_state *rs, int maxsteps)
 {
     struct gridgen_usage *usage;
     int x, y, ret;
@@ -2042,8 +2038,7 @@ static int gridgen(int cr, struct block_structure *blocks, int xtype,
     usage->cr = cr;
     usage->blocks = blocks;
 
-    usage->grid = snewn(cr * cr, digit);
-    memcpy(usage->grid, grid, cr * cr);
+    usage->grid = grid;
 
     usage->row = snewn(cr * cr, unsigned char);
     usage->col = snewn(cr * cr, unsigned char);
@@ -2059,15 +2054,29 @@ static int gridgen(int cr, struct block_structure *blocks, int xtype,
 	usage->diag = NULL;
     }
 
+    /*
+     * Begin by filling in the whole top row with randomly chosen
+     * numbers. This cannot introduce any bias or restriction on
+     * the available grids, since we already know those numbers
+     * are all distinct so all we're doing is choosing their
+     * labels.
+     */
+    for (x = 0; x < cr; x++)
+	grid[x] = x+1;
+    shuffle(grid, cr, sizeof(*grid), rs);
+    for (x = 0; x < cr; x++)
+	gridgen_place(usage, x, 0, grid[x], TRUE);
+
     usage->spaces = snewn(cr * cr, struct gridgen_coord);
     usage->nspaces = 0;
 
     usage->rs = rs;
 
     /*
-     * Initialise the list of grid spaces.
+     * Initialise the list of grid spaces, taking care to leave
+     * out the row I've already filled in above.
      */
-    for (y = 0; y < cr; y++) {
+    for (y = 1; y < cr; y++) {
 	for (x = 0; x < cr; x++) {
             usage->spaces[usage->nspaces].x = x;
             usage->spaces[usage->nspaces].y = y;
@@ -2079,7 +2088,7 @@ static int gridgen(int cr, struct block_structure *blocks, int xtype,
     /*
      * Run the real generator function.
      */
-    ret = gridgen_real(usage, grid);
+    ret = gridgen_real(usage, grid, &maxsteps);
 
     /*
      * Clean up the usage structure now we have our answer.
@@ -2088,7 +2097,6 @@ static int gridgen(int cr, struct block_structure *blocks, int xtype,
     sfree(usage->blk);
     sfree(usage->col);
     sfree(usage->row);
-    sfree(usage->grid);
     sfree(usage);
 
     return ret;
@@ -2354,8 +2362,8 @@ static char *new_game_desc(game_params *params, random_state *rs,
 	    blocks->blocks[b][j] = i;
 	}
 
-        if (!gridgen(cr, blocks, params->xtype, grid, rs))
-	    continue;  /* this might happen if the jigsaw is unsuitable */
+        if (!gridgen(cr, blocks, params->xtype, grid, rs, area*area))
+	    continue;
         assert(check_valid(cr, blocks, params->xtype, grid));
 
 	/*
@@ -2772,10 +2780,10 @@ static game_state *new_game(midend *me, game_params *params, char *desc)
 
 	    if (*desc == '_')
 		c = 0;
-	    else if (*desc >= 'a' && *desc <= 'z')
+	    else {
+                assert(*desc >= 'a' && *desc <= 'z');
 		c = *desc - 'a' + 1;
-	    else
-		assert(!"Shouldn't get here");
+            }
 	    desc++;
 
 	    adv = (c != 25);	       /* 'z' is a special case */
@@ -3155,6 +3163,11 @@ static char *grid_text_format(int cr, struct block_structure *blocks,
     return ret;
 }
 
+static int game_can_format_as_text_now(game_params *params)
+{
+    return TRUE;
+}
+
 static char *game_text_format(game_state *state)
 {
     return grid_text_format(state->cr, state->blocks, state->xtype,
@@ -3275,13 +3288,13 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
 	((button >= '1' && button <= '9' && button - '0' <= cr) ||
 	 (button >= 'a' && button <= 'z' && button - 'a' + 10 <= cr) ||
 	 (button >= 'A' && button <= 'Z' && button - 'A' + 10 <= cr) ||
-	 button == ' ' || button == '\010' || button == '\177')) {
+	 button == ' ' || button == '\010' || button == '\177' || button == MIDDLE_BUTTON)) {
 	int n = button - '0';
 	if (button >= 'A' && button <= 'Z')
 	    n = button - 'A' + 10;
 	if (button >= 'a' && button <= 'z')
 	    n = button - 'a' + 10;
-	if (button == ' ' || button == '\010' || button == '\177')
+	if (button == ' ' || button == '\010' || button == '\177' || button == MIDDLE_BUTTON)
 	    n = 0;
 
         /*
@@ -3928,7 +3941,7 @@ const struct game thegame = {
     dup_game,
     free_game,
     TRUE, solve_game,
-    TRUE, game_text_format,
+    TRUE, game_can_format_as_text_now, game_text_format,
     new_ui,
     free_ui,
     encode_ui,
@@ -3946,6 +3959,7 @@ const struct game thegame = {
     TRUE, FALSE, game_print_size, game_print,
     FALSE,			       /* wants_statusbar */
     FALSE, game_timing_state,
+//    REQUIRE_RBUTTON | REQUIRE_NUMPAD | REQUIRE_LARGE_SCREEN,  /* flags */
     REQUIRE_RBUTTON | REQUIRE_NUMPAD,  /* flags */
 };
 

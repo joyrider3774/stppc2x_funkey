@@ -143,7 +143,7 @@ static config_item *game_configure(game_params *params)
     config_item *ret;
     char buf[80];
 
-    ret = snewn(4, config_item);
+    ret = snewn(5, config_item);
 
     ret[0].name = "Width";
     ret[0].type = C_STRING;
@@ -157,6 +157,7 @@ static config_item *game_configure(game_params *params)
     ret[1].sval = dupstr(buf);
     ret[1].ival = 0;
 
+/*
     ret[2].name = "No. of balls";
     ret[2].type = C_STRING;
     if (params->minballs == params->maxballs)
@@ -165,11 +166,24 @@ static config_item *game_configure(game_params *params)
         sprintf(buf, "%d-%d", params->minballs, params->maxballs);
     ret[2].sval = dupstr(buf);
     ret[2].ival = 0;
+*/
 
-    ret[3].name = NULL;
-    ret[3].type = C_END;
-    ret[3].sval = NULL;
+    ret[2].name = "No. of balls";
+    ret[2].type = C_STRING;
+    sprintf(buf, "%d", params->minballs);
+    ret[2].sval = dupstr(buf);
+    ret[2].ival = 0;
+
+    ret[3].name = "Max. no. of balls";
+    ret[3].type = C_STRING;
+    sprintf(buf, "%d", params->maxballs);
+    ret[3].sval = dupstr(buf);
     ret[3].ival = 0;
+
+    ret[4].name = NULL;
+    ret[4].type = C_END;
+    ret[4].sval = NULL;
+    ret[4].ival = 0;
 
     return ret;
 }
@@ -181,9 +195,13 @@ static game_params *custom_params(config_item *cfg)
     ret->w = atoi(cfg[0].sval);
     ret->h = atoi(cfg[1].sval);
 
-    /* Allow 'a-b' for a range, otherwise assume a single number. */
-    if (sscanf(cfg[2].sval, "%d-%d", &ret->minballs, &ret->maxballs) < 2)
-        ret->minballs = ret->maxballs = atoi(cfg[2].sval);
+    /* Allow 'a-b' for a range in No. of balls (compat with "real" blackbox),
+       otherwise assume seperate numbers. */
+    if(sscanf(cfg[2].sval, "%d-%d", &ret->minballs, &ret->maxballs) < 2)
+    {
+        ret->minballs = atoi(cfg[2].sval);
+        ret->maxballs = atoi(cfg[3].sval);
+    };
 
     return ret;
 }
@@ -461,6 +479,11 @@ static char *solve_game(game_state *state, game_state *currstate,
 			char *aux, char **error)
 {
     return dupstr("S");
+}
+
+static int game_can_format_as_text_now(game_params *params)
+{
+    return TRUE;
 }
 
 static char *game_text_format(game_state *state)
@@ -1413,7 +1436,7 @@ const struct game thegame = {
     dup_game,
     free_game,
     TRUE, solve_game,
-    FALSE, game_text_format,
+    FALSE, game_can_format_as_text_now, game_text_format,
     new_ui,
     free_ui,
     encode_ui,

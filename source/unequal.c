@@ -390,9 +390,9 @@ static char n2c(digit n, int order) {
 /* should be 'digit', but includes -1 for 'not a digit'.
  * Includes keypresses (0 especially) for interpret_move. */
 static int c2n(int c, int order) {
-    if (c < 0 || c > 0xff)
+    if (c < 0 || (c > 0xff && c != MIDDLE_BUTTON))
         return -1;
-    if (c == ' ' || c == '\010' || c == '\177')
+    if (c == ' ' || c == '\010' || c == '\177' || c == MIDDLE_BUTTON)
         return 0;
     if (order < 10) {
         if (c >= '1' && c <= '9')
@@ -406,6 +406,11 @@ static int c2n(int c, int order) {
             return (int)(c - 'a' + 11);
     }
     return -1;
+}
+
+static int game_can_format_as_text_now(game_params *params)
+{
+    return TRUE;
 }
 
 static char *game_text_format(game_state *state)
@@ -1302,7 +1307,6 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
                n, ui->hx, ui->hy, ui->hpencil,
                GRID(state, flags, ui->hx, ui->hy),
                GRID(state, nums, ui->hx, ui->hy)));
-
         if (n < 0 || n > ds->order)
             return NULL;        /* out of range */
         if (GRID(state, flags, ui->hx, ui->hy) & F_IMMUTABLE)
@@ -1736,7 +1740,7 @@ const struct game thegame = {
     dup_game,
     free_game,
     TRUE, solve_game,
-    TRUE, game_text_format,
+    TRUE, game_can_format_as_text_now, game_text_format,
     new_ui,
     free_ui,
     encode_ui,
