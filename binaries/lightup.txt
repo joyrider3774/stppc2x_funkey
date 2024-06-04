@@ -1,0 +1,11 @@
+Light Up
+========
+
+You have to place lightbulbs in squares to light up
+every free space without breaking the rules.  A 
+number in a square means that it is adjacent to only 
+that number of lightbulbs (diagonals don't count).  
+No lightbulb can "light" another lightbulb by being
+in the same row or column.
+
+A-click to place a lightbulb.

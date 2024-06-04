@@ -21,6 +21,10 @@ The port author is ledow, whose website is available at:
  http://www.ledow.org.uk/
  http://www.ledow.org.uk/gp2x
 
+Parts of the software were made by other people (e.g. 
+the games were made by Simon Tatham, the menu by juanvvc).
+See the various LICENCE files for details.
+
 Installation
 ============
 
@@ -31,12 +35,14 @@ downloaded the source-code too).
 
 Copy the entire STPPC2x folder (you may omit the "source"
 folder if you want) to your GP2X.  On the GP2X, navigate
-to the folder STPPC2x and run the game of your choice.
+to the folder STPPC2x and either run the menu or go into
+"games" and run the individual game of your choice.
 
 If you are using GMenu2x, I suggest you use the games 
 inside the "games" folder (the ones without the .gpe 
 extension) as these do not try to return to the GP2X's
-default menu.  The .gpe's are just wrapper scripts.
+default menu.  The .gpe's in there are just wrapper 
+scripts.
 
 Controls
 ========
@@ -58,7 +64,7 @@ In-game:
 - Select restarts the current game.
 - L and R at the same time quits the game.
 
-In-menu:
+In-game menu:
 
 - X saves the current configuration as default
 - L & R are used for selected save slots
@@ -69,16 +75,15 @@ For gameplay information or the use of the mouse buttons in
 the individual puzzles see PUZZLES_QUICKSTART.TXT.  There is
 also PUZZLES.TXT which goes into more detail but this file is
 written with desktop use in mind and includes references to 
-lots of unimplented features such as load, save, etc.).
+lots of irrelevant features).
 
 Development information
 =======================
 
 The original license and copyright for the puzzles and 
 sourcecode can be found in LICENCE.SimonTatham. My 
-contributions are under the same licence, found in 
-LICENCE.GP2XPort.  Basically, my additions are copyright me
-and that's the only difference.
+contributions are under the GPLv2, found in 
+LICENCE.GPL.  
 
 This port also uses the following software:
 
@@ -90,6 +95,8 @@ Freetype - LICENCE.Freetype
 INIParser - LICENCE.INIParser
 Paeryn's accelerated SDL Library (although it runs just
 as well under Open2x SDL libraries)
+juanvvc's menu - LICENCE.GUI
+FastEvents - LICENCE.FastEvents
 
 The original GTK/Windows/MacOS/Palm puzzle collection is 
 available (with source code) here:
@@ -130,7 +137,7 @@ A brain that hadn't programmed in C for years.
 Primary testers were:
 
 Me.
-My wife. 
+My wife.
 (she won the bug-finding contest between the two of us)
 
 I hope you enjoy the puzzles.  If you get stuck on them,

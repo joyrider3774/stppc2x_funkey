@@ -1,0 +1,9 @@
+Sokoban
+=======
+
+Push all of the crates on the target circles.
+You can move diagonally if necessary, but only if
+there is a free space horizontally or vertically
+in that direction too.
+
+A-click on an adjacent square to move into it.

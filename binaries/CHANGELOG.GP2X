@@ -1,4 +1,135 @@
-2008-05-06:
+2008-06-04:
+ - Implemented a threaded splashscreen to show the difference 
+   between "crashed" and "taking a long time to load".
+ - Stopped use of 2 uninitialised variables that was spotted by 
+   accident when inserting threading code and not warned by
+   GCC.  
+	Turns out that the threading code left some memory non-
+	zeroed and that found a couple of bugs where things 
+	were used before they were initialised properly.
+
+2008-06-03:
+ - Changed internal functions to use "htmlhelp_topic" in places.
+	This tends to be a nicer filename for the game, whereas 
+	"name" tends to be a better display-name for it.  This 
+	means having to move text files, save games, ini files 
+	with the old names across to the new names.
+   	But it gives a much more consistent file naming scheme.
+
+2008-06-02:
+ - Rejigged the Makefiles for various reasons.
+ - Combined all the games into one executable.
+	All games now take up about 1Mb together instead of about 
+	0.75Mb each.
+	Individual games are still available and best for development.
+ - Factored out screen size to a variable, so that the combined
+   executable can change screen size on the fly in future (mainly for
+   Maze 3D).
+ - Re-jigged startup sequence to get to a screen of some kind faster.
+ - Added PNG loading screen.
+	Mainly for Slide, which pauses an incredibly long time 
+	sometimes.
+
+2008-06-01:
+ - LOST SOME SOURCE CODE.  BUGGER.
+	Fortunately, most of it is quite simple to reproduce once it's
+	been done once.
+ - Reimplemented all of the features lost.
+ - Factored out font-caching code.
+ - Fixed a bug in colour allocation that could occasionally and randomly
+   cause a crash on exit.
+ - Added another "unfinished" game - Sokoban.
+	It needed a little patching because it required keyboard input 
+	(up, down, left, right) rather than mouse, but I fixed that.
+	Simon Tatham admits in his documentation that it's "too easy"
+	because it is difficult to generate a random Sokoban game (hence 
+	why it was left unfinished).  But, hey, it works so why not?
+	People can edit the savefiles manually and distribute them as 
+	"levels" if necessary.
+	
+2008-05-31:
+ - Added preliminary code to change GP2X CPU speed.  Not yet used.
+ - Updated DejaVu fonts to latest versions (2.25).
+ - Implemented preliminary routines to change the cursor to a rendered 
+   character from the fonts.  Not yet used.
+ - Added lots of missing free()'s
+ 	Not that you'd ever have an effect from hitting them unless you
+	kept your GP2X on for days at a time, running the games on and 
+	off.
+ - Factored out a lot of options for SDL events to allow greater testing.
+ - Removed the "Press X to Enter <digit>" options from games that don't 
+   require digit entry.
+ - Started work on a single combined executable.  Not yet complete.
+
+2008-05-30:
+ - Fixed up Maze3D to conform a bit more with the puzzle API
+	Now provides proper checking of the game configuration,
+	has better colours for use on the GP2X, etc.
+ - Removed some code that was sending empty mouse movements to games
+	If the button isn't held down, the games don't care/don't notice
+	the mouse movement.  SDL does all the cursor jiggery-pokery so 
+	we get a speedup by not telling the midend when the cursor is just
+	moving without any buttons held down.
+
+2008-05-29:
+ - Stopped the long startup for the pause-menu on first press.
+	By pre-caching font required, along with statusbar font at the 
+	beginning of execution.
+ - Added Maze3D game (from http://eddy.edlsystems.com/maze3d/)
+	Works but requires a "larger" screen, so the scaling is enforced
+	and subsequently it doesn't display properly.
+	Pretty amazing, considering it was last updated in Jan 2006 and all
+	it needed to compile was a "gamename" put into a structure, because
+	of an API difference since then...
+ - Added Slide game (from the /unfinished/ directory of STPPC)
+	Works fine but sometimes startup/new game times can be long.
+ - Seperated out more debug flags.
+ - Implemented support for "Large screen" games (640x480 instead of 320x240).
+
+2008-05-28:
+ - Reorganised all of the folders.
+	YOU WILL NEED TO COPY THE GAMES PROPERLY as the folder layout has 
+	changed.  If you need to do this, the easiest way is to back up any
+	save games/INI files on your GP2X and then delete the STPPC2x folder 
+	and copy it over again from the new ZIP file.
+ - Relicenced under GPL (v2).
+ - Improved mouse AGAIN.
+	Using proper SDL events, using threads, using fastevents,
+	used a touchscreen "emulator" to test (not perfect).  Now it's much 
+	"fairer" to all forms of input.  However, touchscreen may still be 
+	an issue, especially with recent changes to the new F-200's that seem 
+	to handle the screen differently.  There's now a much greater chance of
+	it working, though.  Eventually, at least. ;-)
+ - Added FastEvents code to speed things up a little / reduce CPU use.
+ - Added in juanvvc's menu, with some changes:
+	Added ability to scroll off top/bottom of the screen.
+	Edited the code to stop a crash when running on PC (ShowCursor before 
+	SetVideoMode).
+	Changed some text for clarity, in the code and the datafile.
+	Changed main icon.
+	Anti-aliased fonts.
+	Changed some pathnames to make more sense.
+ - Compile using -O3 by default.
+	There were no regressions that I saw due to this being in place.
+ - Changed background colour.
+	White lines are now more easy to see in Bridges, Inertia etc.
+	The GP2X just seems to be colour-inaccurate (tilt the GP2X screen up on 
+	the older versions and you can see the white lines were always drawn 
+	but showed as nearly the same colour as the background).
+ - Got rid of a bit of unnecessary floating-point arithmetic.
+ - Made the main SDL loop sleep a little more.
+
+2008-05-14:
+ - Changed SDL to use EventThread (which, for some reason, I assumed to be on).
+	This helps touchscreen work better but it still might not be perfect.
+	My "emulator" shows that it might not always release the button properly.
+	If this is the case, pressing the A button fixes it.
+ - Edited lightup.c to clear up a tiny warning when compiling using -O3.
+ - Testing and preliminary integration of juanvvc's menu.
+ - Factored out timer intervals into defines so they can be changed easily.
+	Changed the default values, too.
+
+2008-05-06 - BETA 4:
  - Fixed a centered text bug (only present in the menus).
  - Fixed the blit rubbish which resulted from the drag-crash bugfix?
  - Fixed timers in paused (only affects mines at this point anyway)

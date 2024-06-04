@@ -1,0 +1,10 @@
+Maze 3D
+=======
+
+Navigate the maze to find the exit. The 
+maze is full 3D (so don't forget to check
+up and down too!)
+
+A-click on the window to turn in that 
+direction, e.g. click the top part to look
+up, the left part to turn left, etc.
