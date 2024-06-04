@@ -1,3 +1,38 @@
+2008-04-18 - BETA 3:
+ - Fixed two problems with clipping because of the new pause menu.
+ - Increased font size in pause menu and made it "clip" so that it doesn't overlap other text.
+ - Prettied-up the pause menu a bit by rearranging and drawing a line.
+ - Small fix to net to remove a tiny bit of unused library code.
+ - Included tons of debugging info for developers (enabled by config option).
+
+2008-04-17:
+ - Anti-aliased all primitives that allow it and which can safely overwrite each other.
+ - Improved quality of text by using anti-aliased, alpha-blended rendered text.
+ - Improved game configuration to remove problems associated with options not fitting and
+   options requiring decimal numbers (fudged for net and netslide probabilities too).
+ - Added help text loading for all games.
+ - Background colours tweaked slightly.
+ - Compressed all executables with UPX, reducing their size by 50%.
+
+2008-04-13:
+ - Implemented pause on the Start button.
+ - Implemented game-independent colour routines to define black and white for text no matter 
+   what the game uses, so that the status bar always shows up.
+ - Added game configurability for all games under the Pause menu.
+	This greatly increases the potential of the puzzle colleciton and lets you configure
+	the types of puzzles in all manner of ways.  So you can play bridges on a giant board,
+	cube with an octagon, dominosa with more dominoes, solo in a number of different ways,
+	net so that the board "wraps" and a million others.
+	The Pause menu hides all the configuration, and you have to start a new game from there
+	for the options to take effect.  The games will tell you if you have set options
+	incorrectly, e.g. tried to play on a -1 x -1 board etc.
+	Still flaky for some games because:
+		- It really needs scrolling for the games with more options (e.g. bridges).
+		- Some games want you to be able to enter non-integer numbers (e.g. 0.1) but 
+		  it's almost impossible to distinguish which games need this programmatically.
+ - Revamped the use of colours a bit, no more colour conversions on every primitive draw.
+ - Added loading of game instructions from text files.
+
 2008-04-09 - BETA 2:
  - Slightly improved status-bar drawing to stop stray pixels when a "descender" character
    is printed.

@@ -1,0 +1,13 @@
+Guess
+=====
+
+Guess the secret four-colour code.  Enter your 
+guesses by dragging the colours on the left into 
+the grid, using the top-line for your first guess.  
+The results appear on the right once you have 
+entered your colours - black dots mean correct 
+colour in the correct position, white dots mean 
+correct colour but incorrect position.
+
+Hold A and move the joystick to drag the colours to 
+the positions.

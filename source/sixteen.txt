@@ -1,0 +1,8 @@
+Sixteen
+=======
+
+The same as fifteen but this time you have to slide 
+rows/columns as if they were a Rubik's Cube to get 
+the numbers into numerical order.
+
+A-click the arrows to slide a row/column.

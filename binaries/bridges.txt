@@ -1,0 +1,14 @@
+Bridges
+=======
+
+Connect all the islands with a network of bridges.
+Each island has a number, which is the number of 
+bridges that it has.  The connections between 
+islands may use more than one bridge.
+
+All the islands have to join together and have the 
+right number of bridges.
+
+Move the joystick while holding button A to build a 
+bridge.  Press A on an island to "lock" it.  Press 
+A+Y on an island to "unlock it".

@@ -1,0 +1,14 @@
+Blackbox
+========
+
+Find the hidden balls in the box by bouncing laser 
+beams off them.  There are some very complicated 
+rules about when it bounces which you may be able 
+to work out for yourself by looking at the computer 
+solution.
+
+A-Click the outer edges to fire a laser.
+A-Click the inner squares where you think the hidden 
+balls are
+A-Click the green circle to see if your guess is 
+correct.

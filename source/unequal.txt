@@ -1,0 +1,10 @@
+Unequal
+=======
+
+Complete the "latin square" so that each row/column 
+has the numbers 1-4 in it and the "greater than" 
+symbols hold true (e.g. 4 > 2 but not 1 > 2).
+
+Use L and R to select the number to enter.  
+A-click to select a box and press X to actually 
+enter the number.

@@ -1,0 +1,7 @@
+Untangle
+========
+
+Drag the points out so that none of the lines cross 
+any other.
+
+Hold A and move the joystick to drag a point.

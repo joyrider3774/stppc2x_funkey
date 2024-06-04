@@ -1,0 +1,9 @@
+Tents
+=====
+
+Place a tent next to each tree so that there are 
+the same number of tents as trees, no two tents are
+ adjacent and the number of tents in each row / 
+column matches the numbers on the sides of the grid.
+
+A-click to insert a tent into a square.

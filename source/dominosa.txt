@@ -1,0 +1,8 @@
+Dominosa
+========
+
+Find the position of the full set of dominoes, i.e. 
+mark out the 0-0, 0-1, 0-2, 0-3,...,6-4,6-5,6-6 
+tiles within the grid.
+
+A-click between two numbers to put a domino over them.

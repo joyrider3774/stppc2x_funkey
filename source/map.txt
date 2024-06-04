@@ -1,0 +1,16 @@
+Map
+===
+
+Drag and drop the colours so that the map is filled
+and no two "countries" next to each other have the 
+same colour.  It's always possible with just the 
+four colours.
+
+Move the joystick while pressing A to drag a colour 
+from one country to another.
+
+Move the joystick while pressing B to drag a 
+"pencilled" colour from one country to another.
+
+The guess colours help you try out colours without 
+committing to them.

@@ -1,0 +1,8 @@
+Mines
+=====
+
+Minesweeper!  Clear all the squares except the 
+mines.  A number in a square indicates how many of 
+its eight neighbours are mines.
+
+A-click to reveal a square.

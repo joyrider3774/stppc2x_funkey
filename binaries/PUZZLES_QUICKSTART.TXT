@@ -3,7 +3,8 @@ with some very basic controls to get you started playing.  PUZZLES.TXT has much
 more information on gameplay, extra controls etc.
 
 The joystick/D-pad works like a mouse with A, Y, B as left-,middle- and right-click.
-Press Start for a new game
+Press Start to pause the game and to change options, restart, quit, or start a new 
+game.
 Press Select to restart a game
 Press L+R together to quit
 Press Vol+/Vol- together to have the computer solve the puzzle (if possible)

@@ -1,0 +1,9 @@
+Net
+===
+
+Rotate each square to complete the network.  Each 
+square should be joined to the network and "powered"
+with electricity which comes from the central square.
+
+A-click to rotate a square clockwise, B-click to 
+rotate anti-clockwise.

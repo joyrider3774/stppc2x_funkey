@@ -1,0 +1,10 @@
+Solo
+====
+
+Also known as Sudoku.  Enter a number into every 
+square so that each line, column and 3x3 box on the 
+grid contains the numbers 1-9 without any 
+repetitions.
+
+Use L and R to pick a number, then A-click on a 
+square and press X to enter the number.

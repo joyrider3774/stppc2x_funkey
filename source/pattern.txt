@@ -1,0 +1,13 @@
+Pattern
+=======
+
+Also known as nonograms or "paint by numbers".  
+Fill in the randomly-generated picture by using the 
+clues.  The numbers indicate the lengths of runs of
+black squares in the row or column they are in.  
+E.g. 2 3 indicates that there is a run of two black
+before a run of three black somewhere in that 
+column.
+
+A-click to mark a square black.  
+B-click to mark it white.

@@ -51,7 +51,8 @@ Chances are that you can only left-click, though.]
 - L & R are used for selecting numbers.
 - X inserts the currently selected number.
 - Vol+ and Vol- at the same time solves the puzzle.
-- Start begins a new game.
+- Start brings up the menu to let you pause, restart, 
+  quit, configure and start new games.
 - Select restarts the current game.
 - L and R at the same time quits the game.
 

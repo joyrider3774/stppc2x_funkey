@@ -1,0 +1,8 @@
+Pegs
+====
+
+Also known as solitaire (not the card game!).  Jump 
+pegs over one another (removing the "jumped" peg as 
+in draughts/checkers) until only one remains.
+
+Hold A and move the joystick to drag a peg.

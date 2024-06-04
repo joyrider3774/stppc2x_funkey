@@ -1,0 +1,7 @@
+Cube
+====
+
+Pick up all the blue squares by rolling the cube 
+over them.
+
+A-click on a square to roll the cube onto it.

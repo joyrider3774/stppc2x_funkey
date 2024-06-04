@@ -1,0 +1,7 @@
+Netslide
+========
+
+Similar to net, but this time you have to slide the 
+squares like a Rubik's Cube and not rotate them.
+
+A-click the arrows to slide a row or column.

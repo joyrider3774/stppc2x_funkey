@@ -1,0 +1,15 @@
+Slant
+=====
+
+Draw a diagonal line in every box so that the 
+numbered boxes have that number of diagonal lines 
+touching their circles.  
+
+Zero's have to be                  Four's have to be:
+diamonds:                          crosses:
+/ \                                     \ /
+ 0                                       4
+\ /                                     / \
+
+A-click a square to change it between a blank and 
+the two types of diagonal line.

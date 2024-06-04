@@ -1,0 +1,8 @@
+Flip
+====
+
+Flip groups of squares to light them all up at once.  
+Each click flips the square you click, plus the ones 
+directly above, below, to the right and left.
+
+A-click to flip a square.

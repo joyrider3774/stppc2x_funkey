@@ -1,0 +1,10 @@
+Dominosa
+========
+
+Find the position of the full set of dominoes, which 
+is hidden in the grid.  Mark out the 0-0, 0-1, 0-2, 
+0-3,...,6-4,6-5,6-6 tiles within the grid so that 
+they are all present and there are no duplicates
+
+A-click between two numbers to put a domino over them.
+B-click between two numbers to place a reminder.

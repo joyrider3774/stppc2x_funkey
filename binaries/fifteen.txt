@@ -1,0 +1,10 @@
+Fifteen
+=======
+
+This is a sliding-tile puzzle.  Slide the tiles 
+using the empty space until they are in order, 
+top-to-bottom, left-to-right, with the space in
+the bottom-right square.
+
+A-click on a number next to the space to slide it 
+into the space.

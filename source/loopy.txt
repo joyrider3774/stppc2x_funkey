@@ -1,0 +1,7 @@
+Loopy
+=====
+Draw a single unbroken loop along the dots within 
+the grid.  The squares that contain numbers have to 
+have that many of their edges as part of the loop.
+
+A-click between two dots to draw a line between them.

@@ -1,0 +1,9 @@
+Rect
+====
+
+Divide the grid into rectangles with areas equal to 
+their numbers.  So a 4 would be inside a 2x2 or a 
+4x1 rectangle.
+
+A-click on the lines between squares to build up 
+the edges of the rectangles.

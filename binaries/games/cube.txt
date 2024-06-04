@@ -1,0 +1,8 @@
+Cube
+====
+
+Pick up all the blue squares by rolling the shape
+over them.  You use a cube by default but the 
+options let you select from other shapes.
+
+A-click on a square to roll the shape onto it.
