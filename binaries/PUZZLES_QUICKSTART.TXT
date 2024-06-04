@@ -13,6 +13,10 @@ For games which need you to enter numbers:
 Press L and R to cycle through the possible numbers
 Press X to enter the number (you may have to A-click the cell first).
 
+In the pause menu, L & R select a save game slot, Select saves the game, Vol+/- 
+loads the game, X save the current game config as the default
+
+
 Blackbox
 ========
 

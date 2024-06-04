@@ -16,9 +16,11 @@ CC=$(CROSS_COMPILE)gcc
 CXX = $(CROSS_COMPILE)gcc
 LD=$(CROSS_COMPILE)ld
 STRIP = $(CROSS_COMPILE)strip
+UPX = upx -9
+#UPX = echo
 
 CXXFLAGS = -I /opt/open2x/gcc-4.1.1-glibc-2.3.6/include/ -DTARGET_GP2X -O2 -Wall -Werror 
-#CXXFLAGS = -I /opt/open2x/gcc-4.1.1-glibc-2.3.6/include/ -DTARGET_GP2X -O2 -Wall -Werror
+#CXXFLAGS = -fsigned-bitfields -fsigned-char -I /opt/open2x/gcc-4.1.1-glibc-2.3.6/include/ -DTARGET_GP2X -O2 -Wall -Werror
 LIBS = -L"/opt/open2x/gcc-4.1.1-glibc-2.3.6/lib" -lSDL -lSDL_gfx --start-group -lSDL_ttf -lfreetype -lSDL --end-group -lSDL_image -ljpeg -lpng12 -lz --start-group -lSDL_mixer -lvorbisidec -lmikmod -lsmpeg -lmad -lSDL --end-group -lgcc -lm -lc -lpthread -ldl
 
 ALL_TARGETS = $(TARGET)
@@ -26,248 +28,284 @@ ALL_TARGETS = $(TARGET)
 all: blackbox.gpe bridges.gpe cube.gpe dominosa.gpe fifteen.gpe filling.gpe flip.gpe galaxies.gpe guess.gpe inertia.gpe lightup.gpe loopy.gpe map.gpe mines.gpe net.gpe netslide.gpe pattern.gpe pegs.gpe rect.gpe samegame.gpe sixteen.gpe slant.gpe solo.gpe tents.gpe twiddle.gpe unequal.gpe untangle.gpe
 
 clean:
-		rm *.o
+		rm *.gpo
 
 # GAMES
 # =====
 
-blackbox.gpe: blackbox.o drawing.o sdl.o malloc.o midend.o misc.o printing.o ps.o random.o version.o
-	$(CXX) -o $@ blackbox.o drawing.o sdl.o malloc.o midend.o misc.o printing.o ps.o random.o version.o $(LDFLAGS)
+blackbox.gpe: blackbox.gpo dictionary.gpo drawing.gpo iniparser.gpo malloc.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo sdl.gpo version.gpo
+	$(CXX) -o $@ blackbox.gpo dictionary.gpo drawing.gpo iniparser.gpo malloc.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo sdl.gpo version.gpo $(LDFLAGS)
 	$(STRIP) $@
+	$(UPX) $@
 
-bridges.gpe: bridges.o drawing.o dsf.o sdl.o malloc.o midend.o misc.o printing.o ps.o random.o version.o
-	$(CXX) -o $@ bridges.o drawing.o dsf.o sdl.o malloc.o midend.o misc.o printing.o ps.o random.o version.o $(LDFLAGS)
+bridges.gpe: bridges.gpo dictionary.gpo drawing.gpo dsf.gpo iniparser.gpo malloc.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo sdl.gpo version.gpo
+	$(CXX) -o $@ bridges.gpo dictionary.gpo drawing.gpo dsf.gpo iniparser.gpo malloc.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo sdl.gpo version.gpo $(LDFLAGS)
 	$(STRIP) $@
+	$(UPX) $@
 
-cube.gpe: cube.o drawing.o sdl.o malloc.o midend.o misc.o printing.o ps.o random.o version.o
-	$(CXX) -o $@ cube.o drawing.o sdl.o malloc.o midend.o misc.o printing.o ps.o random.o version.o $(LDFLAGS)
+cube.gpe: cube.gpo dictionary.gpo drawing.gpo iniparser.gpo sdl.gpo malloc.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo version.gpo
+	$(CXX) -o $@ cube.gpo dictionary.gpo drawing.gpo iniparser.gpo sdl.gpo malloc.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo version.gpo $(LDFLAGS)
 	$(STRIP) $@
+	$(UPX) $@
 
-dominosa.gpe: dominosa.o drawing.o sdl.o malloc.o midend.o misc.o printing.o ps.o random.o version.o
-	$(CXX) -o $@ dominosa.o drawing.o sdl.o malloc.o midend.o misc.o printing.o ps.o random.o version.o $(LDFLAGS)
+dominosa.gpe: dictionary.gpo dominosa.gpo drawing.gpo iniparser.gpo sdl.gpo malloc.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo version.gpo
+	$(CXX) -o $@ dictionary.gpo dominosa.gpo drawing.gpo iniparser.gpo sdl.gpo malloc.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo version.gpo $(LDFLAGS)
 	$(STRIP) $@
+	$(UPX) $@
 
-fifteen.gpe: drawing.o fifteen.o sdl.o malloc.o midend.o misc.o printing.o ps.o random.o version.o
-	$(CXX) -o $@ drawing.o fifteen.o sdl.o malloc.o midend.o misc.o printing.o ps.o random.o version.o $(LDFLAGS)
+fifteen.gpe: dictionary.gpo drawing.gpo fifteen.gpo iniparser.gpo sdl.gpo malloc.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo version.gpo
+	$(CXX) -o $@ dictionary.gpo drawing.gpo fifteen.gpo iniparser.gpo sdl.gpo malloc.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo version.gpo $(LDFLAGS)
 	$(STRIP) $@
+	$(UPX) $@
 
-filling.gpe: drawing.o dsf.o filling.o sdl.o malloc.o midend.o 	misc.o printing.o ps.o random.o version.o
-	$(CXX) -o $@ drawing.o dsf.o filling.o sdl.o malloc.o midend.o misc.o printing.o ps.o random.o version.o $(LDFLAGS)
+filling.gpe: dictionary.gpo drawing.gpo dsf.gpo filling.gpo iniparser.gpo sdl.gpo malloc.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo version.gpo
+	$(CXX) -o $@ dictionary.gpo drawing.gpo dsf.gpo filling.gpo iniparser.gpo sdl.gpo malloc.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo version.gpo $(LDFLAGS)
 	$(STRIP) $@
+	$(UPX) $@
 
-flip.gpe: drawing.o flip.o sdl.o malloc.o midend.o misc.o printing.o ps.o random.o tree234.o version.o
-	$(CXX) -o $@ drawing.o flip.o sdl.o malloc.o midend.o misc.o printing.o ps.o random.o tree234.o version.o $(LDFLAGS)
+flip.gpe: dictionary.gpo drawing.gpo flip.gpo iniparser.gpo sdl.gpo malloc.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo tree234.gpo version.gpo
+	$(CXX) -o $@ dictionary.gpo drawing.gpo flip.gpo iniparser.gpo sdl.gpo malloc.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo tree234.gpo version.gpo $(LDFLAGS)
 	$(STRIP) $@
+	$(UPX) $@
 
-galaxies.gpe: drawing.o dsf.o galaxies.o sdl.o malloc.o midend.o misc.o printing.o ps.o random.o version.o
-	$(CXX) -o $@ drawing.o dsf.o galaxies.o sdl.o malloc.o midend.o misc.o printing.o ps.o random.o version.o $(LDFLAGS)
+galaxies.gpe: dictionary.gpo drawing.gpo dsf.gpo galaxies.gpo iniparser.gpo sdl.gpo malloc.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo version.gpo
+	$(CXX) -o $@ dictionary.gpo drawing.gpo dsf.gpo galaxies.gpo iniparser.gpo sdl.gpo malloc.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo version.gpo $(LDFLAGS)
 	$(STRIP) $@
+	$(UPX) $@
 
-guess.gpe: drawing.o sdl.o guess.o malloc.o midend.o misc.o printing.o ps.o random.o version.o
-	$(CXX) -o $@ drawing.o sdl.o guess.o malloc.o midend.o misc.o printing.o ps.o random.o version.o $(LDFLAGS)
+guess.gpe: dictionary.gpo drawing.gpo sdl.gpo guess.gpo iniparser.gpo malloc.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo version.gpo
+	$(CXX) -o $@ dictionary.gpo drawing.gpo sdl.gpo guess.gpo iniparser.gpo malloc.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo version.gpo $(LDFLAGS)
 	$(STRIP) $@
+	$(UPX) $@
 
-inertia.gpe: drawing.o sdl.o inertia.o malloc.o midend.o misc.o printing.o ps.o random.o version.o
-	$(CXX) -o $@ drawing.o sdl.o inertia.o malloc.o midend.o misc.o printing.o ps.o random.o version.o $(LDFLAGS)
+inertia.gpe: dictionary.gpo drawing.gpo sdl.gpo inertia.gpo iniparser.gpo malloc.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo version.gpo
+	$(CXX) -o $@ dictionary.gpo drawing.gpo sdl.gpo inertia.gpo iniparser.gpo malloc.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo version.gpo $(LDFLAGS)
 	$(STRIP) $@
+	$(UPX) $@
 
-lightup.gpe: combi.o drawing.o sdl.o lightup.o malloc.o midend.o misc.o printing.o ps.o random.o version.o
-	$(CXX) -o $@ combi.o drawing.o sdl.o lightup.o malloc.o midend.o misc.o printing.o ps.o random.o version.o $(LDFLAGS)
+lightup.gpe: combi.gpo dictionary.gpo drawing.gpo sdl.gpo iniparser.gpo lightup.gpo malloc.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo version.gpo
+	$(CXX) -o $@ combi.gpo dictionary.gpo drawing.gpo sdl.gpo iniparser.gpo lightup.gpo malloc.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo version.gpo $(LDFLAGS)
 	$(STRIP) $@
+	$(UPX) $@
 
-loopy.gpe: drawing.o dsf.o sdl.o loopy.o malloc.o midend.o misc.o printing.o ps.o random.o tree234.o version.o
-	$(CXX) -o $@ drawing.o dsf.o sdl.o loopy.o malloc.o midend.o misc.o printing.o ps.o random.o tree234.o version.o $(LDFLAGS)
+loopy.gpe: dictionary.gpo drawing.gpo dsf.gpo sdl.gpo iniparser.gpo loopy.gpo malloc.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo tree234.gpo version.gpo
+	$(CXX) -o $@ dictionary.gpo drawing.gpo dsf.gpo sdl.gpo iniparser.gpo loopy.gpo malloc.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo tree234.gpo version.gpo $(LDFLAGS)
 	$(STRIP) $@
+	$(UPX) $@
 
-map.gpe: drawing.o dsf.o sdl.o malloc.o map.o midend.o misc.o printing.o ps.o random.o version.o
-	$(CXX) -o $@ drawing.o dsf.o sdl.o malloc.o map.o midend.o misc.o printing.o ps.o random.o version.o $(LDFLAGS)
+map.gpe: dictionary.gpo drawing.gpo dsf.gpo sdl.gpo iniparser.gpo malloc.gpo map.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo version.gpo
+	$(CXX) -o $@ dictionary.gpo drawing.gpo dsf.gpo sdl.gpo iniparser.gpo malloc.gpo map.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo version.gpo $(LDFLAGS)
 	$(STRIP) $@
+	$(UPX) $@
 
-mines.gpe: drawing.o sdl.o malloc.o midend.o mines.o misc.o printing.o ps.o random.o tree234.o version.o
-	$(CXX) -o $@ drawing.o sdl.o malloc.o midend.o mines.o misc.o printing.o ps.o random.o tree234.o version.o $(LDFLAGS)
+mines.gpe: dictionary.gpo drawing.gpo sdl.gpo iniparser.gpo malloc.gpo midend.gpo mines.gpo misc.gpo printing.gpo ps.gpo random.gpo tree234.gpo version.gpo
+	$(CXX) -o $@ dictionary.gpo drawing.gpo sdl.gpo iniparser.gpo malloc.gpo midend.gpo mines.gpo misc.gpo printing.gpo ps.gpo random.gpo tree234.gpo version.gpo $(LDFLAGS)
 	$(STRIP) $@
+	$(UPX) $@
 
-net.gpe: drawing.o dsf.o sdl.o malloc.o midend.o misc.o net.o printing.o ps.o random.o tree234.o version.o
-	$(CXX) -o $@ drawing.o dsf.o sdl.o malloc.o midend.o misc.o net.o printing.o ps.o random.o tree234.o version.o $(LDFLAGS)
+net.gpe: dictionary.gpo drawing.gpo dsf.gpo sdl.gpo iniparser.gpo malloc.gpo midend.gpo misc.gpo net.gpo printing.gpo ps.gpo random.gpo tree234.gpo version.gpo
+	$(CXX) -o $@ dictionary.gpo drawing.gpo dsf.gpo sdl.gpo iniparser.gpo malloc.gpo midend.gpo misc.gpo net.gpo printing.gpo ps.gpo random.gpo tree234.gpo version.gpo $(LDFLAGS)
 	$(STRIP) $@
+	$(UPX) $@
 
-netslide.gpe: drawing.o sdl.o malloc.o midend.o misc.o netslide.o printing.o ps.o random.o tree234.o version.o
-	$(CXX) -o $@ drawing.o sdl.o malloc.o midend.o misc.o netslide.o printing.o ps.o random.o tree234.o version.o $(LDFLAGS)
+netslide.gpe: dictionary.gpo drawing.gpo sdl.gpo iniparser.gpo malloc.gpo midend.gpo misc.gpo netslide.gpo printing.gpo ps.gpo random.gpo tree234.gpo version.gpo
+	$(CXX) -o $@ dictionary.gpo drawing.gpo sdl.gpo iniparser.gpo malloc.gpo midend.gpo misc.gpo netslide.gpo printing.gpo ps.gpo random.gpo tree234.gpo version.gpo $(LDFLAGS)
 	$(STRIP) $@
+	$(UPX) $@
 
-pattern.gpe: drawing.o sdl.o malloc.o midend.o misc.o pattern.o printing.o ps.o random.o version.o
-	$(CXX) -o $@ drawing.o sdl.o malloc.o midend.o misc.o pattern.o printing.o ps.o random.o version.o $(LDFLAGS)
+pattern.gpe: dictionary.gpo drawing.gpo sdl.gpo iniparser.gpo malloc.gpo midend.gpo misc.gpo pattern.gpo printing.gpo ps.gpo random.gpo version.gpo
+	$(CXX) -o $@ dictionary.gpo drawing.gpo sdl.gpo iniparser.gpo malloc.gpo midend.gpo misc.gpo pattern.gpo printing.gpo ps.gpo random.gpo version.gpo $(LDFLAGS)
 	$(STRIP) $@
+	$(UPX) $@
 
-pegs.gpe: drawing.o sdl.o malloc.o midend.o misc.o pegs.o printing.o ps.o random.o tree234.o version.o
-	$(CXX) -o $@ drawing.o sdl.o malloc.o midend.o misc.o pegs.o printing.o ps.o random.o tree234.o version.o $(LDFLAGS)
+pegs.gpe: dictionary.gpo drawing.gpo sdl.gpo iniparser.gpo malloc.gpo midend.gpo misc.gpo pegs.gpo printing.gpo ps.gpo random.gpo tree234.gpo version.gpo
+	$(CXX) -o $@ dictionary.gpo drawing.gpo sdl.gpo iniparser.gpo malloc.gpo midend.gpo misc.gpo pegs.gpo printing.gpo ps.gpo random.gpo tree234.gpo version.gpo $(LDFLAGS)
 	$(STRIP) $@
+	$(UPX) $@
 
-rect.gpe: drawing.o sdl.o malloc.o midend.o misc.o printing.o ps.o random.o rect.o version.o
-	$(CXX) -o $@ drawing.o sdl.o malloc.o midend.o misc.o printing.o ps.o random.o rect.o version.o $(LDFLAGS)
+rect.gpe: dictionary.gpo drawing.gpo sdl.gpo iniparser.gpo malloc.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo rect.gpo version.gpo
+	$(CXX) -o $@ dictionary.gpo drawing.gpo sdl.gpo iniparser.gpo malloc.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo rect.gpo version.gpo $(LDFLAGS)
 	$(STRIP) $@
+	$(UPX) $@
 
-samegame.gpe: drawing.o sdl.o malloc.o midend.o misc.o printing.o ps.o random.o samegame.o version.o
-	$(CXX) -o $@ drawing.o sdl.o malloc.o midend.o misc.o printing.o ps.o random.o samegame.o version.o $(LDFLAGS)
+samegame.gpe: dictionary.gpo drawing.gpo sdl.gpo iniparser.gpo malloc.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo samegame.gpo version.gpo
+	$(CXX) -o $@ dictionary.gpo drawing.gpo sdl.gpo iniparser.gpo malloc.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo samegame.gpo version.gpo $(LDFLAGS)
 	$(STRIP) $@
+	$(UPX) $@
 
-sixteen.gpe: drawing.o sdl.o malloc.o midend.o misc.o printing.o ps.o random.o sixteen.o version.o
-	$(CXX) -o $@ drawing.o sdl.o malloc.o midend.o misc.o printing.o ps.o random.o sixteen.o version.o $(LDFLAGS)
+sixteen.gpe: dictionary.gpo drawing.gpo sdl.gpo iniparser.gpo malloc.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo sixteen.gpo version.gpo
+	$(CXX) -o $@ dictionary.gpo drawing.gpo sdl.gpo iniparser.gpo malloc.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo sixteen.gpo version.gpo $(LDFLAGS)
 	$(STRIP) $@
+	$(UPX) $@
 
-slant.gpe: drawing.o dsf.o sdl.o malloc.o midend.o misc.o printing.o ps.o random.o slant.o version.o
-	$(CXX) -o $@ drawing.o dsf.o sdl.o malloc.o midend.o misc.o printing.o ps.o random.o slant.o version.o $(LDFLAGS)
+slant.gpe: dictionary.gpo drawing.gpo dsf.gpo sdl.gpo iniparser.gpo malloc.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo slant.gpo version.gpo
+	$(CXX) -o $@ dictionary.gpo drawing.gpo dsf.gpo sdl.gpo iniparser.gpo malloc.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo slant.gpo version.gpo $(LDFLAGS)
 	$(STRIP) $@
+	$(UPX) $@
 
-solo.gpe: divvy.o drawing.o dsf.o malloc.o midend.o misc.o printing.o ps.o random.o sdl.o solo.o version.o
-	$(CXX) -o $@ divvy.o drawing.o dsf.o malloc.o midend.o misc.o printing.o ps.o random.o sdl.o solo.o version.o $(LDFLAGS)
+solo.gpe: dictionary.gpo divvy.gpo drawing.gpo dsf.gpo iniparser.gpo malloc.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo sdl.gpo solo.gpo version.gpo
+	$(CXX) -o $@ dictionary.gpo divvy.gpo drawing.gpo dsf.gpo iniparser.gpo malloc.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo sdl.gpo solo.gpo version.gpo $(LDFLAGS)
 	$(STRIP) $@
+	$(UPX) $@
 
-tents.gpe: drawing.o sdl.o malloc.o maxflow.o midend.o misc.o printing.o ps.o random.o tents.o version.o
-	$(CXX) -o $@ drawing.o sdl.o malloc.o maxflow.o midend.o misc.o printing.o ps.o random.o tents.o version.o $(LDFLAGS)
+tents.gpe: dictionary.gpo drawing.gpo sdl.gpo iniparser.gpo malloc.gpo maxflow.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo tents.gpo version.gpo
+	$(CXX) -o $@ dictionary.gpo drawing.gpo sdl.gpo iniparser.gpo malloc.gpo maxflow.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo tents.gpo version.gpo $(LDFLAGS)
 	$(STRIP) $@
+	$(UPX) $@
 
-twiddle.gpe: drawing.o sdl.o malloc.o midend.o misc.o printing.o ps.o random.o twiddle.o version.o
-	$(CXX) -o $@ drawing.o sdl.o malloc.o midend.o misc.o printing.o ps.o random.o twiddle.o version.o $(LDFLAGS)
+twiddle.gpe: dictionary.gpo drawing.gpo sdl.gpo iniparser.gpo malloc.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo twiddle.gpo version.gpo
+	$(CXX) -o $@ dictionary.gpo drawing.gpo sdl.gpo iniparser.gpo malloc.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo twiddle.gpo version.gpo $(LDFLAGS)
 	$(STRIP) $@
+	$(UPX) $@
 
-unequal.gpe: drawing.o sdl.o latin.o malloc.o maxflow.o midend.o misc.o printing.o ps.o random.o tree234.o unequal.o version.o
-	$(CXX) -o $@ drawing.o sdl.o latin.o malloc.o maxflow.o midend.o misc.o printing.o ps.o random.o tree234.o unequal.o version.o $(LDFLAGS)
+unequal.gpe: dictionary.gpo drawing.gpo sdl.gpo iniparser.gpo latin.gpo malloc.gpo maxflow.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo tree234.gpo unequal.gpo version.gpo
+	$(CXX) -o $@ dictionary.gpo drawing.gpo sdl.gpo iniparser.gpo latin.gpo malloc.gpo maxflow.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo tree234.gpo unequal.gpo version.gpo $(LDFLAGS)
 	$(STRIP) $@
+	$(UPX) $@
 
-untangle.gpe: drawing.o sdl.o malloc.o midend.o misc.o printing.o ps.o random.o tree234.o untangle.o version.o
-	$(CXX) -o $@ drawing.o sdl.o malloc.o midend.o misc.o printing.o ps.o random.o tree234.o untangle.o version.o $(LDFLAGS)
+untangle.gpe: dictionary.gpo drawing.gpo sdl.gpo iniparser.gpo malloc.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo tree234.gpo untangle.gpo version.gpo
+	$(CXX) -o $@ dictionary.gpo drawing.gpo sdl.gpo iniparser.gpo malloc.gpo midend.gpo misc.gpo printing.gpo ps.gpo random.gpo tree234.gpo untangle.gpo version.gpo $(LDFLAGS)
 	$(STRIP) $@
+	$(UPX) $@
 
 # OBJECTS
 # =======
 
-blackbox.o: ./blackbox.c ./puzzles.h
+blackbox.gpo: ./blackbox.c ./puzzles.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-bridges.o: ./bridges.c ./puzzles.h
+bridges.gpo: ./bridges.c ./puzzles.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-combi.o: ./combi.c ./puzzles.h
+combi.gpo: ./combi.c ./puzzles.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-cube.o: ./cube.c ./puzzles.h
+cube.gpo: ./cube.c ./puzzles.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-divvy.o: ./divvy.c ./puzzles.h
+dictionary.gpo: ./iniparser/src/dictionary.c ./iniparser/src/dictionary.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-dominosa.o: ./dominosa.c ./puzzles.h
+divvy.gpo: ./divvy.c ./puzzles.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-drawing.o: ./drawing.c ./puzzles.h
+dominosa.gpo: ./dominosa.c ./puzzles.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-dsf.o: ./dsf.c ./puzzles.h
+drawing.gpo: ./drawing.c ./puzzles.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-fifteen.o: ./fifteen.c ./puzzles.h
+dsf.gpo: ./dsf.c ./puzzles.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-filling.o: ./filling.c ./puzzles.h
+fifteen.gpo: ./fifteen.c ./puzzles.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-flip.o: ./flip.c ./puzzles.h ./tree234.h
+filling.gpo: ./filling.c ./puzzles.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-galaxies.o: ./galaxies.c ./puzzles.h
+flip.gpo: ./flip.c ./puzzles.h ./tree234.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-guess.o: ./guess.c ./puzzles.h
+galaxies.gpo: ./galaxies.c ./puzzles.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-inertia.o: ./inertia.c ./puzzles.h
+guess.gpo: ./guess.c ./puzzles.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-latin.o: ./latin.c ./puzzles.h ./tree234.h ./maxflow.h ./latin.h
+inertia.gpo: ./inertia.c ./puzzles.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-lightup.o: ./lightup.c ./puzzles.h
+iniparser.gpo: ./iniparser/src/iniparser.c ./iniparser/src/iniparser.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-list.o: ./list.c ./puzzles.h
+latin.gpo: ./latin.c ./puzzles.h ./tree234.h ./maxflow.h ./latin.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-loopy.o: ./loopy.c ./puzzles.h ./tree234.h
+lightup.gpo: ./lightup.c ./puzzles.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-malloc.o: ./malloc.c ./puzzles.h
+list.gpo: ./list.c ./puzzles.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-map.o: ./map.c ./puzzles.h
+loopy.gpo: ./loopy.c ./puzzles.h ./tree234.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-maxflow.o: ./maxflow.c ./maxflow.h ./puzzles.h
+malloc.gpo: ./malloc.c ./puzzles.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-midend.o: ./midend.c ./puzzles.h
+map.gpo: ./map.c ./puzzles.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-mines.o: ./mines.c ./tree234.h ./puzzles.h
+maxflow.gpo: ./maxflow.c ./maxflow.h ./puzzles.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-misc.o: ./misc.c ./puzzles.h
+midend.gpo: ./midend.c ./puzzles.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-net.o: ./net.c ./puzzles.h ./tree234.h
+mines.gpo: ./mines.c ./tree234.h ./puzzles.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-netslide.o: ./netslide.c ./puzzles.h ./tree234.h
+misc.gpo: ./misc.c ./puzzles.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-no-icon.o: ./no-icon.c
+net.gpo: ./net.c ./puzzles.h ./tree234.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-pattern.o: ./pattern.c ./puzzles.h
+netslide.gpo: ./netslide.c ./puzzles.h ./tree234.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-pegs.o: ./pegs.c ./puzzles.h ./tree234.h
+no-icon.gpo: ./no-icon.c
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-printing.o: ./printing.c ./puzzles.h
+pattern.gpo: ./pattern.c ./puzzles.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-ps.o: ./ps.c ./puzzles.h
+pegs.gpo: ./pegs.c ./puzzles.h ./tree234.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-random.o: ./random.c ./puzzles.h
+printing.gpo: ./printing.c ./puzzles.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-rect.o: ./rect.c ./puzzles.h
+ps.gpo: ./ps.c ./puzzles.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-samegame.o: ./samegame.c ./puzzles.h
+random.gpo: ./random.c ./puzzles.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-sdl.o: ./sdl.c ./puzzles.h
+rect.gpo: ./rect.c ./puzzles.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-sixteen.o: ./sixteen.c ./puzzles.h
+samegame.gpo: ./samegame.c ./puzzles.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-slant.o: ./slant.c ./puzzles.h
+sdl.gpo: ./sdl.c ./puzzles.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-solo.o: ./solo.c ./puzzles.h
+sixteen.gpo: ./sixteen.c ./puzzles.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-tents.o: ./tents.c ./puzzles.h ./maxflow.h
+slant.gpo: ./slant.c ./puzzles.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-tree234.o: ./tree234.c ./tree234.h ./puzzles.h
+solo.gpo: ./solo.c ./puzzles.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-twiddle.o: ./twiddle.c ./puzzles.h
+tents.gpo: ./tents.c ./puzzles.h ./maxflow.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-unequal.o: ./unequal.c ./puzzles.h ./latin.h
+tree234.gpo: ./tree234.c ./tree234.h ./puzzles.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-untangle.o: ./untangle.c ./puzzles.h ./tree234.h
+twiddle.gpo: ./twiddle.c ./puzzles.h
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+unequal.gpo: ./unequal.c ./puzzles.h ./latin.h
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+untangle.gpo: ./untangle.c ./puzzles.h ./tree234.h
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+version.gpo: ./version.c
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 

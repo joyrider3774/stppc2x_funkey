@@ -47,6 +47,8 @@ The joystick controls the mouse cursor.
 controlling the mouse too but I have no way to test that.  
 Chances are that you can only left-click, though.]
 
+In-game:
+
 - A, Y and B work as left, middle and right mouse buttons.
 - L & R are used for selecting numbers.
 - X inserts the currently selected number.
@@ -55,6 +57,13 @@ Chances are that you can only left-click, though.]
   quit, configure and start new games.
 - Select restarts the current game.
 - L and R at the same time quits the game.
+
+In-menu:
+
+- X saves the current configuration as default
+- L & R are used for selected save slots
+- Select saves the current game to a save slot
+- Vol+ and Vol- at the same time loads the game from a slot
 
 For gameplay information or the use of the mouse buttons in 
 the individual puzzles see PUZZLES_QUICKSTART.TXT.  There is
@@ -78,6 +87,7 @@ SDL_gfx - LICENCE.SDL_gfx
 SDL_ttf - LICENCE.SDL_ttf
 SDL - LICENCE.SDL
 Freetype - LICENCE.Freetype
+INIParser - LICENCE.INIParser
 Paeryn's accelerated SDL Library (although it runs just
 as well under Open2x SDL libraries)
 
@@ -127,4 +137,4 @@ I hope you enjoy the puzzles.  If you get stuck on them,
 I'll be absolutely no use to you.
 
 - Ledow
-http://www.ledow.org.uk/
+http://www.ledow.org.uk/gp2x/

@@ -1,0 +1,521 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+"http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+<meta http-equiv="content-type" content="text/html; charset=US-ASCII">
+<title>Utility APIs</title>
+<link rel="previous" href="midend.html">
+<link rel="ToC" href="index.html">
+<link rel="up" href="index.html">
+<link rel="next" href="writing.html">
+</head>
+<body>
+<p><a href="midend.html">Previous</a> | <a href="index.html">Contents</a> | <a href="writing.html">Next</a></p>
+
+<ul>
+<li><a href="#utils">Chapter 5: Utility APIs</a>
+<ul>
+<li><a href="#utils-random">5.1 Random number generation</a>
+<ul>
+<li><a href="#utils-random-init">5.1.1 <code>random_new()</code></a></li>
+<li><a href="#utils-random-copy">5.1.2 <code>random_copy()</code></a></li>
+<li><a href="#utils-random-free">5.1.3 <code>random_free()</code></a></li>
+<li><a href="#utils-random-bits">5.1.4 <code>random_bits()</code></a></li>
+<li><a href="#utils-random-upto">5.1.5 <code>random_upto()</code></a></li>
+<li><a href="#utils-random-state-encode">5.1.6 <code>random_state_encode()</code></a></li>
+<li><a href="#utils-random-state-decode">5.1.7 <code>random_state_decode()</code></a></li>
+<li><a href="#utils-shuffle">5.1.8 <code>shuffle()</code></a></li>
+</ul></li>
+<li><a href="#utils-alloc">5.2 Memory allocation</a>
+<ul>
+<li><a href="#utils-snew">5.2.1 <code>snew()</code></a></li>
+<li><a href="#utils-snewn">5.2.2 <code>snewn()</code></a></li>
+<li><a href="#utils-sresize">5.2.3 <code>sresize()</code></a></li>
+<li><a href="#utils-sfree">5.2.4 <code>sfree()</code></a></li>
+<li><a href="#utils-dupstr">5.2.5 <code>dupstr()</code></a></li>
+<li><a href="#utils-free-cfg">5.2.6 <code>free_cfg()</code></a></li>
+</ul></li>
+<li><a href="#utils-tree234">5.3 Sorted and counted tree functions</a>
+<ul>
+<li><a href="#utils-newtree234">5.3.1 <code>newtree234()</code></a></li>
+<li><a href="#utils-freetree234">5.3.2 <code>freetree234()</code></a></li>
+<li><a href="#utils-add234">5.3.3 <code>add234()</code></a></li>
+<li><a href="#utils-addpos234">5.3.4 <code>addpos234()</code></a></li>
+<li><a href="#utils-index234">5.3.5 <code>index234()</code></a></li>
+<li><a href="#utils-find234">5.3.6 <code>find234()</code></a></li>
+<li><a href="#utils-findrel234">5.3.7 <code>findrel234()</code></a></li>
+<li><a href="#utils-findpos234">5.3.8 <code>findpos234()</code></a></li>
+<li><a href="#utils-findrelpos234">5.3.9 <code>findrelpos234()</code></a></li>
+<li><a href="#utils-del234">5.3.10 <code>del234()</code></a></li>
+<li><a href="#utils-delpos234">5.3.11 <code>delpos234()</code></a></li>
+<li><a href="#utils-count234">5.3.12 <code>count234()</code></a></li>
+<li><a href="#utils-splitpos234">5.3.13 <code>splitpos234()</code></a></li>
+<li><a href="#utils-split234">5.3.14 <code>split234()</code></a></li>
+<li><a href="#utils-join234">5.3.15 <code>join234()</code></a></li>
+<li><a href="#utils-join234r">5.3.16 <code>join234r()</code></a></li>
+<li><a href="#utils-copytree234">5.3.17 <code>copytree234()</code></a></li>
+</ul></li>
+<li><a href="#utils-misc">5.4 Miscellaneous utility functions and macros</a>
+<ul>
+<li><a href="#utils-truefalse">5.4.1 <code>TRUE</code> and <code>FALSE</code></a></li>
+<li><a href="#utils-maxmin">5.4.2 <code>max()</code> and <code>min()</code></a></li>
+<li><a href="#utils-pi">5.4.3 <code>PI</code></a></li>
+<li><a href="#utils-obfuscate-bitmap">5.4.4 <code>obfuscate_bitmap()</code></a></li>
+<li><a href="#utils-bin2hex">5.4.5 <code>bin2hex()</code></a></li>
+<li><a href="#utils-hex2bin">5.4.6 <code>hex2bin()</code></a></li>
+<li><a href="#utils-game-mkhighlight">5.4.7 <code>game_mkhighlight()</code></a></li>
+</ul></li>
+</ul></li>
+</ul>
+<h1><a name="utils"></a>Chapter 5: Utility APIs</h1>
+<p>
+This chapter documents a variety of utility APIs provided for the general use of the rest of the Puzzles code.
+</p>
+<h2><a name="utils-random"></a>5.1 Random number generation</h2>
+<p>
+Platforms' local random number generators vary widely in quality and seed size. Puzzles therefore supplies its own high-quality random number generator, with the additional advantage of giving the same results if fed the same seed data on different platforms. This allows game random seeds to be exchanged between different ports of Puzzles and still generate the same games.
+</p>
+<p>
+Unlike the ANSI C <code>rand()</code> function, the Puzzles random number generator has an <em>explicit</em> state object called a <code>random_state</code>. One of these is managed by each mid-end, for example, and passed to the back end to generate a game with.
+</p>
+<h3><a name="utils-random-init"></a>5.1.1 <code>random_new()</code></h3>
+<pre><code>random_state *random_new(char *seed, int len);
+</code></pre>
+<p>
+Allocates, initialises and returns a new <code>random_state</code>. The input data is used as the seed for the random number stream (i.e. using the same seed at a later time will generate the same stream).
+</p>
+<p>
+The seed data can be any data at all; there is no requirement to use printable ASCII, or NUL-terminated strings, or anything like that.
+</p>
+<h3><a name="utils-random-copy"></a>5.1.2 <code>random_copy()</code></h3>
+<pre><code>random_state *random_copy(random_state *tocopy);
+</code></pre>
+<p>
+Allocates a new <code>random_state</code>, copies the contents of another <code>random_state</code> into it, and returns the new state. If exactly the same sequence of functions is subseqently called on both the copy and the original, the results will be identical. This may be useful for speculatively performing some operation using a given random state, and later replaying that operation precisely.
+</p>
+<h3><a name="utils-random-free"></a>5.1.3 <code>random_free()</code></h3>
+<pre><code>void random_free(random_state *state);
+</code></pre>
+<p>
+Frees a <code>random_state</code>.
+</p>
+<h3><a name="utils-random-bits"></a>5.1.4 <code>random_bits()</code></h3>
+<pre><code>unsigned long random_bits(random_state *state, int bits);
+</code></pre>
+<p>
+Returns a random number from 0 to <code>2^bits-1</code> inclusive. <code>bits</code> should be between 1 and 32 inclusive.
+</p>
+<h3><a name="utils-random-upto"></a>5.1.5 <code>random_upto()</code></h3>
+<pre><code>unsigned long random_upto(random_state *state, unsigned long limit);
+</code></pre>
+<p>
+Returns a random number from 0 to <code>limit-1</code> inclusive.
+</p>
+<h3><a name="utils-random-state-encode"></a>5.1.6 <code>random_state_encode()</code></h3>
+<pre><code>char *random_state_encode(random_state *state);
+</code></pre>
+<p>
+Encodes the entire contents of a <code>random_state</code> in printable ASCII. Returns a dynamically allocated string containing that encoding. This can subsequently be passed to <code>random_state_decode()</code> to reconstruct the same <code>random_state</code>.
+</p>
+<h3><a name="utils-random-state-decode"></a>5.1.7 <code>random_state_decode()</code></h3>
+<pre><code>random_state *random_state_decode(char *input);
+</code></pre>
+<p>
+Decodes a string generated by <code>random_state_encode()</code> and reconstructs an equivalent <code>random_state</code> to the one encoded, i.e. it should produce the same stream of random numbers.
+</p>
+<p>
+This function has no error reporting; if you pass it an invalid string it will simply generate an arbitrary random state, which may turn out to be noticeably non-random.
+</p>
+<h3><a name="utils-shuffle"></a>5.1.8 <code>shuffle()</code></h3>
+<pre><code>void shuffle(void *array, int nelts, int eltsize, random_state *rs);
+</code></pre>
+<p>
+Shuffles an array into a random order. The interface is much like ANSI C <code>qsort()</code>, except that there's no need for a compare function.
+</p>
+<p>
+<code>array</code> is a pointer to the first element of the array. <code>nelts</code> is the number of elements in the array; <code>eltsize</code> is the size of a single element (typically measured using <code>sizeof</code>). <code>rs</code> is a <code>random_state</code> used to generate all the random numbers for the shuffling process.
+</p>
+<h2><a name="utils-alloc"></a>5.2 Memory allocation</h2>
+<p>
+Puzzles has some central wrappers on the standard memory allocation functions, which provide compile-time type checking, and run-time error checking by means of quitting the application if it runs out of memory. This doesn't provide the best possible recovery from memory shortage, but on the other hand it greatly simplifies the rest of the code, because nothing else anywhere needs to worry about <code>NULL</code> returns from allocation.
+</p>
+<h3><a name="utils-snew"></a>5.2.1 <code>snew()</code></h3>
+<pre><code><em>var</em> = snew(<em>type</em>);
+</code></pre>
+<p>
+This macro takes a single argument which is a <em>type name</em>. It allocates space for one object of that type. If allocation fails it will call <code>fatal()</code> and not return; so if it does return, you can be confident that its return value is non-<code>NULL</code>.
+</p>
+<p>
+The return value is cast to the specified type, so that the compiler will type-check it against the variable you assign it into. Thus, this ensures you don't accidentally allocate memory the size of the wrong type and assign it into a variable of the right one (or vice versa!).
+</p>
+<h3><a name="utils-snewn"></a>5.2.2 <code>snewn()</code></h3>
+<pre><code><em>var</em> = snewn(<em>n</em>, <em>type</em>);
+</code></pre>
+<p>
+This macro is the array form of <code>snew()</code>. It takes two arguments; the first is a number, and the second is a type name. It allocates space for that many objects of that type, and returns a type-checked non-<code>NULL</code> pointer just as <code>snew()</code> does.
+</p>
+<h3><a name="utils-sresize"></a>5.2.3 <code>sresize()</code></h3>
+<pre><code><em>var</em> = sresize(<em>var</em>, <em>n</em>, <em>type</em>);
+</code></pre>
+<p>
+This macro is a type-checked form of <code>realloc()</code>. It takes three arguments: an input memory block, a new size in elements, and a type. It re-sizes the input memory block to a size sufficient to contain that many elements of that type. It returns a type-checked non-<code>NULL</code> pointer, like <code>snew()</code> and <code>snewn()</code>.
+</p>
+<p>
+The input memory block can be <code>NULL</code>, in which case this function will behave exactly like <code>snewn()</code>. (In principle any ANSI-compliant <code>realloc()</code> implementation ought to cope with this, but I've never quite trusted it to work everywhere.)
+</p>
+<h3><a name="utils-sfree"></a>5.2.4 <code>sfree()</code></h3>
+<pre><code>void sfree(void *p);
+</code></pre>
+<p>
+This function is pretty much equivalent to <code>free()</code>. It is provided with a dynamically allocated block, and frees it.
+</p>
+<p>
+The input memory block can be <code>NULL</code>, in which case this function will do nothing. (In principle any ANSI-compliant <code>free()</code> implementation ought to cope with this, but I've never quite trusted it to work everywhere.)
+</p>
+<h3><a name="utils-dupstr"></a>5.2.5 <code>dupstr()</code></h3>
+<pre><code>char *dupstr(const char *s);
+</code></pre>
+<p>
+This function dynamically allocates a duplicate of a C string. Like the <code>snew()</code> functions, it guarantees to return non-<code>NULL</code> or not return at all.
+</p>
+<p>
+(Many platforms provide the function <code>strdup()</code>. As well as guaranteeing never to return <code>NULL</code>, my version has the advantage of being defined <em>everywhere</em>, rather than inconveniently not quite everywhere.)
+</p>
+<h3><a name="utils-free-cfg"></a>5.2.6 <code>free_cfg()</code></h3>
+<pre><code>void free_cfg(config_item *cfg);
+</code></pre>
+<p>
+This function correctly frees an array of <code>config_item</code>s, including walking the array until it gets to the end and freeing precisely those <code>sval</code> fields which are expected to be dynamically allocated.
+</p>
+<p>
+(See <a href="backend.html#backend-configure">section 2.3.8</a> for details of the <code>config_item</code> structure.)
+</p>
+<h2><a name="utils-tree234"></a>5.3 Sorted and counted tree functions</h2>
+<p>
+Many games require complex algorithms for generating random puzzles, and some require moderately complex algorithms even during play. A common requirement during these algorithms is for a means of maintaining sorted or unsorted lists of items, such that items can be removed and added conveniently.
+</p>
+<p>
+For general use, Puzzles provides the following set of functions which maintain 2-3-4 trees in memory. (A 2-3-4 tree is a balanced tree structure, with the property that all lookups, insertions, deletions, splits and joins can be done in <code>O(log N)</code> time.)
+</p>
+<p>
+All these functions expect you to be storing a tree of <code>void *</code> pointers. You can put anything you like in those pointers.
+</p>
+<p>
+By the use of per-node element counts, these tree structures have the slightly unusual ability to look elements up by their numeric index within the list represented by the tree. This means that they can be used to store an unsorted list (in which case, every time you insert a new element, you must explicitly specify the position where you wish to insert it). They can also do numeric lookups in a sorted tree, which might be useful for (for example) tracking the median of a changing data set.
+</p>
+<p>
+As well as storing sorted lists, these functions can be used for storing &#8216;maps&#8217; (associative arrays), by defining each element of a tree to be a (key, value) pair.
+</p>
+<h3><a name="utils-newtree234"></a>5.3.1 <code>newtree234()</code></h3>
+<pre><code>tree234 *newtree234(cmpfn234 cmp);
+</code></pre>
+<p>
+Creates a new empty tree, and returns a pointer to it.
+</p>
+<p>
+The parameter <code>cmp</code> determines the sorting criterion on the tree. Its prototype is
+</p>
+<pre><code>typedef int (*cmpfn234)(void *, void *);
+</code></pre>
+<p>
+If you want a sorted tree, you should provide a function matching this prototype, which returns like <code>strcmp()</code> does (negative if the first argument is smaller than the second, positive if it is bigger, zero if they compare equal). In this case, the function <code>addpos234()</code> will not be usable on your tree (because all insertions must respect the sorting order).
+</p>
+<p>
+If you want an unsorted tree, pass <code>NULL</code>. In this case you will not be able to use either <code>add234()</code> or <code>del234()</code>, or any other function such as <code>find234()</code> which depends on a sorting order. Your tree will become something more like an array, except that it will efficiently support insertion and deletion as well as lookups by numeric index.
+</p>
+<h3><a name="utils-freetree234"></a>5.3.2 <code>freetree234()</code></h3>
+<pre><code>void freetree234(tree234 *t);
+</code></pre>
+<p>
+Frees a tree. This function will not free the <em>elements</em> of the tree (because they might not be dynamically allocated, or you might be storing the same set of elements in more than one tree); it will just free the tree structure itself. If you want to free all the elements of a tree, you should empty it before passing it to <code>freetree234()</code>, by means of code along the lines of
+</p>
+<pre><code>while ((element = delpos234(tree, 0)) != NULL)
+    sfree(element); <em>/* or some more complicated free function */</em>
+</code></pre>
+<h3><a name="utils-add234"></a>5.3.3 <code>add234()</code></h3>
+<pre><code>void *add234(tree234 *t, void *e);
+</code></pre>
+<p>
+Inserts a new element <code>e</code> into the tree <code>t</code>. This function expects the tree to be sorted; the new element is inserted according to the sort order.
+</p>
+<p>
+If an element comparing equal to <code>e</code> is already in the tree, then the insertion will fail, and the return value will be the existing element. Otherwise, the insertion succeeds, and <code>e</code> is returned.
+</p>
+<h3><a name="utils-addpos234"></a>5.3.4 <code>addpos234()</code></h3>
+<pre><code>void *addpos234(tree234 *t, void *e, int index);
+</code></pre>
+<p>
+Inserts a new element into an unsorted tree. Since there is no sorting order to dictate where the new element goes, you must specify where you want it to go. Setting <code>index</code> to zero puts the new element right at the start of the list; setting <code>index</code> to the current number of elements in the tree puts the new element at the end.
+</p>
+<p>
+Return value is <code>e</code>, in line with <code>add234()</code> (although this function cannot fail except by running out of memory, in which case it will bomb out and die rather than returning an error indication).
+</p>
+<h3><a name="utils-index234"></a>5.3.5 <code>index234()</code></h3>
+<pre><code>void *index234(tree234 *t, int index);
+</code></pre>
+<p>
+Returns a pointer to the <code>index</code>th element of the tree, or <code>NULL</code> if <code>index</code> is out of range. Elements of the tree are numbered from zero.
+</p>
+<h3><a name="utils-find234"></a>5.3.6 <code>find234()</code></h3>
+<pre><code>void *find234(tree234 *t, void *e, cmpfn234 cmp);
+</code></pre>
+<p>
+Searches for an element comparing equal to <code>e</code> in a sorted tree.
+</p>
+<p>
+If <code>cmp</code> is <code>NULL</code>, the tree's ordinary comparison function will be used to perform the search. However, sometimes you don't want that; suppose, for example, each of your elements is a big structure containing a <code>char *</code> name field, and you want to find the element with a given name. You <em>could</em> achieve this by constructing a fake element structure, setting its name field appropriately, and passing it to <code>find234()</code>, but you might find it more convenient to pass <em>just</em> a name string to <code>find234()</code>, supplying an alternative comparison function which expects one of its arguments to be a bare name and the other to be a large structure containing a name field.
+</p>
+<p>
+Therefore, if <code>cmp</code> is not <code>NULL</code>, then it will be used to compare <code>e</code> to elements of the tree. The first argument passed to <code>cmp</code> will always be <code>e</code>; the second will be an element of the tree.
+</p>
+<p>
+(See <a href="#utils-newtree234">section 5.3.1</a> for the definition of the <code>cmpfn234</code> function pointer type.)
+</p>
+<p>
+The returned value is the element found, or <code>NULL</code> if the search is unsuccessful.
+</p>
+<h3><a name="utils-findrel234"></a>5.3.7 <code>findrel234()</code></h3>
+<pre><code>void *findrel234(tree234 *t, void *e, cmpfn234 cmp, int relation);
+</code></pre>
+<p>
+This function is like <code>find234()</code>, but has the additional ability to do a <em>relative</em> search. The additional parameter <code>relation</code> can be one of the following values:
+</p>
+<dl><dt>
+<code>REL234_EQ</code>
+</dt>
+<dd>
+Find only an element that compares equal to <code>e</code>. This is exactly the behaviour of <code>find234()</code>.
+</dd>
+<dt>
+<code>REL234_LT</code>
+</dt>
+<dd>
+Find the greatest element that compares strictly less than <code>e</code>. <code>e</code> may be <code>NULL</code>, in which case it finds the greatest element in the whole tree (which could also be done by <code>index234(t, count234(t)-1)</code>).
+</dd>
+<dt>
+<code>REL234_LE</code>
+</dt>
+<dd>
+Find the greatest element that compares less than or equal to <code>e</code>. (That is, find an element that compares equal to <code>e</code> if possible, but failing that settle for something just less than it.)
+</dd>
+<dt>
+<code>REL234_GT</code>
+</dt>
+<dd>
+Find the smallest element that compares strictly greater than <code>e</code>. <code>e</code> may be <code>NULL</code>, in which case it finds the smallest element in the whole tree (which could also be done by <code>index234(t, 0)</code>).
+</dd>
+<dt>
+<code>REL234_GE</code>
+</dt>
+<dd>
+Find the smallest element that compares greater than or equal to <code>e</code>. (That is, find an element that compares equal to <code>e</code> if possible, but failing that settle for something just bigger than it.)
+</dd>
+</dl>
+<p>
+Return value, as before, is the element found or <code>NULL</code> if no element satisfied the search criterion.
+</p>
+<h3><a name="utils-findpos234"></a>5.3.8 <code>findpos234()</code></h3>
+<pre><code>void *findpos234(tree234 *t, void *e, cmpfn234 cmp, int *index);
+</code></pre>
+<p>
+This function is like <code>find234()</code>, but has the additional feature of returning the index of the element found in the tree; that index is written to <code>*index</code> in the event of a successful search (a non-<code>NULL</code> return value).
+</p>
+<p>
+<code>index</code> may be <code>NULL</code>, in which case this function behaves exactly like <code>find234()</code>.
+</p>
+<h3><a name="utils-findrelpos234"></a>5.3.9 <code>findrelpos234()</code></h3>
+<pre><code>void *findrelpos234(tree234 *t, void *e, cmpfn234 cmp, int relation,
+                    int *index);
+</code></pre>
+<p>
+This function combines all the features of <code>findrel234()</code> and <code>findpos234()</code>.
+</p>
+<h3><a name="utils-del234"></a>5.3.10 <code>del234()</code></h3>
+<pre><code>void *del234(tree234 *t, void *e);
+</code></pre>
+<p>
+Finds an element comparing equal to <code>e</code> in the tree, deletes it, and returns it.
+</p>
+<p>
+The input tree must be sorted.
+</p>
+<p>
+The element found might be <code>e</code> itself, or might merely compare equal to it.
+</p>
+<p>
+Return value is <code>NULL</code> if no such element is found.
+</p>
+<h3><a name="utils-delpos234"></a>5.3.11 <code>delpos234()</code></h3>
+<pre><code>void *delpos234(tree234 *t, int index);
+</code></pre>
+<p>
+Deletes the element at position <code>index</code> in the tree, and returns it.
+</p>
+<p>
+Return value is <code>NULL</code> if the index is out of range.
+</p>
+<h3><a name="utils-count234"></a>5.3.12 <code>count234()</code></h3>
+<pre><code>int count234(tree234 *t);
+</code></pre>
+<p>
+Returns the number of elements currently in the tree.
+</p>
+<h3><a name="utils-splitpos234"></a>5.3.13 <code>splitpos234()</code></h3>
+<pre><code>tree234 *splitpos234(tree234 *t, int index, int before);
+</code></pre>
+<p>
+Splits the input tree into two pieces at a given position, and creates a new tree containing all the elements on one side of that position.
+</p>
+<p>
+If <code>before</code> is <code>TRUE</code>, then all the items at or after position <code>index</code> are left in the input tree, and the items before that point are returned in the new tree. Otherwise, the reverse happens: all the items at or after <code>index</code> are moved into the new tree, and those before that point are left in the old one.
+</p>
+<p>
+If <code>index</code> is equal to 0 or to the number of elements in the input tree, then one of the two trees will end up empty (and this is not an error condition). If <code>index</code> is further out of range in either direction, the operation will fail completely and return <code>NULL</code>.
+</p>
+<p>
+This operation completes in <code>O(log N)</code> time, no matter how large the tree or how balanced or unbalanced the split.
+</p>
+<h3><a name="utils-split234"></a>5.3.14 <code>split234()</code></h3>
+<pre><code>tree234 *split234(tree234 *t, void *e, cmpfn234 cmp, int rel);
+</code></pre>
+<p>
+Splits a sorted tree according to its sort order.
+</p>
+<p>
+<code>rel</code> can be any of the relation constants described in <a href="#utils-findrel234">section 5.3.7</a>, <em>except</em> for <code>REL234_EQ</code>. All the elements having that relation to <code>e</code> will be transferred into the new tree; the rest will be left in the old one.
+</p>
+<p>
+The parameter <code>cmp</code> has the same semantics as it does in <code>find234()</code>: if it is not <code>NULL</code>, it will be used in place of the tree's own comparison function when comparing elements to <code>e</code>, in such a way that <code>e</code> itself is always the first of its two operands.
+</p>
+<p>
+Again, this operation completes in <code>O(log N)</code> time, no matter how large the tree or how balanced or unbalanced the split.
+</p>
+<h3><a name="utils-join234"></a>5.3.15 <code>join234()</code></h3>
+<pre><code>tree234 *join234(tree234 *t1, tree234 *t2);
+</code></pre>
+<p>
+Joins two trees together by concatenating the lists they represent. All the elements of <code>t2</code> are moved into <code>t1</code>, in such a way that they appear <em>after</em> the elements of <code>t1</code>. The tree <code>t2</code> is freed; the return value is <code>t1</code>.
+</p>
+<p>
+If you apply this function to a sorted tree and it violates the sort order (i.e. the smallest element in <code>t2</code> is smaller than or equal to the largest element in <code>t1</code>), the operation will fail and return <code>NULL</code>.
+</p>
+<p>
+This operation completes in <code>O(log N)</code> time, no matter how large the trees being joined together.
+</p>
+<h3><a name="utils-join234r"></a>5.3.16 <code>join234r()</code></h3>
+<pre><code>tree234 *join234r(tree234 *t1, tree234 *t2);
+</code></pre>
+<p>
+Joins two trees together in exactly the same way as <code>join234()</code>, but this time the combined tree is returned in <code>t2</code>, and <code>t1</code> is destroyed. The elements in <code>t1</code> still appear before those in <code>t2</code>.
+</p>
+<p>
+Again, this operation completes in <code>O(log N)</code> time, no matter how large the trees being joined together.
+</p>
+<h3><a name="utils-copytree234"></a>5.3.17 <code>copytree234()</code></h3>
+<pre><code>tree234 *copytree234(tree234 *t, copyfn234 copyfn,
+                     void *copyfnstate);
+</code></pre>
+<p>
+Makes a copy of an entire tree.
+</p>
+<p>
+If <code>copyfn</code> is <code>NULL</code>, the tree will be copied but the elements will not be; i.e. the new tree will contain pointers to exactly the same physical elements as the old one.
+</p>
+<p>
+If you want to copy each actual element during the operation, you can instead pass a function in <code>copyfn</code> which makes a copy of each element. That function has the prototype
+</p>
+<pre><code>typedef void *(*copyfn234)(void *state, void *element);
+</code></pre>
+<p>
+and every time it is called, the <code>state</code> parameter will be set to the value you passed in as <code>copyfnstate</code>.
+</p>
+<h2><a name="utils-misc"></a>5.4 Miscellaneous utility functions and macros</h2>
+<p>
+This section contains all the utility functions which didn't sensibly fit anywhere else.
+</p>
+<h3><a name="utils-truefalse"></a>5.4.1 <code>TRUE</code> and <code>FALSE</code></h3>
+<p>
+The main Puzzles header file defines the macros <code>TRUE</code> and <code>FALSE</code>, which are used throughout the code in place of 1 and 0 (respectively) to indicate that the values are in a boolean context. For code base consistency, I'd prefer it if submissions of new code followed this convention as well.
+</p>
+<h3><a name="utils-maxmin"></a>5.4.2 <code>max()</code> and <code>min()</code></h3>
+<p>
+The main Puzzles header file defines the pretty standard macros <code>max()</code> and <code>min()</code>, each of which is given two arguments and returns the one which compares greater or less respectively.
+</p>
+<p>
+These macros may evaluate their arguments multiple times. Avoid side effects.
+</p>
+<h3><a name="utils-pi"></a>5.4.3 <code>PI</code></h3>
+<p>
+The main Puzzles header file defines a macro <code>PI</code> which expands to a floating-point constant representing pi.
+</p>
+<p>
+(I've never understood why ANSI's <code>&lt;math.h&gt;</code> doesn't define this. It'd be so useful!)
+</p>
+<h3><a name="utils-obfuscate-bitmap"></a>5.4.4 <code>obfuscate_bitmap()</code></h3>
+<pre><code>void obfuscate_bitmap(unsigned char *bmp, int bits, int decode);
+</code></pre>
+<p>
+This function obscures the contents of a piece of data, by cryptographic methods. It is useful for games of hidden information (such as Mines, Guess or Black Box), in which the game ID theoretically reveals all the information the player is supposed to be trying to guess. So in order that players should be able to send game IDs to one another without accidentally spoiling the resulting game by looking at them, these games obfuscate their game IDs using this function.
+</p>
+<p>
+Although the obfuscation function is cryptographic, it cannot properly be called encryption because it has no key. Therefore, anybody motivated enough can re-implement it, or hack it out of the Puzzles source, and strip the obfuscation off one of these game IDs to see what lies beneath. (Indeed, they could usually do it much more easily than that, by entering the game ID into their own copy of the puzzle and hitting Solve.) The aim is not to protect against a determined attacker; the aim is simply to protect people who wanted to play the game honestly from <em>accidentally</em> spoiling their own fun.
+</p>
+<p>
+The input argument <code>bmp</code> points at a piece of memory to be obfuscated. <code>bits</code> gives the length of the data. Note that that length is in <em>bits</em> rather than bytes: if you ask for obfuscation of a partial number of bytes, then you will get it. Bytes are considered to be used from the top down: thus, for example, setting <code>bits</code> to 10 will cover the whole of <code>bmp[0]</code> and the <em>top two</em> bits of <code>bmp[1]</code>. The remainder of a partially used byte is undefined (i.e. it may be corrupted by the function).
+</p>
+<p>
+The parameter <code>decode</code> is <code>FALSE</code> for an encoding operation, and <code>TRUE</code> for a decoding operation. Each is the inverse of the other. (There's no particular reason you shouldn't obfuscate by decoding and restore cleartext by encoding, if you really wanted to; it should still work.)
+</p>
+<p>
+The input bitmap is processed in place.
+</p>
+<h3><a name="utils-bin2hex"></a>5.4.5 <code>bin2hex()</code></h3>
+<pre><code>char *bin2hex(const unsigned char *in, int inlen);
+</code></pre>
+<p>
+This function takes an input byte array and converts it into an ASCII string encoding those bytes in (lower-case) hex. It returns a dynamically allocated string containing that encoding.
+</p>
+<p>
+This function is useful for encoding the result of <code>obfuscate_bitmap()</code> in printable ASCII for use in game IDs.
+</p>
+<h3><a name="utils-hex2bin"></a>5.4.6 <code>hex2bin()</code></h3>
+<pre><code>unsigned char *hex2bin(const char *in, int outlen);
+</code></pre>
+<p>
+This function takes an ASCII string containing hex digits, and converts it back into a byte array of length <code>outlen</code>. If there aren't enough hex digits in the string, the contents of the resulting array will be undefined.
+</p>
+<p>
+This function is the inverse of <code>bin2hex()</code>.
+</p>
+<h3><a name="utils-game-mkhighlight"></a>5.4.7 <code>game_mkhighlight()</code></h3>
+<pre><code>void game_mkhighlight(frontend *fe, float *ret,
+                      int background, int highlight, int lowlight);
+</code></pre>
+<p>
+It's reasonably common for a puzzle game's graphics to use highlights and lowlights to indicate &#8216;raised&#8217; or &#8216;lowered&#8217; sections. Fifteen, Sixteen and Twiddle are good examples of this.
+</p>
+<p>
+Puzzles using this graphical style are running a risk if they just use whatever background colour is supplied to them by the front end, because that background colour might be too light to see any highlights on at all. (In particular, it's not unheard of for the front end to specify a default background colour of white.)
+</p>
+<p>
+Therefore, such puzzles can call this utility function from their <code>colours()</code> routine (<a href="backend.html#backend-colours">section 2.8.6</a>). You pass it your front end handle, a pointer to the start of your return array, and three colour indices. It will:
+</p>
+<ul><li>
+call <code>frontend_default_colour()</code> (<a href="midend.html#frontend-default-colour">section 4.31</a>) to fetch the front end's default background colour
+</li>
+<li>
+alter the brightness of that colour if it's unsuitable
+</li>
+<li>
+define brighter and darker variants of the colour to be used as highlights and lowlights
+</li>
+<li>
+write those results into the relevant positions in the <code>ret</code> array.
+</li>
+</ul>
+<p>
+Thus, <code>ret[background*3]</code> to <code>ret[background*3+2]</code> will be set to RGB values defining a sensible background colour, and similary <code>highlight</code> and <code>lowlight</code> will be set to sensible colours.
+</p>
+
+<hr><address></address></body>
+</html>

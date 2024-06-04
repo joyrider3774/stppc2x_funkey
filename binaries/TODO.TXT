@@ -1,7 +1,6 @@
 TODO:
-  Add hardware window zoom (Paeryn's library)
+  Add hardware window zoom (Paeryn's library) 
   Add parameter passing (difficulty, size etc.)
-  Add save/load game (already in place, just need code to write to file)
   Fix off-by-one errors in drawing code
   Create SDL menu for all the games?
 

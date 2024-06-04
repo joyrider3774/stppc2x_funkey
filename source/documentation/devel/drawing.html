@@ -1,0 +1,743 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+"http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+<meta http-equiv="content-type" content="text/html; charset=US-ASCII">
+<title>The drawing API</title>
+<link rel="previous" href="backend.html">
+<link rel="ToC" href="index.html">
+<link rel="up" href="index.html">
+<link rel="next" href="midend.html">
+</head>
+<body>
+<p><a href="backend.html">Previous</a> | <a href="index.html">Contents</a> | <a href="midend.html">Next</a></p>
+
+<ul>
+<li><a href="#drawing">Chapter 3: The drawing API</a>
+<ul>
+<li><a href="#drawing-backend">3.1 Drawing API as seen by the back end</a>
+<ul>
+<li><a href="#drawing-draw-rect">3.1.1 <code>draw_rect()</code></a></li>
+<li><a href="#drawing-draw-rect-outline">3.1.2 <code>draw_rect_outline()</code></a></li>
+<li><a href="#drawing-draw-line">3.1.3 <code>draw_line()</code></a></li>
+<li><a href="#drawing-draw-polygon">3.1.4 <code>draw_polygon()</code></a></li>
+<li><a href="#drawing-draw-circle">3.1.5 <code>draw_circle()</code></a></li>
+<li><a href="#drawing-draw-text">3.1.6 <code>draw_text()</code></a></li>
+<li><a href="#drawing-clip">3.1.7 <code>clip()</code></a></li>
+<li><a href="#drawing-unclip">3.1.8 <code>unclip()</code></a></li>
+<li><a href="#drawing-draw-update">3.1.9 <code>draw_update()</code></a></li>
+<li><a href="#drawing-status-bar">3.1.10 <code>status_bar()</code></a></li>
+<li><a href="#drawing-blitter">3.1.11 Blitter functions</a></li>
+<li><a href="#print-mono-colour">3.1.12 <code>print_mono_colour()</code></a></li>
+<li><a href="#print-grey-colour">3.1.13 <code>print_grey_colour()</code></a></li>
+<li><a href="#print-hatched-colour">3.1.14 <code>print_hatched_colour()</code></a></li>
+<li><a href="#print-rgb-mono-colour">3.1.15 <code>print_rgb_mono_colour()</code></a></li>
+<li><a href="#print-rgb-grey-colour">3.1.16 <code>print_rgb_grey_colour()</code></a></li>
+<li><a href="#print-rgb-hatched-colour">3.1.17 <code>print_rgb_hatched_colour()</code></a></li>
+<li><a href="#print-line-width">3.1.18 <code>print_line_width()</code></a></li>
+</ul></li>
+<li><a href="#drawing-frontend">3.2 The drawing API as implemented by the front end</a>
+<ul>
+<li><a href="#drawingapi-draw-text">3.2.1 <code>draw_text()</code></a></li>
+<li><a href="#drawingapi-draw-rect">3.2.2 <code>draw_rect()</code></a></li>
+<li><a href="#drawingapi-draw-line">3.2.3 <code>draw_line()</code></a></li>
+<li><a href="#drawingapi-draw-polygon">3.2.4 <code>draw_polygon()</code></a></li>
+<li><a href="#drawingapi-draw-circle">3.2.5 <code>draw_circle()</code></a></li>
+<li><a href="#drawingapi-draw-update">3.2.6 <code>draw_update()</code></a></li>
+<li><a href="#drawingapi-clip">3.2.7 <code>clip()</code></a></li>
+<li><a href="#drawingapi-unclip">3.2.8 <code>unclip()</code></a></li>
+<li><a href="#drawingapi-start-draw">3.2.9 <code>start_draw()</code></a></li>
+<li><a href="#drawingapi-end-draw">3.2.10 <code>end_draw()</code></a></li>
+<li><a href="#drawingapi-status-bar">3.2.11 <code>status_bar()</code></a></li>
+<li><a href="#drawingapi-blitter-new">3.2.12 <code>blitter_new()</code></a></li>
+<li><a href="#drawingapi-blitter-free">3.2.13 <code>blitter_free()</code></a></li>
+<li><a href="#drawingapi-blitter-save">3.2.14 <code>blitter_save()</code></a></li>
+<li><a href="#drawingapi-blitter-load">3.2.15 <code>blitter_load()</code></a></li>
+<li><a href="#drawingapi-begin-doc">3.2.16 <code>begin_doc()</code></a></li>
+<li><a href="#drawingapi-begin-page">3.2.17 <code>begin_page()</code></a></li>
+<li><a href="#drawingapi-begin-puzzle">3.2.18 <code>begin_puzzle()</code></a></li>
+<li><a href="#drawingapi-end-puzzle">3.2.19 <code>end_puzzle()</code></a></li>
+<li><a href="#drawingapi-end-page">3.2.20 <code>end_page()</code></a></li>
+<li><a href="#drawingapi-end-doc">3.2.21 <code>end_doc()</code></a></li>
+<li><a href="#drawingapi-line-width">3.2.22 <code>line_width()</code></a></li>
+</ul></li>
+<li><a href="#drawingapi-frontend">3.3 The drawing API as called by the front end</a>
+<ul>
+<li><a href="#drawing-new">3.3.1 <code>drawing_new()</code></a></li>
+<li><a href="#drawing-free">3.3.2 <code>drawing_free()</code></a></li>
+<li><a href="#drawing-print-get-colour">3.3.3 <code>print_get_colour()</code></a></li>
+</ul></li>
+</ul></li>
+</ul>
+<h1><a name="drawing"></a>Chapter 3: The drawing API</h1>
+<p>
+The back end function <code>redraw()</code> (<a href="backend.html#backend-redraw">section 2.8.9</a>) is required to draw the puzzle's graphics on the window's drawing area, or on paper if the puzzle is printable. To do this portably, it is provided with a drawing API allowing it to talk directly to the front end. In this chapter I document that API, both for the benefit of back end authors trying to use it and for front end authors trying to implement it.
+</p>
+<p>
+The drawing API as seen by the back end is a collection of global functions, each of which takes a pointer to a <code>drawing</code> structure (a &#8216;drawing object&#8217;). These objects are supplied as parameters to the back end's <code>redraw()</code> and <code>print()</code> functions.
+</p>
+<p>
+In fact these global functions are not implemented directly by the front end; instead, they are implemented centrally in <code>drawing.c</code> and form a small piece of middleware. The drawing API as supplied by the front end is a structure containing a set of function pointers, plus a &#8216;<code>void *</code>&#8217; handle which is passed to each of those functions. This enables a single front end to switch between multiple implementations of the drawing API if necessary. For example, the Windows API supplies a printing mechanism integrated into the same GDI which deals with drawing in windows, and therefore the same API implementation can handle both drawing and printing; but on Unix, the most common way for applications to print is by producing PostScript output directly, and although it would be <em>possible</em> to write a single (say) <code>draw_rect()</code> function which checked a global flag to decide whether to do GTK drawing operations or output PostScript to a file, it's much nicer to have two separate functions and switch between them as appropriate.
+</p>
+<p>
+When drawing, the puzzle window is indexed by pixel coordinates, with the top left pixel defined as <code>(0,0)</code> and the bottom right pixel <code>(w-1,h-1)</code>, where <code>w</code> and <code>h</code> are the width and height values returned by the back end function <code>compute_size()</code> (<a href="backend.html#backend-compute-size">section 2.8.4</a>).
+</p>
+<p>
+When printing, the puzzle's print area is indexed in exactly the same way (with an arbitrary tile size provided by the printing module <code>printing.c</code>), to facilitate sharing of code between the drawing and printing routines. However, when printing, puzzles may no longer assume that the coordinate unit has any relationship to a pixel; the printer's actual resolution might very well not even be known at print time, so the coordinate unit might be smaller or larger than a pixel. Puzzles' print functions should restrict themselves to drawing geometric shapes rather than fiddly pixel manipulation.
+</p>
+<p>
+<em>Puzzles' redraw functions may assume that the surface they draw on is persistent</em>. It is the responsibility of every front end to preserve the puzzle's window contents in the face of GUI window expose issues and similar. It is not permissible to request that the back end redraw any part of a window that it has already drawn, unless something has actually changed as a result of making moves in the puzzle.
+</p>
+<p>
+Most front ends accomplish this by having the drawing routines draw on a stored bitmap rather than directly on the window, and copying the bitmap to the window every time a part of the window needs to be redrawn. Therefore, it is vitally important that whenever the back end does any drawing it informs the front end of which parts of the window it has accessed, and hence which parts need repainting. This is done by calling <code>draw_update()</code> (<a href="#drawing-draw-update">section 3.1.9</a>).
+</p>
+<p>
+In the following sections I first discuss the drawing API as seen by the back end, and then the <em>almost</em> identical function-pointer form seen by the front end.
+</p>
+<h2><a name="drawing-backend"></a>3.1 Drawing API as seen by the back end</h2>
+<p>
+This section documents the back-end drawing API, in the form of functions which take a <code>drawing</code> object as an argument.
+</p>
+<h3><a name="drawing-draw-rect"></a>3.1.1 <code>draw_rect()</code></h3>
+<pre><code>void draw_rect(drawing *dr, int x, int y, int w, int h,
+               int colour);
+</code></pre>
+<p>
+Draws a filled rectangle in the puzzle window.
+</p>
+<p>
+<code>x</code> and <code>y</code> give the coordinates of the top left pixel of the rectangle. <code>w</code> and <code>h</code> give its width and height. Thus, the horizontal extent of the rectangle runs from <code>x</code> to <code>x+w-1</code> inclusive, and the vertical extent from <code>y</code> to <code>y+h-1</code> inclusive.
+</p>
+<p>
+<code>colour</code> is an integer index into the colours array returned by the back end function <code>colours()</code> (<a href="backend.html#backend-colours">section 2.8.6</a>).
+</p>
+<p>
+There is no separate pixel-plotting function. If you want to plot a single pixel, the approved method is to use <code>draw_rect()</code> with width and height set to 1.
+</p>
+<p>
+Unlike many of the other drawing functions, this function is guaranteed to be pixel-perfect: the rectangle will be sharply defined and not anti-aliased or anything like that.
+</p>
+<p>
+This function may be used for both drawing and printing.
+</p>
+<h3><a name="drawing-draw-rect-outline"></a>3.1.2 <code>draw_rect_outline()</code></h3>
+<pre><code>void draw_rect_outline(drawing *dr, int x, int y, int w, int h,
+                       int colour);
+</code></pre>
+<p>
+Draws an outline rectangle in the puzzle window.
+</p>
+<p>
+<code>x</code> and <code>y</code> give the coordinates of the top left pixel of the rectangle. <code>w</code> and <code>h</code> give its width and height. Thus, the horizontal extent of the rectangle runs from <code>x</code> to <code>x+w-1</code> inclusive, and the vertical extent from <code>y</code> to <code>y+h-1</code> inclusive.
+</p>
+<p>
+<code>colour</code> is an integer index into the colours array returned by the back end function <code>colours()</code> (<a href="backend.html#backend-colours">section 2.8.6</a>).
+</p>
+<p>
+From a back end perspective, this function may be considered to be part of the drawing API. However, front ends are not required to implement it, since it is actually implemented centrally (in <code>misc.c</code>) as a wrapper on <code>draw_polygon()</code>.
+</p>
+<p>
+This function may be used for both drawing and printing.
+</p>
+<h3><a name="drawing-draw-line"></a>3.1.3 <code>draw_line()</code></h3>
+<pre><code>void draw_line(drawing *dr, int x1, int y1, int x2, int y2,
+               int colour);
+</code></pre>
+<p>
+Draws a straight line in the puzzle window.
+</p>
+<p>
+<code>x1</code> and <code>y1</code> give the coordinates of one end of the line. <code>x2</code> and <code>y2</code> give the coordinates of the other end. The line drawn includes both those points.
+</p>
+<p>
+<code>colour</code> is an integer index into the colours array returned by the back end function <code>colours()</code> (<a href="backend.html#backend-colours">section 2.8.6</a>).
+</p>
+<p>
+Some platforms may perform anti-aliasing on this function. Therefore, do not assume that you can erase a line by drawing the same line over it in the background colour; anti-aliasing might lead to perceptible ghost artefacts around the vanished line.
+</p>
+<p>
+This function may be used for both drawing and printing.
+</p>
+<h3><a name="drawing-draw-polygon"></a>3.1.4 <code>draw_polygon()</code></h3>
+<pre><code>void draw_polygon(drawing *dr, int *coords, int npoints,
+                  int fillcolour, int outlinecolour);
+</code></pre>
+<p>
+Draws an outlined or filled polygon in the puzzle window.
+</p>
+<p>
+<code>coords</code> is an array of <code>(2*npoints)</code> integers, containing the <code>x</code> and <code>y</code> coordinates of <code>npoints</code> vertices.
+</p>
+<p>
+<code>fillcolour</code> and <code>outlinecolour</code> are integer indices into the colours array returned by the back end function <code>colours()</code> (<a href="backend.html#backend-colours">section 2.8.6</a>). <code>fillcolour</code> may also be <code>-1</code> to indicate that the polygon should be outlined only.
+</p>
+<p>
+The polygon defined by the specified list of vertices is first filled in <code>fillcolour</code>, if specified, and then outlined in <code>outlinecolour</code>.
+</p>
+<p>
+<code>outlinecolour</code> may <em>not</em> be <code>-1</code>; it must be a valid colour (and front ends are permitted to enforce this by assertion). This is because different platforms disagree on whether a filled polygon should include its boundary line or not, so drawing <em>only</em> a filled polygon would have non-portable effects. If you want your filled polygon not to have a visible outline, you must set <code>outlinecolour</code> to the same as <code>fillcolour</code>.
+</p>
+<p>
+Some platforms may perform anti-aliasing on this function. Therefore, do not assume that you can erase a polygon by drawing the same polygon over it in the background colour. Also, be prepared for the polygon to extend a pixel beyond its obvious bounding box as a result of this; if you really need it not to do this to avoid interfering with other delicate graphics, you should probably use <code>clip()</code> (<a href="#drawing-clip">section 3.1.7</a>).
+</p>
+<p>
+This function may be used for both drawing and printing.
+</p>
+<h3><a name="drawing-draw-circle"></a>3.1.5 <code>draw_circle()</code></h3>
+<pre><code>void draw_circle(drawing *dr, int cx, int cy, int radius,
+                 int fillcolour, int outlinecolour);
+</code></pre>
+<p>
+Draws an outlined or filled circle in the puzzle window.
+</p>
+<p>
+<code>cx</code> and <code>cy</code> give the coordinates of the centre of the circle. <code>radius</code> gives its radius. The total horizontal pixel extent of the circle is from <code>cx-radius+1</code> to <code>cx+radius-1</code> inclusive, and the vertical extent similarly around <code>cy</code>.
+</p>
+<p>
+<code>fillcolour</code> and <code>outlinecolour</code> are integer indices into the colours array returned by the back end function <code>colours()</code> (<a href="backend.html#backend-colours">section 2.8.6</a>). <code>fillcolour</code> may also be <code>-1</code> to indicate that the circle should be outlined only.
+</p>
+<p>
+The circle is first filled in <code>fillcolour</code>, if specified, and then outlined in <code>outlinecolour</code>.
+</p>
+<p>
+<code>outlinecolour</code> may <em>not</em> be <code>-1</code>; it must be a valid colour (and front ends are permitted to enforce this by assertion). This is because different platforms disagree on whether a filled circle should include its boundary line or not, so drawing <em>only</em> a filled circle would have non-portable effects. If you want your filled circle not to have a visible outline, you must set <code>outlinecolour</code> to the same as <code>fillcolour</code>.
+</p>
+<p>
+Some platforms may perform anti-aliasing on this function. Therefore, do not assume that you can erase a circle by drawing the same circle over it in the background colour. Also, be prepared for the circle to extend a pixel beyond its obvious bounding box as a result of this; if you really need it not to do this to avoid interfering with other delicate graphics, you should probably use <code>clip()</code> (<a href="#drawing-clip">section 3.1.7</a>).
+</p>
+<p>
+This function may be used for both drawing and printing.
+</p>
+<h3><a name="drawing-draw-text"></a>3.1.6 <code>draw_text()</code></h3>
+<pre><code>void draw_text(drawing *dr, int x, int y, int fonttype,
+               int fontsize, int align, int colour, char *text);
+</code></pre>
+<p>
+Draws text in the puzzle window.
+</p>
+<p>
+<code>x</code> and <code>y</code> give the coordinates of a point. The relation of this point to the location of the text is specified by <code>align</code>, which is a bitwise OR of horizontal and vertical alignment flags:
+</p>
+<dl><dt>
+<code>ALIGN_VNORMAL</code>
+</dt>
+<dd>
+Indicates that <code>y</code> is aligned with the baseline of the text.
+</dd>
+<dt>
+<code>ALIGN_VCENTRE</code>
+</dt>
+<dd>
+Indicates that <code>y</code> is aligned with the vertical centre of the text. (In fact, it's aligned with the vertical centre of normal <em>capitalised</em> text: displaying two pieces of text with <code>ALIGN_VCENTRE</code> at the same <code>y</code>-coordinate will cause their baselines to be aligned with one another, even if one is an ascender and the other a descender.)
+</dd>
+<dt>
+<code>ALIGN_HLEFT</code>
+</dt>
+<dd>
+Indicates that <code>x</code> is aligned with the left-hand end of the text.
+</dd>
+<dt>
+<code>ALIGN_HCENTRE</code>
+</dt>
+<dd>
+Indicates that <code>x</code> is aligned with the horizontal centre of the text.
+</dd>
+<dt>
+<code>ALIGN_HRIGHT</code>
+</dt>
+<dd>
+Indicates that <code>x</code> is aligned with the right-hand end of the text.
+</dd>
+</dl>
+<p>
+<code>fonttype</code> is either <code>FONT_FIXED</code> or <code>FONT_VARIABLE</code>, for a monospaced or proportional font respectively. (No more detail than that may be specified; it would only lead to portability issues between different platforms.)
+</p>
+<p>
+<code>fontsize</code> is the desired size, in pixels, of the text. This size corresponds to the overall point size of the text, not to any internal dimension such as the cap-height.
+</p>
+<p>
+<code>colour</code> is an integer index into the colours array returned by the back end function <code>colours()</code> (<a href="backend.html#backend-colours">section 2.8.6</a>).
+</p>
+<p>
+This function may be used for both drawing and printing.
+</p>
+<h3><a name="drawing-clip"></a>3.1.7 <code>clip()</code></h3>
+<pre><code>void clip(drawing *dr, int x, int y, int w, int h);
+</code></pre>
+<p>
+Establishes a clipping rectangle in the puzzle window.
+</p>
+<p>
+<code>x</code> and <code>y</code> give the coordinates of the top left pixel of the clipping rectangle. <code>w</code> and <code>h</code> give its width and height. Thus, the horizontal extent of the rectangle runs from <code>x</code> to <code>x+w-1</code> inclusive, and the vertical extent from <code>y</code> to <code>y+h-1</code> inclusive. (These are exactly the same semantics as <code>draw_rect()</code>.)
+</p>
+<p>
+After this call, no drawing operation will affect anything outside the specified rectangle. The effect can be reversed by calling <code>unclip()</code> (<a href="#drawing-unclip">section 3.1.8</a>).
+</p>
+<p>
+Back ends should not assume that a clipping rectangle will be automatically cleared up by the front end if it's left lying around; that might work on current front ends, but shouldn't be relied upon. Always explicitly call <code>unclip()</code>.
+</p>
+<p>
+This function may be used for both drawing and printing.
+</p>
+<h3><a name="drawing-unclip"></a>3.1.8 <code>unclip()</code></h3>
+<pre><code>void unclip(drawing *dr);
+</code></pre>
+<p>
+Reverts the effect of a previous call to <code>clip()</code>. After this call, all drawing operations will be able to affect the entire puzzle window again.
+</p>
+<p>
+This function may be used for both drawing and printing.
+</p>
+<h3><a name="drawing-draw-update"></a>3.1.9 <code>draw_update()</code></h3>
+<pre><code>void draw_update(drawing *dr, int x, int y, int w, int h);
+</code></pre>
+<p>
+Informs the front end that a rectangular portion of the puzzle window has been drawn on and needs to be updated.
+</p>
+<p>
+<code>x</code> and <code>y</code> give the coordinates of the top left pixel of the update rectangle. <code>w</code> and <code>h</code> give its width and height. Thus, the horizontal extent of the rectangle runs from <code>x</code> to <code>x+w-1</code> inclusive, and the vertical extent from <code>y</code> to <code>y+h-1</code> inclusive. (These are exactly the same semantics as <code>draw_rect()</code>.)
+</p>
+<p>
+The back end redraw function <em>must</em> call this function to report any changes it has made to the window. Otherwise, those changes may not become immediately visible, and may then appear at an unpredictable subsequent time such as the next time the window is covered and re-exposed.
+</p>
+<p>
+This function is only important when drawing. It may be called when printing as well, but doing so is not compulsory, and has no effect. (So if you have a shared piece of code between the drawing and printing routines, that code may safely call <code>draw_update()</code>.)
+</p>
+<h3><a name="drawing-status-bar"></a>3.1.10 <code>status_bar()</code></h3>
+<pre><code>void status_bar(drawing *dr, char *text);
+</code></pre>
+<p>
+Sets the text in the game's status bar to <code>text</code>. The text is copied from the supplied buffer, so the caller is free to deallocate or modify the buffer after use.
+</p>
+<p>
+(This function is not exactly a <em>drawing</em> function, but it shares with the drawing API the property that it may only be called from within the back end redraw function, so this is as good a place as any to document it.)
+</p>
+<p>
+The supplied text is filtered through the mid-end for optional rewriting before being passed on to the front end; the mid-end will prepend the current game time if the game is timed (and may in future perform other rewriting if it seems like a good idea).
+</p>
+<p>
+This function is for drawing only; it must never be called during printing.
+</p>
+<h3><a name="drawing-blitter"></a>3.1.11 Blitter functions</h3>
+<p>
+This section describes a group of related functions which save and restore a section of the puzzle window. This is most commonly used to implement user interfaces involving dragging a puzzle element around the window: at the end of each call to <code>redraw()</code>, if an object is currently being dragged, the back end saves the window contents under that location and then draws the dragged object, and at the start of the next <code>redraw()</code> the first thing it does is to restore the background.
+</p>
+<p>
+The front end defines an opaque type called a <code>blitter</code>, which is capable of storing a rectangular area of a specified size.
+</p>
+<p>
+Blitter functions are for drawing only; they must never be called during printing.
+</p>
+<h4><a name="drawing-blitter-new"></a>3.1.11.1 <code>blitter_new()</code></h4>
+<pre><code>blitter *blitter_new(drawing *dr, int w, int h);
+</code></pre>
+<p>
+Creates a new blitter object which stores a rectangle of size <code>w</code> by <code>h</code> pixels. Returns a pointer to the blitter object.
+</p>
+<p>
+Blitter objects are best stored in the <code>game_drawstate</code>. A good time to create them is in the <code>set_size()</code> function (<a href="backend.html#backend-set-size">section 2.8.5</a>), since it is at this point that you first know how big a rectangle they will need to save.
+</p>
+<h4><a name="drawing-blitter-free"></a>3.1.11.2 <code>blitter_free()</code></h4>
+<pre><code>void blitter_free(drawing *dr, blitter *bl);
+</code></pre>
+<p>
+Disposes of a blitter object. Best called in <code>free_drawstate()</code>. (However, check that the blitter object is not <code>NULL</code> before attempting to free it; it is possible that a draw state might be created and freed without ever having <code>set_size()</code> called on it in between.)
+</p>
+<h4><a name="drawing-blitter-save"></a>3.1.11.3 <code>blitter_save()</code></h4>
+<pre><code>void blitter_save(drawing *dr, blitter *bl, int x, int y);
+</code></pre>
+<p>
+This is a true drawing API function, in that it may only be called from within the game redraw routine. It saves a rectangular portion of the puzzle window into the specified blitter object.
+</p>
+<p>
+<code>x</code> and <code>y</code> give the coordinates of the top left corner of the saved rectangle. The rectangle's width and height are the ones specified when the blitter object was created.
+</p>
+<p>
+This function is required to cope and do the right thing if <code>x</code> and <code>y</code> are out of range. (The right thing probably means saving whatever part of the blitter rectangle overlaps with the visible area of the puzzle window.)
+</p>
+<h4><a name="drawing-blitter-load"></a>3.1.11.4 <code>blitter_load()</code></h4>
+<pre><code>void blitter_load(drawing *dr, blitter *bl, int x, int y);
+</code></pre>
+<p>
+This is a true drawing API function, in that it may only be called from within the game redraw routine. It restores a rectangular portion of the puzzle window from the specified blitter object.
+</p>
+<p>
+<code>x</code> and <code>y</code> give the coordinates of the top left corner of the rectangle to be restored. The rectangle's width and height are the ones specified when the blitter object was created.
+</p>
+<p>
+Alternatively, you can specify both <code>x</code> and <code>y</code> as the special value <code>BLITTER_FROMSAVED</code>, in which case the rectangle will be restored to exactly where it was saved from. (This is probably what you want to do almost all the time, if you're using blitters to implement draggable puzzle elements.)
+</p>
+<p>
+This function is required to cope and do the right thing if <code>x</code> and <code>y</code> (or the equivalent ones saved in the blitter) are out of range. (The right thing probably means restoring whatever part of the blitter rectangle overlaps with the visible area of the puzzle window.)
+</p>
+<p>
+If this function is called on a blitter which had previously been saved from a partially out-of-range rectangle, then the parts of the saved bitmap which were not visible at save time are undefined. If the blitter is restored to a different position so as to make those parts visible, the effect on the drawing area is undefined.
+</p>
+<h3><a name="print-mono-colour"></a>3.1.12 <code>print_mono_colour()</code></h3>
+<pre><code>int print_mono_colour(drawing *dr, int grey);
+</code></pre>
+<p>
+This function allocates a colour index for a simple monochrome colour during printing.
+</p>
+<p>
+<code>grey</code> must be 0 or 1. If <code>grey</code> is 0, the colour returned is black; if <code>grey</code> is 1, the colour is white.
+</p>
+<h3><a name="print-grey-colour"></a>3.1.13 <code>print_grey_colour()</code></h3>
+<pre><code>int print_grey_colour(drawing *dr, float grey);
+</code></pre>
+<p>
+This function allocates a colour index for a grey-scale colour during printing.
+</p>
+<p>
+<code>grey</code> may be any number between 0 (black) and 1 (white); for example, 0.5 indicates a medium grey.
+</p>
+<p>
+The chosen colour will be rendered to the limits of the printer's halftoning capability.
+</p>
+<h3><a name="print-hatched-colour"></a>3.1.14 <code>print_hatched_colour()</code></h3>
+<pre><code>int print_hatched_colour(drawing *dr, int hatch);
+</code></pre>
+<p>
+This function allocates a colour index which does not represent a literal <em>colour</em>. Instead, regions shaded in this colour will be hatched with parallel lines. The <code>hatch</code> parameter defines what type of hatching should be used in place of this colour:
+</p>
+<dl><dt>
+<code>HATCH_SLASH</code>
+</dt>
+<dd>
+This colour will be hatched by lines slanting to the right at 45 degrees.
+</dd>
+<dt>
+<code>HATCH_BACKSLASH</code>
+</dt>
+<dd>
+This colour will be hatched by lines slanting to the left at 45 degrees.
+</dd>
+<dt>
+<code>HATCH_HORIZ</code>
+</dt>
+<dd>
+This colour will be hatched by horizontal lines.
+</dd>
+<dt>
+<code>HATCH_VERT</code>
+</dt>
+<dd>
+This colour will be hatched by vertical lines.
+</dd>
+<dt>
+<code>HATCH_PLUS</code>
+</dt>
+<dd>
+This colour will be hatched by criss-crossing horizontal and vertical lines.
+</dd>
+<dt>
+<code>HATCH_X</code>
+</dt>
+<dd>
+This colour will be hatched by criss-crossing diagonal lines.
+</dd>
+</dl>
+<p>
+Colours defined to use hatching may not be used for drawing lines or text; they may only be used for filling areas. That is, they may be used as the <code>fillcolour</code> parameter to <code>draw_circle()</code> and <code>draw_polygon()</code>, and as the colour parameter to <code>draw_rect()</code>, but may not be used as the <code>outlinecolour</code> parameter to <code>draw_circle()</code> or <code>draw_polygon()</code>, or with <code>draw_line()</code> or <code>draw_text()</code>.
+</p>
+<h3><a name="print-rgb-mono-colour"></a>3.1.15 <code>print_rgb_mono_colour()</code></h3>
+<pre><code>int print_rgb_mono_colour(drawing *dr, float r, float g,
+                          float b, float grey);
+</code></pre>
+<p>
+This function allocates a colour index for a fully specified RGB colour during printing.
+</p>
+<p>
+<code>r</code>, <code>g</code> and <code>b</code> may each be anywhere in the range from 0 to 1.
+</p>
+<p>
+If printing in black and white only, these values will be ignored, and either pure black or pure white will be used instead, according to the &#8216;grey&#8217; parameter. (The fallback colour is the same as the one which would be allocated by <code>print_mono_colour(grey)</code>.)
+</p>
+<h3><a name="print-rgb-grey-colour"></a>3.1.16 <code>print_rgb_grey_colour()</code></h3>
+<pre><code>int print_rgb_grey_colour(drawing *dr, float r, float g,
+                          float b, float grey);
+</code></pre>
+<p>
+This function allocates a colour index for a fully specified RGB colour during printing.
+</p>
+<p>
+<code>r</code>, <code>g</code> and <code>b</code> may each be anywhere in the range from 0 to 1.
+</p>
+<p>
+If printing in black and white only, these values will be ignored, and a shade of grey given by the <code>grey</code> parameter will be used instead. (The fallback colour is the same as the one which would be allocated by <code>print_grey_colour(grey)</code>.)
+</p>
+<h3><a name="print-rgb-hatched-colour"></a>3.1.17 <code>print_rgb_hatched_colour()</code></h3>
+<pre><code>int print_rgb_hatched_colour(drawing *dr, float r, float g,
+                             float b, float hatched);
+</code></pre>
+<p>
+This function allocates a colour index for a fully specified RGB colour during printing.
+</p>
+<p>
+<code>r</code>, <code>g</code> and <code>b</code> may each be anywhere in the range from 0 to 1.
+</p>
+<p>
+If printing in black and white only, these values will be ignored, and a form of cross-hatching given by the <code>hatch</code> parameter will be used instead; see <a href="#print-hatched-colour">section 3.1.14</a> for the possible values of this parameter. (The fallback colour is the same as the one which would be allocated by <code>print_hatched_colour(hatch)</code>.)
+</p>
+<h3><a name="print-line-width"></a>3.1.18 <code>print_line_width()</code></h3>
+<pre><code>void print_line_width(drawing *dr, int width);
+</code></pre>
+<p>
+This function is called to set the thickness of lines drawn during printing. It is meaningless in drawing: all lines drawn by <code>draw_line()</code>, <code>draw_circle</code> and <code>draw_polygon()</code> are one pixel in thickness. However, in printing there is no clear definition of a pixel and so line widths must be explicitly specified.
+</p>
+<p>
+The line width is specified in the usual coordinate system. Note, however, that it is a hint only: the central printing system may choose to vary line thicknesses at user request or due to printer capabilities.
+</p>
+<h2><a name="drawing-frontend"></a>3.2 The drawing API as implemented by the front end</h2>
+<p>
+This section describes the drawing API in the function-pointer form in which it is implemented by a front end.
+</p>
+<p>
+(It isn't only platform-specific front ends which implement this API; the platform-independent module <code>ps.c</code> also provides an implementation of it which outputs PostScript. Thus, any platform which wants to do PS printing can do so with minimum fuss.)
+</p>
+<p>
+The following entries all describe function pointer fields in a structure called <code>drawing_api</code>. Each of the functions takes a &#8216;<code>void *</code>&#8217; context pointer, which it should internally cast back to a more useful type. Thus, a drawing <em>object</em> (<code>drawing *)</code> suitable for passing to the back end redraw or printing functions is constructed by passing a <code>drawing_api</code> and a &#8216;<code>void *</code>&#8217; to the function <code>drawing_new()</code> (see <a href="#drawing-new">section 3.3.1</a>).
+</p>
+<h3><a name="drawingapi-draw-text"></a>3.2.1 <code>draw_text()</code></h3>
+<pre><code>void (*draw_text)(void *handle, int x, int y, int fonttype,
+                  int fontsize, int align, int colour, char *text);
+</code></pre>
+<p>
+This function behaves exactly like the back end <code>draw_text()</code> function; see <a href="#drawing-draw-text">section 3.1.6</a>.
+</p>
+<h3><a name="drawingapi-draw-rect"></a>3.2.2 <code>draw_rect()</code></h3>
+<pre><code>void (*draw_rect)(void *handle, int x, int y, int w, int h,
+                  int colour);
+</code></pre>
+<p>
+This function behaves exactly like the back end <code>draw_rect()</code> function; see <a href="#drawing-draw-rect">section 3.1.1</a>.
+</p>
+<h3><a name="drawingapi-draw-line"></a>3.2.3 <code>draw_line()</code></h3>
+<pre><code>void (*draw_line)(void *handle, int x1, int y1, int x2, int y2,
+                  int colour);
+</code></pre>
+<p>
+This function behaves exactly like the back end <code>draw_line()</code> function; see <a href="#drawing-draw-line">section 3.1.3</a>.
+</p>
+<h3><a name="drawingapi-draw-polygon"></a>3.2.4 <code>draw_polygon()</code></h3>
+<pre><code>void (*draw_polygon)(void *handle, int *coords, int npoints,
+                     int fillcolour, int outlinecolour);
+</code></pre>
+<p>
+This function behaves exactly like the back end <code>draw_polygon()</code> function; see <a href="#drawing-draw-polygon">section 3.1.4</a>.
+</p>
+<h3><a name="drawingapi-draw-circle"></a>3.2.5 <code>draw_circle()</code></h3>
+<pre><code>void (*draw_circle)(void *handle, int cx, int cy, int radius,
+                    int fillcolour, int outlinecolour);
+</code></pre>
+<p>
+This function behaves exactly like the back end <code>draw_circle()</code> function; see <a href="#drawing-draw-circle">section 3.1.5</a>.
+</p>
+<h3><a name="drawingapi-draw-update"></a>3.2.6 <code>draw_update()</code></h3>
+<pre><code>void (*draw_update)(void *handle, int x, int y, int w, int h);
+</code></pre>
+<p>
+This function behaves exactly like the back end <code>draw_update()</code> function; see <a href="#drawing-draw-update">section 3.1.9</a>.
+</p>
+<p>
+An implementation of this API which only supports printing is permitted to define this function pointer to be <code>NULL</code> rather than bothering to define an empty function. The middleware in <code>drawing.c</code> will notice and avoid calling it.
+</p>
+<h3><a name="drawingapi-clip"></a>3.2.7 <code>clip()</code></h3>
+<pre><code>void (*clip)(void *handle, int x, int y, int w, int h);
+</code></pre>
+<p>
+This function behaves exactly like the back end <code>clip()</code> function; see <a href="#drawing-clip">section 3.1.7</a>.
+</p>
+<h3><a name="drawingapi-unclip"></a>3.2.8 <code>unclip()</code></h3>
+<pre><code>void (*unclip)(void *handle);
+</code></pre>
+<p>
+This function behaves exactly like the back end <code>unclip()</code> function; see <a href="#drawing-unclip">section 3.1.8</a>.
+</p>
+<h3><a name="drawingapi-start-draw"></a>3.2.9 <code>start_draw()</code></h3>
+<pre><code>void (*start_draw)(void *handle);
+</code></pre>
+<p>
+This function is called at the start of drawing. It allows the front end to initialise any temporary data required to draw with, such as device contexts.
+</p>
+<p>
+Implementations of this API which do not provide drawing services may define this function pointer to be <code>NULL</code>; it will never be called unless drawing is attempted.
+</p>
+<h3><a name="drawingapi-end-draw"></a>3.2.10 <code>end_draw()</code></h3>
+<pre><code>void (*end_draw)(void *handle);
+</code></pre>
+<p>
+This function is called at the end of drawing. It allows the front end to do cleanup tasks such as deallocating device contexts and scheduling appropriate GUI redraw events.
+</p>
+<p>
+Implementations of this API which do not provide drawing services may define this function pointer to be <code>NULL</code>; it will never be called unless drawing is attempted.
+</p>
+<h3><a name="drawingapi-status-bar"></a>3.2.11 <code>status_bar()</code></h3>
+<pre><code>void (*status_bar)(void *handle, char *text);
+</code></pre>
+<p>
+This function behaves exactly like the back end <code>status_bar()</code> function; see <a href="#drawing-status-bar">section 3.1.10</a>.
+</p>
+<p>
+Front ends implementing this function need not worry about it being called repeatedly with the same text; the middleware code in <code>status_bar()</code> will take care of this.
+</p>
+<p>
+Implementations of this API which do not provide drawing services may define this function pointer to be <code>NULL</code>; it will never be called unless drawing is attempted.
+</p>
+<h3><a name="drawingapi-blitter-new"></a>3.2.12 <code>blitter_new()</code></h3>
+<pre><code>blitter *(*blitter_new)(void *handle, int w, int h);
+</code></pre>
+<p>
+This function behaves exactly like the back end <code>blitter_new()</code> function; see <a href="#drawing-blitter-new">section 3.1.11.1</a>.
+</p>
+<p>
+Implementations of this API which do not provide drawing services may define this function pointer to be <code>NULL</code>; it will never be called unless drawing is attempted.
+</p>
+<h3><a name="drawingapi-blitter-free"></a>3.2.13 <code>blitter_free()</code></h3>
+<pre><code>void (*blitter_free)(void *handle, blitter *bl);
+</code></pre>
+<p>
+This function behaves exactly like the back end <code>blitter_free()</code> function; see <a href="#drawing-blitter-free">section 3.1.11.2</a>.
+</p>
+<p>
+Implementations of this API which do not provide drawing services may define this function pointer to be <code>NULL</code>; it will never be called unless drawing is attempted.
+</p>
+<h3><a name="drawingapi-blitter-save"></a>3.2.14 <code>blitter_save()</code></h3>
+<pre><code>void (*blitter_save)(void *handle, blitter *bl, int x, int y);
+</code></pre>
+<p>
+This function behaves exactly like the back end <code>blitter_save()</code> function; see <a href="#drawing-blitter-save">section 3.1.11.3</a>.
+</p>
+<p>
+Implementations of this API which do not provide drawing services may define this function pointer to be <code>NULL</code>; it will never be called unless drawing is attempted.
+</p>
+<h3><a name="drawingapi-blitter-load"></a>3.2.15 <code>blitter_load()</code></h3>
+<pre><code>void (*blitter_load)(void *handle, blitter *bl, int x, int y);
+</code></pre>
+<p>
+This function behaves exactly like the back end <code>blitter_load()</code> function; see <a href="#drawing-blitter-load">section 3.1.11.4</a>.
+</p>
+<p>
+Implementations of this API which do not provide drawing services may define this function pointer to be <code>NULL</code>; it will never be called unless drawing is attempted.
+</p>
+<h3><a name="drawingapi-begin-doc"></a>3.2.16 <code>begin_doc()</code></h3>
+<pre><code>void (*begin_doc)(void *handle, int pages);
+</code></pre>
+<p>
+This function is called at the beginning of a printing run. It gives the front end an opportunity to initialise any required printing subsystem. It also provides the number of pages in advance.
+</p>
+<p>
+Implementations of this API which do not provide printing services may define this function pointer to be <code>NULL</code>; it will never be called unless printing is attempted.
+</p>
+<h3><a name="drawingapi-begin-page"></a>3.2.17 <code>begin_page()</code></h3>
+<pre><code>void (*begin_page)(void *handle, int number);
+</code></pre>
+<p>
+This function is called during printing, at the beginning of each page. It gives the page number (numbered from 1 rather than 0, so suitable for use in user-visible contexts).
+</p>
+<p>
+Implementations of this API which do not provide printing services may define this function pointer to be <code>NULL</code>; it will never be called unless printing is attempted.
+</p>
+<h3><a name="drawingapi-begin-puzzle"></a>3.2.18 <code>begin_puzzle()</code></h3>
+<pre><code>void (*begin_puzzle)(void *handle, float xm, float xc,
+                     float ym, float yc, int pw, int ph, float wmm);
+</code></pre>
+<p>
+This function is called during printing, just before printing a single puzzle on a page. It specifies the size and location of the puzzle on the page.
+</p>
+<p>
+<code>xm</code> and <code>xc</code> specify the horizontal position of the puzzle on the page, as a linear function of the page width. The front end is expected to multiply the page width by <code>xm</code>, add <code>xc</code> (measured in millimetres), and use the resulting x-coordinate as the left edge of the puzzle.
+</p>
+<p>
+Similarly, <code>ym</code> and <code>yc</code> specify the vertical position of the puzzle as a function of the page height: the page height times <code>ym</code>, plus <code>yc</code> millimetres, equals the desired distance from the top of the page to the top of the puzzle.
+</p>
+<p>
+(This unwieldy mechanism is required because not all printing systems can communicate the page size back to the software. The PostScript back end, for example, writes out PS which determines the page size at print time by means of calling &#8216;<code>clippath</code>&#8217;, and centres the puzzles within that. Thus, exactly the same PS file works on A4 or on US Letter paper without needing local configuration, which simplifies matters.)
+</p>
+<p>
+<code>pw</code> and <code>ph</code> give the size of the puzzle in drawing API coordinates. The printing system will subsequently call the puzzle's own print function, which will in turn call drawing API functions in the expectation that an area <code>pw</code> by <code>ph</code> units is available to draw the puzzle on.
+</p>
+<p>
+Finally, <code>wmm</code> gives the desired width of the puzzle in millimetres. (The aspect ratio is expected to be preserved, so if the desired puzzle height is also needed then it can be computed as <code>wmm*ph/pw</code>.)
+</p>
+<p>
+Implementations of this API which do not provide printing services may define this function pointer to be <code>NULL</code>; it will never be called unless printing is attempted.
+</p>
+<h3><a name="drawingapi-end-puzzle"></a>3.2.19 <code>end_puzzle()</code></h3>
+<pre><code>void (*end_puzzle)(void *handle);
+</code></pre>
+<p>
+This function is called after the printing of a specific puzzle is complete.
+</p>
+<p>
+Implementations of this API which do not provide printing services may define this function pointer to be <code>NULL</code>; it will never be called unless printing is attempted.
+</p>
+<h3><a name="drawingapi-end-page"></a>3.2.20 <code>end_page()</code></h3>
+<pre><code>void (*end_page)(void *handle, int number);
+</code></pre>
+<p>
+This function is called after the printing of a page is finished.
+</p>
+<p>
+Implementations of this API which do not provide printing services may define this function pointer to be <code>NULL</code>; it will never be called unless printing is attempted.
+</p>
+<h3><a name="drawingapi-end-doc"></a>3.2.21 <code>end_doc()</code></h3>
+<pre><code>void (*end_doc)(void *handle);
+</code></pre>
+<p>
+This function is called after the printing of the entire document is finished. This is the moment to close files, send things to the print spooler, or whatever the local convention is.
+</p>
+<p>
+Implementations of this API which do not provide printing services may define this function pointer to be <code>NULL</code>; it will never be called unless printing is attempted.
+</p>
+<h3><a name="drawingapi-line-width"></a>3.2.22 <code>line_width()</code></h3>
+<pre><code>void (*line_width)(void *handle, float width);
+</code></pre>
+<p>
+This function is called to set the line thickness, during printing only. Note that the width is a <code>float</code> here, where it was an <code>int</code> as seen by the back end. This is because <code>drawing.c</code> may have scaled it on the way past.
+</p>
+<p>
+However, the width is still specified in the same coordinate system as the rest of the drawing.
+</p>
+<p>
+Implementations of this API which do not provide printing services may define this function pointer to be <code>NULL</code>; it will never be called unless printing is attempted.
+</p>
+<h2><a name="drawingapi-frontend"></a>3.3 The drawing API as called by the front end</h2>
+<p>
+There are a small number of functions provided in <code>drawing.c</code> which the front end needs to <em>call</em>, rather than helping to implement. They are described in this section.
+</p>
+<h3><a name="drawing-new"></a>3.3.1 <code>drawing_new()</code></h3>
+<pre><code>drawing *drawing_new(const drawing_api *api, midend *me,
+                     void *handle);
+</code></pre>
+<p>
+This function creates a drawing object. It is passed a <code>drawing_api</code>, which is a structure containing nothing but function pointers; and also a &#8216;<code>void *</code>&#8217; handle. The handle is passed back to each function pointer when it is called.
+</p>
+<p>
+The <code>midend</code> parameter is used for rewriting the status bar contents: <code>status_bar()</code> (see <a href="#drawing-status-bar">section 3.1.10</a>) has to call a function in the mid-end which might rewrite the status bar text. If the drawing object is to be used only for printing, or if the game is known not to call <code>status_bar()</code>, this parameter may be <code>NULL</code>.
+</p>
+<h3><a name="drawing-free"></a>3.3.2 <code>drawing_free()</code></h3>
+<pre><code>void drawing_free(drawing *dr);
+</code></pre>
+<p>
+This function frees a drawing object. Note that the &#8216;<code>void *</code>&#8217; handle is not freed; if that needs cleaning up it must be done by the front end.
+</p>
+<h3><a name="drawing-print-get-colour"></a>3.3.3 <code>print_get_colour()</code></h3>
+<pre><code>void print_get_colour(drawing *dr, int colour, int printincolour,
+                      int *hatch, float *r, float *g, float *b)
+</code></pre>
+<p>
+This function is called by the implementations of the drawing API functions when they are called in a printing context. It takes a colour index as input, and returns the description of the colour as requested by the back end.
+</p>
+<p>
+<code>printincolour</code> is <code>TRUE</code> iff the implementation is printing in colour. This will alter the results returned if the colour in question was specified with a black-and-white fallback value.
+</p>
+<p>
+If the colour should be rendered by hatching, <code>*hatch</code> is filled with the type of hatching desired. See <a href="#print-grey-colour">section 3.1.13</a> for details of the values this integer can take.
+</p>
+<p>
+If the colour should be rendered as solid colour, <code>*hatch</code> is given a negative value, and <code>*r</code>, <code>*g</code> and <code>*b</code> are filled with the RGB values of the desired colour (if printing in colour), or all filled with the grey-scale value (if printing in black and white).
+</p>
+
+<hr><address></address></body>
+</html>

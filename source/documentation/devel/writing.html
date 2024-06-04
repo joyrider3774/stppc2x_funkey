@@ -1,0 +1,388 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+"http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+<meta http-equiv="content-type" content="text/html; charset=US-ASCII">
+<title>How to write a new puzzle</title>
+<link rel="previous" href="utils.html">
+<link rel="ToC" href="index.html">
+<link rel="up" href="index.html">
+</head>
+<body>
+<p><a href="utils.html">Previous</a> | <a href="index.html">Contents</a> | Next</p>
+
+<ul>
+<li><a href="#writing">Chapter 6: How to write a new puzzle</a>
+<ul>
+<li><a href="#writing-editorial">6.1 Choosing a puzzle</a></li>
+<li><a href="#writing-gs">6.2 Getting started</a>
+<ul>
+<li><a href="#writing-generation">6.2.1 Puzzle generation</a></li>
+<li><a href="#writing-textformats">6.2.2 Designing textual description formats</a></li>
+</ul></li>
+<li><a href="#writing-howto">6.3 Common how-to questions</a>
+<ul>
+<li><a href="#writing-howto-cursor">6.3.1 Drawing objects at only one position</a></li>
+<li><a href="#writing-keyboard-cursor">6.3.2 Implementing a keyboard-controlled cursor</a></li>
+<li><a href="#writing-howto-dragging">6.3.3 Implementing draggable sprites</a></li>
+<li><a href="#writing-ref-counting">6.3.4 Sharing large invariant data between all game states</a></li>
+<li><a href="#writing-flash-types">6.3.5 Implementing multiple types of flash</a></li>
+<li><a href="#writing-move-anim">6.3.6 Animating game moves</a></li>
+<li><a href="#writing-conditional-anim">6.3.7 Animating drag operations</a></li>
+<li><a href="#writing-cheating">6.3.8 Inhibiting the victory flash when Solve is used</a></li>
+</ul></li>
+<li><a href="#writing-testing">6.4 Things to test once your puzzle is written</a></li>
+</ul></li>
+</ul>
+<h1><a name="writing"></a>Chapter 6: How to write a new puzzle</h1>
+<p>
+This chapter gives a guide to how to actually write a new puzzle: where to start, what to do first, how to solve common problems.
+</p>
+<p>
+The previous chapters have been largely composed of facts. This one is mostly advice.
+</p>
+<h2><a name="writing-editorial"></a>6.1 Choosing a puzzle</h2>
+<p>
+Before you start writing a puzzle, you have to choose one. Your taste in puzzle games is up to you, of course; and, in fact, you're probably reading this guide because you've <em>already</em> thought of a game you want to write. But if you want to get it accepted into the official Puzzles distribution, then there's a criterion it has to meet.
+</p>
+<p>
+The current Puzzles editorial policy is that all games should be <em>fair</em>. A fair game is one which a player can only fail to complete through demonstrable lack of skill &#8211; that is, such that a better player in the same situation would have <em>known</em> to do something different.
+</p>
+<p>
+For a start, that means every game presented to the user must have <em>at least one solution</em>. Giving the unsuspecting user a puzzle which is actually impossible is not acceptable. (There is an exception: if the user has selected some non-default option which is clearly labelled as potentially unfair, <em>then</em> you're allowed to generate possibly insoluble puzzles, because the user isn't unsuspecting any more. Same Game and Mines both have options of this type.)
+</p>
+<p>
+Also, this actually <em>rules out</em> games such as Klondike, or the normal form of Mahjong Solitaire. Those games have the property that even if there is a solution (i.e. some sequence of moves which will get from the start state to the solved state), the player doesn't necessarily have enough information to <em>find</em> that solution. In both games, it is possible to reach a dead end because you had an arbitrary choice to make and made it the wrong way. This violates the fairness criterion, because a better player couldn't have known they needed to make the other choice.
+</p>
+<p>
+(GNOME has a variant on Mahjong Solitaire which makes it fair: there is a Shuffle operation which randomly permutes all the remaining tiles without changing their positions, which allows you to get out of a sticky situation. Using this operation adds a 60-second penalty to your solution time, so it's to the player's advantage to try to minimise the chance of having to use it. It's still possible to render the game uncompletable if you end up with only two tiles vertically stacked, but that's easy to foresee and avoid using a shuffle operation. This form of the game <em>is</em> fair. Implementing it in Puzzles would require an infrastructure change so that the back end could communicate time penalties to the mid-end, but that would be easy enough.)
+</p>
+<p>
+Providing a <em>unique</em> solution is a little more negotiable; it depends on the puzzle. Solo would have been of unacceptably low quality if it didn't always have a unique solution, whereas Twiddle inherently has multiple solutions by its very nature and it would have been meaningless to even <em>suggest</em> making it uniquely soluble. Somewhere in between, Flip could reasonably be made to have unique solutions (by enforcing a zero-dimension kernel in every generated matrix) but it doesn't seem like a serious quality problem that it doesn't.
+</p>
+<p>
+Of course, you don't <em>have</em> to care about all this. There's nothing stopping you implementing any puzzle you want to if you're happy to maintain your puzzle yourself, distribute it from your own web site, fork the Puzzles code completely, or anything like that. It's free software; you can do what you like with it. But any game that you want to be accepted into <em>my</em> Puzzles code base has to satisfy the fairness criterion, which means all randomly generated puzzles must have a solution (unless the user has deliberately chosen otherwise) and it must be possible <em>in theory</em> to find that solution without having to guess.
+</p>
+<h2><a name="writing-gs"></a>6.2 Getting started</h2>
+<p>
+The simplest way to start writing a new puzzle is to copy <code>nullgame.c</code>. This is a template puzzle source file which does almost nothing, but which contains all the back end function prototypes and declares the back end data structure correctly. It is built every time the rest of Puzzles is built, to ensure that it doesn't get out of sync with the code and remains buildable.
+</p>
+<p>
+So start by copying <code>nullgame.c</code> into your new source file. Then you'll gradually add functionality until the very boring Null Game turns into your real game.
+</p>
+<p>
+Next you'll need to add your puzzle to the Makefiles, in order to compile it conveniently. <em>Do not edit the Makefiles</em>: they are created automatically by the script <code>mkfiles.pl</code>, from the file called <code>Recipe</code>. Edit <code>Recipe</code>, and then re-run <code>mkfiles.pl</code>.
+</p>
+<p>
+Also, don't forget to add your puzzle to <code>list.c</code>: if you don't, then it will still run fine on platforms which build each puzzle separately, but Mac OS X and other monolithic platforms will not include your new puzzle in their single binary.
+</p>
+<p>
+Once your source file is building, you can move on to the fun bit.
+</p>
+<h3><a name="writing-generation"></a>6.2.1 Puzzle generation</h3>
+<p>
+Randomly generating instances of your puzzle is almost certain to be the most difficult part of the code, and also the task with the highest chance of turning out to be completely infeasible. Therefore I strongly recommend doing it <em>first</em>, so that if it all goes horribly wrong you haven't wasted any more time than you absolutely had to. What I usually do is to take an unmodified <code>nullgame.c</code>, and start adding code to <code>new_game_desc()</code> which tries to generate a puzzle instance and print it out using <code>printf()</code>. Once that's working, <em>then</em> I start connecting it up to the return value of <code>new_game_desc()</code>, populating other structures like <code>game_params</code>, and generally writing the rest of the source file.
+</p>
+<p>
+There are many ways to generate a puzzle which is known to be soluble. In this section I list all the methods I currently know of, in case any of them can be applied to your puzzle. (Not all of these methods will work, or in some cases even make sense, for all puzzles.)
+</p>
+<p>
+Some puzzles are mathematically tractable, meaning you can work out in advance which instances are soluble. Sixteen, for example, has a parity constraint in some settings which renders exactly half the game space unreachable, but it can be mathematically proved that any position not in that half <em>is</em> reachable. Therefore, Sixteen's grid generation simply consists of selecting at random from a well defined subset of the game space. Cube in its default state is even easier: <em>every</em> possible arrangement of the blue squares and the cube's starting position is soluble!
+</p>
+<p>
+Another option is to redefine what you mean by &#8216;soluble&#8217;. Black Box takes this approach. There are layouts of balls in the box which are completely indistinguishable from one another no matter how many beams you fire into the box from which angles, which would normally be grounds for declaring those layouts unfair; but fortunately, detecting that indistinguishability is computationally easy. So Black Box doesn't demand that your ball placements match its own; it merely demands that your ball placements be <em>indistinguishable</em> from the ones it was thinking of. If you have an ambiguous puzzle, then any of the possible answers is considered to be a solution. Having redefined the rules in that way, any puzzle is soluble again.
+</p>
+<p>
+Those are the simple techniques. If they don't work, you have to get cleverer.
+</p>
+<p>
+One way to generate a soluble puzzle is to start from the solved state and make inverse moves until you reach a starting state. Then you know there's a solution, because you can just list the inverse moves you made and make them in the opposite order to return to the solved state.
+</p>
+<p>
+This method can be simple and effective for puzzles where you get to decide what's a starting state and what's not. In Pegs, for example, the generator begins with one peg in the centre of the board and makes inverse moves until it gets bored; in this puzzle, valid inverse moves are easy to detect, and <em>any</em> state that's reachable from the solved state by inverse moves is a reasonable starting position. So Pegs just continues making inverse moves until the board satisfies some criteria about extent and density, and then stops and declares itself done.
+</p>
+<p>
+For other puzzles, it can be a lot more difficult. Same Game uses this strategy too, and it's lucky to get away with it at all: valid inverse moves aren't easy to find (because although it's easy to insert additional squares in a Same Game position, it's difficult to arrange that <em>after</em> the insertion they aren't adjacent to any other squares of the same colour), so you're constantly at risk of running out of options and having to backtrack or start again. Also, Same Game grids never start off half-empty, which means you can't just stop when you run out of moves &#8211; you have to find a way to fill the grid up <em>completely</em>.
+</p>
+<p>
+The other way to generate a puzzle that's soluble is to start from the other end, and actually write a <em>solver</em>. This tends to ensure that a puzzle has a <em>unique</em> solution over and above having a solution at all, so it's a good technique to apply to puzzles for which that's important.
+</p>
+<p>
+One theoretical drawback of generating soluble puzzles by using a solver is that your puzzles are restricted in difficulty to those which the solver can handle. (Most solvers are not fully general: many sets of puzzle rules are NP-complete or otherwise nasty, so most solvers can only handle a subset of the theoretically soluble puzzles.) It's been my experience in practice, however, that this usually isn't a problem; computers are good at very different things from humans, and what the computer thinks is nice and easy might still be pleasantly challenging for a human. For example, when solving Dominosa puzzles I frequently find myself using a variety of reasoning techniques that my solver doesn't know about; in principle, therefore, I should be able to solve the puzzle using only those techniques it <em>does</em> know about, but this would involve repeatedly searching the entire grid for the one simple deduction I can make. Computers are good at this sort of exhaustive search, but it's been my experience that human solvers prefer to do more complex deductions than to spend ages searching for simple ones. So in many cases I don't find my own playing experience to be limited by the restrictions on the solver.
+</p>
+<p>
+(This isn't <em>always</em> the case. Solo is a counter-example; generating Solo puzzles using a simple solver does lead to qualitatively easier puzzles. Therefore I had to make the Solo solver rather more advanced than most of them.)
+</p>
+<p>
+There are several different ways to apply a solver to the problem of generating a soluble puzzle. I list a few of them below.
+</p>
+<p>
+The simplest approach is brute force: randomly generate a puzzle, use the solver to see if it's soluble, and if not, throw it away and try again until you get lucky. This is often a viable technique if all else fails, but it tends not to scale well: for many puzzle types, the probability of finding a uniquely soluble instance decreases sharply as puzzle size goes up, so this technique might work reasonably fast for small puzzles but take (almost) forever at larger sizes. Still, if there's no other alternative it can be usable: Pattern and Dominosa both use this technique. (However, Dominosa has a means of tweaking the randomly generated grids to increase the <em>probability</em> of them being soluble, by ruling out one of the most common ambiguous cases. This improved generation speed by over a factor of 10 on the highest preset!)
+</p>
+<p>
+An approach which can be more scalable involves generating a grid and then tweaking it to make it soluble. This is the technique used by Mines and also by Net: first a random puzzle is generated, and then the solver is run to see how far it gets. Sometimes the solver will get stuck; when that happens, examine the area it's having trouble with, and make a small random change in that area to allow it to make more progress. Continue solving (possibly even without restarting the solver), tweaking as necessary, until the solver finishes. Then restart the solver from the beginning to ensure that the tweaks haven't caused new problems in the process of solving old ones (which can sometimes happen).
+</p>
+<p>
+This strategy works well in situations where the usual solver failure mode is to get stuck in an easily localised spot. Thus it works well for Net and Mines, whose most common failure mode tends to be that most of the grid is fine but there are a few widely separated ambiguous sections; but it would work less well for Dominosa, in which the way you get stuck is to have scoured the whole grid and not found anything you can deduce <em>anywhere</em>. Also, it relies on there being a low probability that tweaking the grid introduces a new problem at the same time as solving the old one; Mines and Net also have the property that most of their deductions are local, so that it's very unlikely for a tweak to affect something half way across the grid from the location where it was applied. In Dominosa, by contrast, a lot of deductions use information about half the grid (&#8216;out of all the sixes, only one is next to a three&#8217;, which can depend on the values of up to 32 of the 56 squares in the default setting!), so this tweaking strategy would be rather less likely to work well.
+</p>
+<p>
+A more specialised strategy is that used in Solo and Slant. These puzzles have the property that they derive their difficulty from not presenting all the available clues. (In Solo's case, if all the possible clues were provided then the puzzle would already be solved; in Slant it would still require user action to fill in the lines, but it would present no challenge at all). Therefore, a simple generation technique is to leave the decision of which clues to provide until the last minute. In other words, first generate a random <em>filled</em> grid with all possible clues present, and then gradually remove clues for as long as the solver reports that it's still soluble. Unlike the methods described above, this technique <em>cannot</em> fail &#8211; once you've got a filled grid, nothing can stop you from being able to convert it into a viable puzzle. However, it wouldn't even be meaningful to apply this technique to (say) Pattern, in which clues can never be left out, so the only way to affect the set of clues is by altering the solution.
+</p>
+<p>
+(Unfortunately, Solo is complicated by the need to provide puzzles at varying difficulty levels. It's easy enough to generate a puzzle of <em>at most</em> a given level of difficulty; you just have a solver with configurable intelligence, and you set it to a given level and apply the above technique, thus guaranteeing that the resulting grid is solvable by someone with at most that much intelligence. However, generating a puzzle of <em>at least</em> a given level of difficulty is rather harder; if you go for <em>at most</em> Intermediate level, you're likely to find that you've accidentally generated a Trivial grid a lot of the time, because removing just one number is sufficient to take the puzzle from Trivial straight to Ambiguous. In that situation Solo has no remaining options but to throw the puzzle away and start again.)
+</p>
+<p>
+A final strategy is to use the solver <em>during</em> puzzle construction: lay out a bit of the grid, run the solver to see what it allows you to deduce, and then lay out a bit more to allow the solver to make more progress. There are articles on the web that recommend constructing Sudoku puzzles by this method (which is completely the opposite way round to how Solo does it); for Sudoku it has the advantage that you get to specify your clue squares in advance (so you can have them make pretty patterns).
+</p>
+<p>
+Rectangles uses a strategy along these lines. First it generates a grid by placing the actual rectangles; then it has to decide where in each rectangle to place a number. It uses a solver to help it place the numbers in such a way as to ensure a unique solution. It does this by means of running a test solver, but it runs the solver <em>before</em> it's placed any of the numbers &#8211; which means the solver must be capable of coping with uncertainty about exactly where the numbers are! It runs the solver as far as it can until it gets stuck; then it narrows down the possible positions of a number in order to allow the solver to make more progress, and so on. Most of the time this process terminates with the grid fully solved, at which point any remaining number-placement decisions can be made at random from the options not so far ruled out. Note that unlike the Net/Mines tweaking strategy described above, this algorithm does not require a checking run after it completes: if it finishes successfully at all, then it has definitely produced a uniquely soluble puzzle.
+</p>
+<p>
+Most of the strategies described above are not 100% reliable. Each one has a failure rate: every so often it has to throw out the whole grid and generate a fresh one from scratch. (Solo's strategy would be the exception, if it weren't for the need to provide configurable difficulty levels.) Occasional failures are not a fundamental problem in this sort of work, however: it's just a question of dividing the grid generation time by the success rate (if it takes 10ms to generate a candidate grid and 1/5 of them work, then it will take 50ms on average to generate a viable one), and seeing whether the expected time taken to <em>successfully</em> generate a puzzle is unacceptably slow. Dominosa's generator has a very low success rate (about 1 out of 20 candidate grids turn out to be usable, and if you think <em>that's</em> bad then go and look at the source code and find the comment showing what the figures were before the generation-time tweaks!), but the generator itself is very fast so this doesn't matter. Rectangles has a slower generator, but fails well under 50% of the time.
+</p>
+<p>
+So don't be discouraged if you have an algorithm that doesn't always work: if it <em>nearly</em> always works, that's probably good enough. The one place where reliability is important is that your algorithm must never produce false positives: it must not claim a puzzle is soluble when it isn't. It can produce false negatives (failing to notice that a puzzle is soluble), and it can fail to generate a puzzle at all, provided it doesn't do either so often as to become slow.
+</p>
+<p>
+One last piece of advice: for grid-based puzzles, when writing and testing your generation algorithm, it's almost always a good idea <em>not</em> to test it initially on a grid that's square (i.e. <code>w==h</code>), because if the grid is square then you won't notice if you mistakenly write <code>h</code> instead of <code>w</code> (or vice versa) somewhere in the code. Use a rectangular grid for testing, and any size of grid will be likely to work after that.
+</p>
+<h3><a name="writing-textformats"></a>6.2.2 Designing textual description formats</h3>
+<p>
+Another aspect of writing a puzzle which is worth putting some thought into is the design of the various text description formats: the format of the game parameter encoding, the game description encoding, and the move encoding.
+</p>
+<p>
+The first two of these should be reasonably intuitive for a user to type in; so provide some flexibility where possible. Suppose, for example, your parameter format consists of two numbers separated by an <code>x</code> to specify the grid dimensions (<code>10x10</code> or <code>20x15</code>), and then has some suffixes to specify other aspects of the game type. It's almost always a good idea in this situation to arrange that <code>decode_params()</code> can handle the suffixes appearing in any order, even if <code>encode_params()</code> only ever generates them in one order.
+</p>
+<p>
+These formats will also be expected to be reasonably stable: users will expect to be able to exchange game IDs with other users who aren't running exactly the same version of your game. So make them robust and stable: don't build too many assumptions into the game ID format which will have to be changed every time something subtle changes in the puzzle code.
+</p>
+<h2><a name="writing-howto"></a>6.3 Common how-to questions</h2>
+<p>
+This section lists some common things people want to do when writing a puzzle, and describes how to achieve them within the Puzzles framework.
+</p>
+<h3><a name="writing-howto-cursor"></a>6.3.1 Drawing objects at only one position</h3>
+<p>
+A common phenomenon is to have an object described in the <code>game_state</code> or the <code>game_ui</code> which can only be at one position. A cursor &#8211; probably specified in the <code>game_ui</code> &#8211; is a good example.
+</p>
+<p>
+In the <code>game_ui</code>, it would <em>obviously</em> be silly to have an array covering the whole game grid with a boolean flag stating whether the cursor was at each position. Doing that would waste space, would make it difficult to find the cursor in order to do anything with it, and would introduce the potential for synchronisation bugs in which you ended up with two cursors or none. The obviously sensible way to store a cursor in the <code>game_ui</code> is to have fields directly encoding the cursor's coordinates.
+</p>
+<p>
+However, it is a mistake to assume that the same logic applies to the <code>game_drawstate</code>. If you replicate the cursor position fields in the draw state, the redraw code will get very complicated. In the draw state, in fact, it <em>is</em> probably the right thing to have a cursor flag for every position in the grid. You probably have an array for the whole grid in the drawstate already (stating what is currently displayed in the window at each position); the sensible approach is to add a &#8216;cursor&#8217; flag to each element of that array. Then the main redraw loop will look something like this (pseudo-code):
+</p>
+<pre><code>for (y = 0; y &lt; h; y++) {
+    for (x = 0; x &lt; w; x++) {
+        int value = state-&gt;symbol_at_position[y][x];
+        if (x == ui-&gt;cursor_x &amp;&amp; y == ui-&gt;cursor_y)
+            value |= CURSOR;
+        if (ds-&gt;symbol_at_position[y][x] != value) {
+            symbol_drawing_subroutine(dr, ds, x, y, value);
+            ds-&gt;symbol_at_position[y][x] = value;
+        }
+    }
+}
+</code></pre>
+<p>
+This loop is very simple, pretty hard to get wrong, and <em>automatically</em> deals both with erasing the previous cursor and drawing the new one, with no special case code required.
+</p>
+<p>
+This type of loop is generally a sensible way to write a redraw function, in fact. The best thing is to ensure that the information stored in the draw state for each position tells you <em>everything</em> about what was drawn there. A good way to ensure that is to pass precisely the same information, and <em>only</em> that information, to a subroutine that does the actual drawing; then you know there's no additional information which affects the drawing but which you don't notice changes in.
+</p>
+<h3><a name="writing-keyboard-cursor"></a>6.3.2 Implementing a keyboard-controlled cursor</h3>
+<p>
+It is often useful to provide a keyboard control method in a basically mouse-controlled game. A keyboard-controlled cursor is best implemented by storing its location in the <code>game_ui</code> (since if it were in the <code>game_state</code> then the user would have to separately undo every cursor move operation). So the procedure would be:
+</p>
+<ul><li>
+Put cursor position fields in the <code>game_ui</code>.
+</li>
+<li>
+<code>interpret_move()</code> responds to arrow keys by modifying the cursor position fields and returning <code>""</code>.
+</li>
+<li>
+<code>interpret_move()</code> responds to some sort of fire button by actually performing a move based on the current cursor location.
+</li>
+<li>
+You might want an additional <code>game_ui</code> field stating whether the cursor is currently visible, and having it disappear when a mouse action occurs (so that it doesn't clutter the display when not actually in use).
+</li>
+<li>
+You might also want to automatically hide the cursor in <code>changed_state()</code> when the current game state changes to one in which there is no move to make (which is the case in some types of completed game).
+</li>
+<li>
+<code>redraw()</code> draws the cursor using the technique described in <a href="#writing-howto-cursor">section 6.3.1</a>.
+</li>
+</ul>
+<h3><a name="writing-howto-dragging"></a>6.3.3 Implementing draggable sprites</h3>
+<p>
+Some games have a user interface which involves dragging some sort of game element around using the mouse. If you need to show a graphic moving smoothly over the top of other graphics, use a blitter (see <a href="drawing.html#drawing-blitter">section 3.1.11</a> for the blitter API) to save the background underneath it. The typical scenario goes:
+</p>
+<ul><li>
+Have a blitter field in the <code>game_drawstate</code>.
+</li>
+<li>
+Set the blitter field to <code>NULL</code> in the game's <code>new_drawstate()</code> function, since you don't yet know how big the piece of saved background needs to be.
+</li>
+<li>
+In the game's <code>set_size()</code> function, once you know the size of the object you'll be dragging around the display and hence the required size of the blitter, actually allocate the blitter.
+</li>
+<li>
+In <code>free_drawstate()</code>, free the blitter if it's not <code>NULL</code>.
+</li>
+<li>
+In <code>interpret_move()</code>, respond to mouse-down and mouse-drag events by updating some fields in the <code>game_ui</code> which indicate that a drag is in progress.
+</li>
+<li>
+At the <em>very end</em> of <code>redraw()</code>, after all other drawing has been done, draw the moving object if there is one. First save the background under the object in the blitter; then set a clip rectangle covering precisely the area you just saved (just in case anti-aliasing or some other error causes your drawing to go beyond the area you saved). Then draw the object, and call <code>unclip()</code>. Finally, set a flag in the <code>game_drawstate</code> that indicates that the blitter needs restoring.
+</li>
+<li>
+At the very start of <code>redraw()</code>, before doing anything else at all, check the flag in the <code>game_drawstate</code>, and if it says the blitter needs restoring then restore it. (Then clear the flag, so that this won't happen again in the next redraw if no moving object is drawn this time.)
+</li>
+</ul>
+<p>
+This way, you will be able to write the rest of the redraw function completely ignoring the dragged object, as if it were floating above your bitmap and being completely separate.
+</p>
+<h3><a name="writing-ref-counting"></a>6.3.4 Sharing large invariant data between all game states</h3>
+<p>
+In some puzzles, there is a large amount of data which never changes between game states. The array of numbers in Dominosa is a good example.
+</p>
+<p>
+You <em>could</em> dynamically allocate a copy of that array in every <code>game_state</code>, and have <code>dup_game()</code> make a fresh copy of it for every new <code>game_state</code>; but it would waste memory and time. A more efficient way is to use a reference-counted structure.
+</p>
+<ul><li>
+Define a structure type containing the data in question, and also containing an integer reference count.
+</li>
+<li>
+Have a field in <code>game_state</code> which is a pointer to this structure.
+</li>
+<li>
+In <code>new_game()</code>, when creating a fresh game state at the start of a new game, create an instance of this structure, initialise it with the invariant data, and set its reference count to 1.
+</li>
+<li>
+In <code>dup_game()</code>, rather than making a copy of the structure for the new game state, simply set the new game state to point at the same copy of the structure, and increment its reference count.
+</li>
+<li>
+In <code>free_game()</code>, decrement the reference count in the structure pointed to by the game state; if the count reaches zero, free the structure.
+</li>
+</ul>
+<p>
+This way, the invariant data will persist for only as long as it's genuinely needed; <em>as soon</em> as the last game state for a particular puzzle instance is freed, the invariant data for that puzzle will vanish as well. Reference counting is a very efficient form of garbage collection, when it works at all. (Which it does in this instance, of course, because there's no possibility of circular references.)
+</p>
+<h3><a name="writing-flash-types"></a>6.3.5 Implementing multiple types of flash</h3>
+<p>
+In some games you need to flash in more than one different way. Mines, for example, flashes white when you win, and flashes red when you tread on a mine and die.
+</p>
+<p>
+The simple way to do this is:
+</p>
+<ul><li>
+Have a field in the <code>game_ui</code> which describes the type of flash.
+</li>
+<li>
+In <code>flash_length()</code>, examine the old and new game states to decide whether a flash is required and what type. Write the type of flash to the <code>game_ui</code> field whenever you return non-zero.
+</li>
+<li>
+In <code>redraw()</code>, when you detect that <code>flash_time</code> is non-zero, examine the field in <code>game_ui</code> to decide which type of flash to draw.
+</li>
+</ul>
+<p>
+<code>redraw()</code> will never be called with <code>flash_time</code> non-zero unless <code>flash_length()</code> was first called to tell the mid-end that a flash was required; so whenever <code>redraw()</code> notices that <code>flash_time</code> is non-zero, you can be sure that the field in <code>game_ui</code> is correctly set.
+</p>
+<h3><a name="writing-move-anim"></a>6.3.6 Animating game moves</h3>
+<p>
+A number of puzzle types benefit from a quick animation of each move you make.
+</p>
+<p>
+For some games, such as Fifteen, this is particularly easy. Whenever <code>redraw()</code> is called with <code>oldstate</code> non-<code>NULL</code>, Fifteen simply compares the position of each tile in the two game states, and if the tile is not in the same place then it draws it some fraction of the way from its old position to its new position. This method copes automatically with undo.
+</p>
+<p>
+Other games are less obvious. In Sixteen, for example, you can't just draw each tile a fraction of the way from its old to its new position: if you did that, the end tile would zip very rapidly past all the others to get to the other end and that would look silly. (Worse, it would look inconsistent if the end tile was drawn on top going one way and on the bottom going the other way.)
+</p>
+<p>
+A useful trick here is to define a field or two in the game state that indicates what the last move was.
+</p>
+<ul><li>
+Add a &#8216;last move&#8217; field to the <code>game_state</code> (or two or more fields if the move is complex enough to need them).
+</li>
+<li>
+<code>new_game()</code> initialises this field to a null value for a new game state.
+</li>
+<li>
+<code>execute_move()</code> sets up the field to reflect the move it just performed.
+</li>
+<li>
+<code>redraw()</code> now needs to examine its <code>dir</code> parameter. If <code>dir</code> is positive, it determines the move being animated by looking at the last-move field in <code>newstate</code>; but if <code>dir</code> is negative, it has to look at the last-move field in <code>oldstate</code>, and invert whatever move it finds there.
+</li>
+</ul>
+<p>
+Note also that Sixteen needs to store the <em>direction</em> of the move, because you can't quite determine it by examining the row or column in question. You can in almost all cases, but when the row is precisely two squares long it doesn't work since a move in either direction looks the same. (You could argue that since moving a 2-element row left and right has the same effect, it doesn't matter which one you animate; but in fact it's very disorienting to click the arrow left and find the row moving right, and almost as bad to undo a move to the right and find the game animating <em>another</em> move to the right.)
+</p>
+<h3><a name="writing-conditional-anim"></a>6.3.7 Animating drag operations</h3>
+<p>
+In Untangle, moves are made by dragging a node from an old position to a new position. Therefore, at the time when the move is initially made, it should not be animated, because the node has already been dragged to the right place and doesn't need moving there. However, it's nice to animate the same move if it's later undone or redone. This requires a bit of fiddling.
+</p>
+<p>
+The obvious approach is to have a flag in the <code>game_ui</code> which inhibits move animation, and to set that flag in <code>interpret_move()</code>. The question is, when would the flag be reset again? The obvious place to do so is <code>changed_state()</code>, which will be called once per move. But it will be called <em>before</em> <code>anim_length()</code>, so if it resets the flag then <code>anim_length()</code> will never see the flag set at all.
+</p>
+<p>
+The solution is to have <em>two</em> flags in a queue.
+</p>
+<ul><li>
+Define two flags in <code>game_ui</code>; let's call them &#8216;current&#8217; and &#8216;next&#8217;.
+</li>
+<li>
+Set both to <code>FALSE</code> in <code>new_ui()</code>.
+</li>
+<li>
+When a drag operation completes in <code>interpret_move()</code>, set the &#8216;next&#8217; flag to <code>TRUE</code>.
+</li>
+<li>
+Every time <code>changed_state()</code> is called, set the value of &#8216;current&#8217; to the value in &#8216;next&#8217;, and then set the value of &#8216;next&#8217; to <code>FALSE</code>.
+</li>
+<li>
+That way, &#8216;current&#8217; will be <code>TRUE</code> <em>after</em> a call to <code>changed_state()</code> if and only if that call to <code>changed_state()</code> was the result of a drag operation processed by <code>interpret_move()</code>. Any other call to <code>changed_state()</code>, due to an Undo or a Redo or a Restart or a Solve, will leave &#8216;current&#8217; <code>FALSE</code>.
+</li>
+<li>
+So now <code>anim_length()</code> can request a move animation if and only if the &#8216;current&#8217; flag is <em>not</em> set.
+</li>
+</ul>
+<h3><a name="writing-cheating"></a>6.3.8 Inhibiting the victory flash when Solve is used</h3>
+<p>
+Many games flash when you complete them, as a visual congratulation for having got to the end of the puzzle. It often seems like a good idea to disable that flash when the puzzle is brought to a solved state by means of the Solve operation.
+</p>
+<p>
+This is easily done:
+</p>
+<ul><li>
+Add a &#8216;cheated&#8217; flag to the <code>game_state</code>.
+</li>
+<li>
+Set this flag to <code>FALSE</code> in <code>new_game()</code>.
+</li>
+<li>
+Have <code>solve()</code> return a move description string which clearly identifies the move as a solve operation.
+</li>
+<li>
+Have <code>execute_move()</code> respond to that clear identification by setting the &#8216;cheated&#8217; flag in the returned <code>game_state</code>. The flag will then be propagated to all subsequent game states, even if the user continues fiddling with the game after it is solved.
+</li>
+<li>
+<code>flash_length()</code> now returns non-zero if <code>oldstate</code> is not completed and <code>newstate</code> is, <em>and</em> neither state has the &#8216;cheated&#8217; flag set.
+</li>
+</ul>
+<h2><a name="writing-testing"></a>6.4 Things to test once your puzzle is written</h2>
+<p>
+Puzzle implementations written in this framework are self-testing as far as I could make them.
+</p>
+<p>
+Textual game and move descriptions, for example, are generated and parsed as part of the normal process of play. Therefore, if you can make moves in the game <em>at all</em> you can be reasonably confident that the mid-end serialisation interface will function correctly and you will be able to save your game. (By contrast, if I'd stuck with a single <code>make_move()</code> function performing the jobs of both <code>interpret_move()</code> and <code>execute_move()</code>, and had separate functions to encode and decode a game state in string form, then those functions would not be used during normal play; so they could have been completely broken, and you'd never know it until you tried to save the game &#8211; which would have meant you'd have to test game saving <em>extensively</em> and make sure to test every possible type of game state. As an added bonus, doing it the way I did leads to smaller save files.)
+</p>
+<p>
+There is one exception to this, which is the string encoding of the <code>game_ui</code>. Most games do not store anything permanent in the <code>game_ui</code>, and hence do not need to put anything in its encode and decode functions; but if there is anything in there, you do need to test game loading and saving to ensure those functions work properly.
+</p>
+<p>
+It's also worth testing undo and redo of all operations, to ensure that the redraw and the animations (if any) work properly. Failing to animate undo properly seems to be a common error.
+</p>
+<p>
+Other than that, just use your common sense.
+</p>
+
+<hr><address></address></body>
+</html>

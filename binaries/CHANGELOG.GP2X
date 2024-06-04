@@ -1,3 +1,72 @@
+2008-05-06:
+ - Fixed a centered text bug (only present in the menus).
+ - Fixed the blit rubbish which resulted from the drag-crash bugfix?
+ - Fixed timers in paused (only affects mines at this point anyway)
+ - Rejigged the menu positions a bit to get enough space for some more key-instructions
+
+2008-05-03:
+ - Implemented game saving with ten slots per game.
+	At the moment, it saves to a file with the name <gamename>N.sav where gamename is map,
+	bridges, rectangles, etc. and N is the save slot (0-9).
+	Press L or R in the menu to select the savegame slot (don't press them both at once!)
+	Press Select in the menu to save the game
+	Press Vol+/Vol- in the menu (at the same time) to load a game
+        You can load any games that you might have saved from PC versions if you put them
+	in the right place and give them the right names (e.g. you can open the example games 
+	that are used to generate the game icons etc.)
+ - Fixed long-standing drag-crash bug (why did nobody tell me that this was so easy to trigger?)
+	Dragging a circle off the top or left edge would crash the game.
+        Now, it just makes it look a little ugly.  I will fix this but it's a little more 
+	complex than it at first looks.  Basically the blitter is being fed rubbish when the 
+	game draws the drag-cursors near the top-left edge of the screen and it's hard to tell
+	what should be done in that case (the developer documentation gives a suggestion that
+	is hard to implement and a little uncertain to work).
+ - Changed all drawing code to check more if it's being asked to draw the impossible.
+	Will slow some things down but will stop silly crashes like the above in the future.
+ - Implemented mouse acceleration by rewriting pretty much the entire mouse code.
+	If people whinge, I can make this configurable for speed.
+        Sometimes it "sticks" but that's an easy fix (hopefully).
+ - Removed a few more useless bits of code, variables etc.
+	Might save a few bytes of two here and there.
+ - Added instructions for new buttons and their uses to the configuration page.
+ - A few fixes to the way things print/update the screen for the new cases (save, load etc.)
+
+2008-04-28:
+ - Stopped "solve" from printing over the menu.
+ - Implemented basic configuration saving to plaintext INI files.
+	I used the MIT-licensed INIParser library.  Unfortunately, it had one function
+	misnamed in the source, and I had to insert a few #ifdef's around some error
+        messages so that they didn't clobber normal game messages, but it works fine.
+
+        Press X in the Pause menu to save the current config as the default (if it is
+        valid, of course, or you'll just get the normal messages for invalid configs).
+
+        If the INI file is invalid/corrupt/missing/unreadable, it will just use the 
+	game's default settings.  If you want to "reset" the defaults, delete
+	the relevant INI file (e.g. net.ini, bridges.ini etc.)
+ - Seperated out debug functions so that you can debug parts of the program without 
+   getting log-floods from everything.
+	You can now select DEBUG_FILE_ACCESS, DEBUG_DRAWING, DEBUG_MOUSE etc.
+ - Closed a couple of improperly-freed variables
+	Wouldn't matter much unless you were running the GP2X for days on end, when it
+	might run out of RAM.
+ - Modified the Makefile so that it can UPX the ARM executables directly.
+
+2008-04-21:
+ - Centered all puzzles on the screen.
+ - Remove an unused variable (leftover GTK cruft from the conversion)
+	Should save about a meg or so of RAM.
+ - After a semi-succesful trial, have decided against hardware "acceleration" entirely.
+	I managed to get hardware surface, double-buffering and even triple-buffering
+	working properly with no display artifacts.  BUT...
+	For the purposes of these games, there is absolutely zero advantage, even with
+	double-buffering etc.  You don't get much acceleration at all, you don't get
+	smoother drawing.  Triple-buffering doesn't do anything noticeable.  You don't
+	"speed" anything up because the games decide when to update themselves etc. and
+	sometimes only do partial updates.  Even if they do it to an offscreen surface
+	that you then use to do triple-buffering from, you get next to zero visible
+	difference.  You don't save any CPU, but just use up more RAM.
+
 2008-04-18 - BETA 3:
  - Fixed two problems with clipping because of the new pause menu.
  - Increased font size in pause menu and made it "clip" so that it doesn't overlap other text.

@@ -1,0 +1,946 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+"http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+<meta http-equiv="content-type" content="text/html; charset=US-ASCII">
+<title>Interface to the back end</title>
+<link rel="previous" href="intro.html">
+<link rel="ToC" href="index.html">
+<link rel="up" href="index.html">
+<link rel="next" href="drawing.html">
+</head>
+<body>
+<p><a href="intro.html">Previous</a> | <a href="index.html">Contents</a> | <a href="drawing.html">Next</a></p>
+
+<ul>
+<li><a href="#backend">Chapter 2: Interface to the back end</a>
+<ul>
+<li><a href="#backend-structs">2.1 Data structures</a>
+<ul>
+<li><a href="#backend-game-params">2.1.1 <code>game_params</code></a></li>
+<li><a href="#backend-game-state">2.1.2 <code>game_state</code></a></li>
+<li><a href="#backend-game-drawstate">2.1.3 <code>game_drawstate</code></a></li>
+<li><a href="#backend-game-ui">2.1.4 <code>game_ui</code></a></li>
+</ul></li>
+<li><a href="#backend-simple">2.2 Simple data in the back end</a>
+<ul>
+<li><a href="#backend-name">2.2.1 <code>name</code></a></li>
+<li><a href="#backend-winhelp">2.2.2 <code>winhelp_topic</code></a></li>
+</ul></li>
+<li><a href="#backend-params">2.3 Handling game parameter sets</a>
+<ul>
+<li><a href="#backend-default-params">2.3.1 <code>default_params()</code></a></li>
+<li><a href="#backend-fetch-preset">2.3.2 <code>fetch_preset()</code></a></li>
+<li><a href="#backend-encode-params">2.3.3 <code>encode_params()</code></a></li>
+<li><a href="#backend-decode-params">2.3.4 <code>decode_params()</code></a></li>
+<li><a href="#backend-free-params">2.3.5 <code>free_params()</code></a></li>
+<li><a href="#backend-dup-params">2.3.6 <code>dup_params()</code></a></li>
+<li><a href="#backend-can-configure">2.3.7 <code>can_configure</code></a></li>
+<li><a href="#backend-configure">2.3.8 <code>configure()</code></a></li>
+<li><a href="#backend-custom-params">2.3.9 <code>custom_params()</code></a></li>
+<li><a href="#backend-validate-params">2.3.10 <code>validate_params()</code></a></li>
+</ul></li>
+<li><a href="#backend-descs">2.4 Handling game descriptions</a>
+<ul>
+<li><a href="#backend-new-desc">2.4.1 <code>new_desc()</code></a></li>
+<li><a href="#backend-validate-desc">2.4.2 <code>validate_desc()</code></a></li>
+<li><a href="#backend-new-game">2.4.3 <code>new_game()</code></a></li>
+</ul></li>
+<li><a href="#backend-states">2.5 Handling game states</a>
+<ul>
+<li><a href="#backend-dup-game">2.5.1 <code>dup_game()</code></a></li>
+<li><a href="#backend-free-game">2.5.2 <code>free_game()</code></a></li>
+</ul></li>
+<li><a href="#backend-ui">2.6 Handling <code>game_ui</code></a>
+<ul>
+<li><a href="#backend-new-ui">2.6.1 <code>new_ui()</code></a></li>
+<li><a href="#backend-free-ui">2.6.2 <code>free_ui()</code></a></li>
+<li><a href="#backend-encode-ui">2.6.3 <code>encode_ui()</code></a></li>
+<li><a href="#backend-decode-ui">2.6.4 <code>decode_ui()</code></a></li>
+<li><a href="#backend-changed-state">2.6.5 <code>changed_state()</code></a></li>
+</ul></li>
+<li><a href="#backend-moves">2.7 Making moves</a>
+<ul>
+<li><a href="#backend-interpret-move">2.7.1 <code>interpret_move()</code></a></li>
+<li><a href="#backend-execute-move">2.7.2 <code>execute_move()</code></a></li>
+<li><a href="#backend-can-solve">2.7.3 <code>can_solve</code></a></li>
+<li><a href="#backend-solve">2.7.4 <code>solve()</code></a></li>
+</ul></li>
+<li><a href="#backend-drawing">2.8 Drawing the game graphics</a>
+<ul>
+<li><a href="#backend-new-drawstate">2.8.1 <code>new_drawstate()</code></a></li>
+<li><a href="#backend-free-drawstate">2.8.2 <code>free_drawstate()</code></a></li>
+<li><a href="#backend-preferred-tilesize">2.8.3 <code>preferred_tilesize</code></a></li>
+<li><a href="#backend-compute-size">2.8.4 <code>compute_size()</code></a></li>
+<li><a href="#backend-set-size">2.8.5 <code>set_size()</code></a></li>
+<li><a href="#backend-colours">2.8.6 <code>colours()</code></a></li>
+<li><a href="#backend-anim-length">2.8.7 <code>anim_length()</code></a></li>
+<li><a href="#backend-flash-length">2.8.8 <code>flash_length()</code></a></li>
+<li><a href="#backend-redraw">2.8.9 <code>redraw()</code></a></li>
+</ul></li>
+<li><a href="#backend-printing">2.9 Printing functions</a>
+<ul>
+<li><a href="#backend-can-print">2.9.1 <code>can_print</code></a></li>
+<li><a href="#backend-can-print-in-colour">2.9.2 <code>can_print_in_colour</code></a></li>
+<li><a href="#backend-print-size">2.9.3 <code>print_size()</code></a></li>
+<li><a href="#backend-print">2.9.4 <code>print()</code></a></li>
+</ul></li>
+<li><a href="#backend-misc">2.10 Miscellaneous</a>
+<ul>
+<li><a href="#backend-can-format-as-text">2.10.1 <code>can_format_as_text</code></a></li>
+<li><a href="#backend-text-format">2.10.2 <code>text_format()</code></a></li>
+<li><a href="#backend-wants-statusbar">2.10.3 <code>wants_statusbar()</code></a></li>
+<li><a href="#backend-is-timed">2.10.4 <code>is_timed</code></a></li>
+<li><a href="#backend-timing-state">2.10.5 <code>timing_state()</code></a></li>
+<li><a href="#backend-flags">2.10.6 <code>flags</code></a></li>
+</ul></li>
+<li><a href="#backend-initiative">2.11 Things a back end may do on its own initiative</a>
+<ul>
+<li><a href="#backend-newrs">2.11.1 Create a random state</a></li>
+<li><a href="#backend-supersede">2.11.2 Supersede its own game description</a></li>
+</ul></li>
+</ul></li>
+</ul>
+<h1><a name="backend"></a>Chapter 2: Interface to the back end</h1>
+<p>
+This chapter gives a detailed discussion of the interface that each back end must implement.
+</p>
+<p>
+At the top level, each back end source file exports a single global symbol, which is a <code>const struct game</code> containing a large number of function pointers and a small amount of constant data. This structure is called by different names depending on what kind of platform the puzzle set is being compiled on:
+</p>
+<ul><li>
+On platforms such as Windows and GTK, which build a separate binary for each puzzle, the game structure in every back end has the same name, &#8216;<code>thegame</code>&#8217;; the front end refers directly to this name, so that compiling the same front end module against a different back end module builds a different puzzle.
+</li>
+<li>
+On platforms such as MacOS X and PalmOS, which build all the puzzles into a single monolithic binary, the game structure in each back end must have a different name, and there's a helper module <code>list.c</code> (constructed automatically by the same Perl script that builds the <code>Makefile</code>s) which contains a complete list of those game structures.
+</li>
+</ul>
+<p>
+On the latter type of platform, source files may assume that the preprocessor symbol <code>COMBINED</code> has been defined. Thus, the usual code to declare the game structure looks something like this:
+</p>
+<pre><code>#ifdef COMBINED
+#define thegame <em>net</em>    <em>/* or whatever this game is called */</em>
+#endif
+
+const struct game thegame = {
+    <em>/* lots of structure initialisation in here */</em>
+};
+</code></pre>
+<p>
+Game back ends must also internally define a number of data structures, for storing their various persistent state. This chapter will first discuss the nature and use of those structures, and then go on to give details of every element of the game structure.
+</p>
+<h2><a name="backend-structs"></a>2.1 Data structures</h2>
+<p>
+Each game is required to define four separate data structures. This section discusses each one and suggests what sorts of things need to be put in it.
+</p>
+<h3><a name="backend-game-params"></a>2.1.1 <code>game_params</code></h3>
+<p>
+The <code>game_params</code> structure contains anything which affects the automatic generation of new puzzles. So if puzzle generation is parametrised in any way, those parameters need to be stored in <code>game_params</code>.
+</p>
+<p>
+Most puzzles currently in this collection are played on a grid of squares, meaning that the most obvious parameter is the grid size. Many puzzles have additional parameters; for example, Mines allows you to control the number of mines in the grid independently of its size, Net can be wrapping or non-wrapping, Solo has difficulty levels and symmetry settings, and so on.
+</p>
+<p>
+A simple rule for deciding whether a data item needs to go in <code>game_params</code> is: would the user expect to be able to control this data item from either the preset-game-types menu or the &#8216;Custom&#8217; game type configuration? If so, it's part of <code>game_params</code>.
+</p>
+<p>
+<code>game_params</code> structures are permitted to contain pointers to subsidiary data if they need to. The back end is required to provide functions to create and destroy <code>game_params</code>, and those functions can allocate and free additional memory if necessary. (It has not yet been necessary to do this in any puzzle so far, but the capability is there just in case.)
+</p>
+<p>
+<code>game_params</code> is also the only structure which the game's <code>compute_size()</code> function may refer to; this means that any aspect of the game which affects the size of the window it needs to be drawn in must be stored in <code>game_params</code>. In particular, this imposes the fundamental limitation that random game generation may not have a random effect on the window size: game generation algorithms are constrained to work by starting from the grid size rather than generating it as an emergent phenomenon. (Although this is a restriction in theory, it has not yet seemed to be a problem.)
+</p>
+<h3><a name="backend-game-state"></a>2.1.2 <code>game_state</code></h3>
+<p>
+While the user is actually playing a puzzle, the <code>game_state</code> structure stores all the data corresponding to the current state of play.
+</p>
+<p>
+The mid-end keeps <code>game_state</code>s in a list, and adds to the list every time the player makes a move; the Undo and Redo functions step back and forth through that list.
+</p>
+<p>
+Therefore, a good means of deciding whether a data item needs to go in <code>game_state</code> is: would a player expect that data item to be restored on undo? If so, put it in <code>game_state</code>, and this will automatically happen without you having to lift a finger. If not &#8211; for example, the deaths counter in Mines is precisely something that does <em>not</em> want to be reset to its previous state on an undo &#8211; then you might have found a data item that needs to go in <code>game_ui</code> instead.
+</p>
+<p>
+During play, <code>game_state</code>s are often passed around without an accompanying <code>game_params</code> structure. Therefore, any information in <code>game_params</code> which is important during play (such as the grid size) must be duplicated within the <code>game_state</code>. One simple method of doing this is to have the <code>game_state</code> structure <em>contain</em> a <code>game_params</code> structure as one of its members, although this isn't obligatory if you prefer to do it another way.
+</p>
+<h3><a name="backend-game-drawstate"></a>2.1.3 <code>game_drawstate</code></h3>
+<p>
+<code>game_drawstate</code> carries persistent state relating to the current graphical contents of the puzzle window. The same <code>game_drawstate</code> is passed to every call to the game redraw function, so that it can remember what it has already drawn and what needs redrawing.
+</p>
+<p>
+A typical use for a <code>game_drawstate</code> is to have an array mirroring the array of grid squares in the <code>game_state</code>; then every time the redraw function was passed a <code>game_state</code>, it would loop over all the squares, and physically redraw any whose description in the <code>game_state</code> (i.e. what the square needs to look like when the redraw is completed) did not match its description in the <code>game_drawstate</code> (i.e. what the square currently looks like).
+</p>
+<p>
+<code>game_drawstate</code> is occasionally completely torn down and reconstructed by the mid-end, if the user somehow forces a full redraw. Therefore, no data should be stored in <code>game_drawstate</code> which is <em>not</em> related to the state of the puzzle window, because it might be unexpectedly destroyed.
+</p>
+<p>
+The back end provides functions to create and destroy <code>game_drawstate</code>, which means it can contain pointers to subsidiary allocated data if it needs to. A common thing to want to allocate in a <code>game_drawstate</code> is a <code>blitter</code>; see <a href="drawing.html#drawing-blitter">section 3.1.11</a> for more on this subject.
+</p>
+<h3><a name="backend-game-ui"></a>2.1.4 <code>game_ui</code></h3>
+<p>
+<code>game_ui</code> contains whatever doesn't fit into the above three structures!
+</p>
+<p>
+A new <code>game_ui</code> is created when the user begins playing a new instance of a puzzle (i.e. during &#8216;New Game&#8217; or after entering a game ID etc). It persists until the user finishes playing that game and begins another one (or closes the window); in particular, &#8216;Restart Game&#8217; does <em>not</em> destroy the <code>game_ui</code>.
+</p>
+<p>
+<code>game_ui</code> is useful for implementing user-interface state which is not part of <code>game_state</code>. Common examples are keyboard control (you wouldn't want to have to separately Undo through every cursor motion) and mouse dragging. See <a href="writing.html#writing-keyboard-cursor">section 6.3.2</a> and <a href="writing.html#writing-howto-dragging">section 6.3.3</a>, respectively, for more details.
+</p>
+<p>
+Another use for <code>game_ui</code> is to store highly persistent data such as the Mines death counter. This is conceptually rather different: where the Net cursor position was <em>not important enough</em> to preserve for the player to restore by Undo, the Mines death counter is <em>too important</em> to permit the player to revert by Undo!
+</p>
+<p>
+A final use for <code>game_ui</code> is to pass information to the redraw function about recent changes to the game state. This is used in Mines, for example, to indicate whether a requested &#8216;flash&#8217; should be a white flash for victory or a red flash for defeat; see <a href="writing.html#writing-flash-types">section 6.3.5</a>.
+</p>
+<h2><a name="backend-simple"></a>2.2 Simple data in the back end</h2>
+<p>
+In this section I begin to discuss each individual element in the back end structure. To begin with, here are some simple self-contained data elements.
+</p>
+<h3><a name="backend-name"></a>2.2.1 <code>name</code></h3>
+<pre><code>const char *name;
+</code></pre>
+<p>
+This is a simple ASCII string giving the name of the puzzle. This name will be used in window titles, in game selection menus on monolithic platforms, and anywhere else that the front end needs to know the name of a game.
+</p>
+<h3><a name="backend-winhelp"></a>2.2.2 <code>winhelp_topic</code></h3>
+<pre><code>const char *winhelp_topic;
+</code></pre>
+<p>
+This member is used on Windows only, to provide online help. Although the Windows front end provides a separate binary for each puzzle, it has a single monolithic help file; so when a user selects &#8216;Help&#8217; from the menu, the program needs to open the help file and jump to the chapter describing that particular puzzle.
+</p>
+<p>
+Therefore, each chapter in <code>puzzles.but</code> is labelled with a <em>help topic</em> name, similar to this:
+</p>
+<pre><code>\cfg{winhelp-topic}{games.net}
+</code></pre>
+<p>
+And then the corresponding game back end encodes the topic string (here &#8216;<code>games.net</code>&#8217;) in the <code>winhelp_topic</code> element of the game structure.
+</p>
+<h2><a name="backend-params"></a>2.3 Handling game parameter sets</h2>
+<p>
+In this section I present the various functions which handle the <code>game_params</code> structure.
+</p>
+<h3><a name="backend-default-params"></a>2.3.1 <code>default_params()</code></h3>
+<pre><code>game_params *(*default_params)(void);
+</code></pre>
+<p>
+This function allocates a new <code>game_params</code> structure, fills it with the default values, and returns a pointer to it.
+</p>
+<h3><a name="backend-fetch-preset"></a>2.3.2 <code>fetch_preset()</code></h3>
+<pre><code>int (*fetch_preset)(int i, char **name, game_params **params);
+</code></pre>
+<p>
+This function is used to populate the &#8216;Type&#8217; menu, which provides a list of conveniently accessible preset parameters for most games.
+</p>
+<p>
+The function is called with <code>i</code> equal to the index of the preset required (numbering from zero). It returns <code>FALSE</code> if that preset does not exist (if <code>i</code> is less than zero or greater than the largest preset index). Otherwise, it sets <code>*params</code> to point at a newly allocated <code>game_params</code> structure containing the preset information, sets <code>*name</code> to point at a newly allocated C string containing the preset title (to go on the &#8216;Type&#8217; menu), and returns <code>TRUE</code>.
+</p>
+<p>
+If the game does not wish to support any presets at all, this function is permitted to return <code>FALSE</code> always.
+</p>
+<h3><a name="backend-encode-params"></a>2.3.3 <code>encode_params()</code></h3>
+<pre><code>char *(*encode_params)(game_params *params, int full);
+</code></pre>
+<p>
+The job of this function is to take a <code>game_params</code>, and encode it in a string form for use in game IDs. The return value must be a newly allocated C string, and <em>must</em> not contain a colon or a hash (since those characters are used to mark the end of the parameter section in a game ID).
+</p>
+<p>
+Ideally, it should also not contain any other potentially controversial punctuation; bear in mind when designing a string parameter format that it will probably be used on both Windows and Unix command lines under a variety of exciting shell quoting and metacharacter rules. Sticking entirely to alphanumerics is the safest thing; if you really need punctuation, you can probably get away with commas, periods or underscores without causing anybody any major inconvenience. If you venture far beyond that, you're likely to irritate <em>somebody</em>.
+</p>
+<p>
+(At the time of writing this, all existing games have purely alphanumeric string parameter formats. Usually these involve a letter denoting a parameter, followed optionally by a number giving the value of that parameter, with a few mandatory parts at the beginning such as numeric width and height separated by &#8216;<code>x</code>&#8217;.)
+</p>
+<p>
+If the <code>full</code> parameter is <code>TRUE</code>, this function should encode absolutely everything in the <code>game_params</code>, such that a subsequent call to <code>decode_params()</code> (<a href="#backend-decode-params">section 2.3.4</a>) will yield an identical structure. If <code>full</code> is <code>FALSE</code>, however, you should leave out anything which is not necessary to describe a <em>specific puzzle instance</em>, i.e. anything which only takes effect when a new puzzle is <em>generated</em>. For example, the Solo <code>game_params</code> includes a difficulty rating used when constructing new puzzles; but a Solo game ID need not explicitly include the difficulty, since to describe a puzzle once generated it's sufficient to give the grid dimensions and the location and contents of the clue squares. (Indeed, one might very easily type in a puzzle out of a newspaper without <em>knowing</em> what its difficulty level is in Solo's terminology.) Therefore, Solo's <code>encode_params()</code> only encodes the difficulty level if <code>full</code> is set.
+</p>
+<h3><a name="backend-decode-params"></a>2.3.4 <code>decode_params()</code></h3>
+<pre><code>void (*decode_params)(game_params *params, char const *string);
+</code></pre>
+<p>
+This function is the inverse of <code>encode_params()</code> (<a href="#backend-encode-params">section 2.3.3</a>). It parses the supplied string and fills in the supplied <code>game_params</code> structure. Note that the structure will <em>already</em> have been allocated: this function is not expected to create a <em>new</em> <code>game_params</code>, but to modify an existing one.
+</p>
+<p>
+This function can receive a string which only encodes a subset of the parameters. The most obvious way in which this can happen is if the string was constructed by <code>encode_params()</code> with its <code>full</code> parameter set to <code>FALSE</code>; however, it could also happen if the user typed in a parameter set manually and missed something out. Be prepared to deal with a wide range of possibilities.
+</p>
+<p>
+When dealing with a parameter which is not specified in the input string, what to do requires a judgment call on the part of the programmer. Sometimes it makes sense to adjust other parameters to bring them into line with the new ones. In Mines, for example, you would probably not want to keep the same mine count if the user dropped the grid size and didn't specify one, since you might easily end up with more mines than would actually fit in the grid! On the other hand, sometimes it makes sense to leave the parameter alone: a Solo player might reasonably expect to be able to configure size and difficulty independently of one another.
+</p>
+<p>
+This function currently has no direct means of returning an error if the string cannot be parsed at all. However, the returned <code>game_params</code> is almost always subsequently passed to <code>validate_params()</code> (<a href="#backend-validate-params">section 2.3.10</a>), so if you really want to signal parse errors, you could always have a <code>char *</code> in your parameters structure which stored an error message, and have <code>validate_params()</code> return it if it is non-<code>NULL</code>.
+</p>
+<h3><a name="backend-free-params"></a>2.3.5 <code>free_params()</code></h3>
+<pre><code>void (*free_params)(game_params *params);
+</code></pre>
+<p>
+This function frees a <code>game_params</code> structure, and any subsidiary allocations contained within it.
+</p>
+<h3><a name="backend-dup-params"></a>2.3.6 <code>dup_params()</code></h3>
+<pre><code>game_params *(*dup_params)(game_params *params);
+</code></pre>
+<p>
+This function allocates a new <code>game_params</code> structure and initialises it with an exact copy of the information in the one provided as input. It returns a pointer to the new duplicate.
+</p>
+<h3><a name="backend-can-configure"></a>2.3.7 <code>can_configure</code></h3>
+<pre><code>int can_configure;
+</code></pre>
+<p>
+This boolean data element is set to <code>TRUE</code> if the back end supports custom parameter configuration via a dialog box. If it is <code>TRUE</code>, then the functions <code>configure()</code> and <code>custom_params()</code> are expected to work. See <a href="#backend-configure">section 2.3.8</a> and <a href="#backend-custom-params">section 2.3.9</a> for more details.
+</p>
+<h3><a name="backend-configure"></a>2.3.8 <code>configure()</code></h3>
+<pre><code>config_item *(*configure)(game_params *params);
+</code></pre>
+<p>
+This function is called when the user requests a dialog box for custom parameter configuration. It returns a newly allocated array of <code>config_item</code> structures, describing the GUI elements required in the dialog box. The array should have one more element than the number of controls, since it is terminated with a <code>C_END</code> marker (see below). Each array element describes the control together with its initial value; the front end will modify the value fields and return the updated array to <code>custom_params()</code> (see <a href="#backend-custom-params">section 2.3.9</a>).
+</p>
+<p>
+The <code>config_item</code> structure contains the following elements:
+</p>
+<pre><code>char *name;
+int type;
+char *sval;
+int ival;
+</code></pre>
+<p>
+<code>name</code> is an ASCII string giving the textual label for a GUI control. It is <em>not</em> expected to be dynamically allocated.
+</p>
+<p>
+<code>type</code> contains one of a small number of <code>enum</code> values defining what type of control is being described. The meaning of the <code>sval</code> and <code>ival</code> fields depends on the value in <code>type</code>. The valid values are:
+</p>
+<dl><dt>
+<code>C_STRING</code>
+</dt>
+<dd>
+Describes a text input box. (This is also used for numeric input. The back end does not bother informing the front end that the box is numeric rather than textual; some front ends do have the capacity to take this into account, but I decided it wasn't worth the extra complexity in the interface.) For this type, <code>ival</code> is unused, and <code>sval</code> contains a dynamically allocated string representing the contents of the input box.
+</dd>
+<dt>
+<code>C_BOOLEAN</code>
+</dt>
+<dd>
+Describes a simple checkbox. For this type, <code>sval</code> is unused, and <code>ival</code> is <code>TRUE</code> or <code>FALSE</code>.
+</dd>
+<dt>
+<code>C_CHOICES</code>
+</dt>
+<dd>
+Describes a drop-down list presenting one of a small number of fixed choices. For this type, <code>sval</code> contains a list of strings describing the choices; the very first character of <code>sval</code> is used as a delimiter when processing the rest (so that the strings &#8216;<code>:zero:one:two</code>&#8217;, &#8216;<code>!zero!one!two</code>&#8217; and &#8216;<code>xzeroxonextwo</code>&#8217; all define a three-element list containing &#8216;<code>zero</code>&#8217;, &#8216;<code>one</code>&#8217; and &#8216;<code>two</code>&#8217;). <code>ival</code> contains the index of the currently selected element, numbering from zero (so that in the above example, 0 would mean &#8216;<code>zero</code>&#8217; and 2 would mean &#8216;<code>two</code>&#8217;).
+<p>
+Note that for this control type, <code>sval</code> is <em>not</em> dynamically allocated, whereas it was for <code>C_STRING</code>.
+</p>
+
+</dd>
+<dt>
+<code>C_END</code>
+</dt>
+<dd>
+Marks the end of the array of <code>config_item</code>s. All other fields are unused.
+</dd>
+</dl>
+<p>
+The array returned from this function is expected to have filled in the initial values of all the controls according to the input <code>game_params</code> structure.
+</p>
+<p>
+If the game's <code>can_configure</code> flag is set to <code>FALSE</code>, this function is never called and need not do anything at all.
+</p>
+<h3><a name="backend-custom-params"></a>2.3.9 <code>custom_params()</code></h3>
+<pre><code>game_params *(*custom_params)(config_item *cfg);
+</code></pre>
+<p>
+This function is the counterpart to <code>configure()</code> (<a href="#backend-configure">section 2.3.8</a>). It receives as input an array of <code>config_item</code>s which was originally created by <code>configure()</code>, but in which the control values have since been changed in accordance with user input. Its function is to read the new values out of the controls and return a newly allocated <code>game_params</code> structure representing the user's chosen parameter set.
+</p>
+<p>
+(The front end will have modified the controls' <em>values</em>, but there will still always be the same set of controls, in the same order, as provided by <code>configure()</code>. It is not necessary to check the <code>name</code> and <code>type</code> fields, although you could use <code>assert()</code> if you were feeling energetic.)
+</p>
+<p>
+This function is not expected to (and indeed <em>must not</em>) free the input <code>config_item</code> array. (If the parameters fail to validate, the dialog box will stay open.)
+</p>
+<p>
+If the game's <code>can_configure</code> flag is set to <code>FALSE</code>, this function is never called and need not do anything at all.
+</p>
+<h3><a name="backend-validate-params"></a>2.3.10 <code>validate_params()</code></h3>
+<pre><code>char *(*validate_params)(game_params *params, int full);
+</code></pre>
+<p>
+This function takes a <code>game_params</code> structure as input, and checks that the parameters described in it fall within sensible limits. (At the very least, grid dimensions should almost certainly be strictly positive, for example.)
+</p>
+<p>
+Return value is <code>NULL</code> if no problems were found, or alternatively a (non-dynamically-allocated) ASCII string describing the error in human-readable form.
+</p>
+<p>
+If the <code>full</code> parameter is set, full validation should be performed: any set of parameters which would not permit generation of a sensible puzzle should be faulted. If <code>full</code> is <em>not</em> set, the implication is that these parameters are not going to be used for <em>generating</em> a puzzle; so parameters which can't even sensibly <em>describe</em> a valid puzzle should still be faulted, but parameters which only affect puzzle generation should not be.
+</p>
+<p>
+(The <code>full</code> option makes a difference when parameter combinations are non-orthogonal. For example, Net has a boolean option controlling whether it enforces a unique solution; it turns out that it's impossible to generate a uniquely soluble puzzle with wrapping walls and width 2, so <code>validate_params()</code> will complain if you ask for one. However, if the user had just been playing a unique wrapping puzzle of a more sensible width, and then pastes in a game ID acquired from somebody else which happens to describe a <em>non</em>-unique wrapping width-2 puzzle, then <code>validate_params()</code> will be passed a <code>game_params</code> containing the width and wrapping settings from the new game ID and the uniqueness setting from the old one. This would be faulted, if it weren't for the fact that <code>full</code> is not set during this call, so Net ignores the inconsistency. The resulting <code>game_params</code> is never subsequently used to generate a puzzle; this is a promise made by the mid-end when it asks for a non-full validation.)
+</p>
+<h2><a name="backend-descs"></a>2.4 Handling game descriptions</h2>
+<p>
+In this section I present the functions that deal with a textual description of a puzzle, i.e. the part that comes after the colon in a descriptive-format game ID.
+</p>
+<h3><a name="backend-new-desc"></a>2.4.1 <code>new_desc()</code></h3>
+<pre><code>char *(*new_desc)(game_params *params, random_state *rs,
+                  char **aux, int interactive);
+</code></pre>
+<p>
+This function is where all the really hard work gets done. This is the function whose job is to randomly generate a new puzzle, ensuring solubility and uniqueness as appropriate.
+</p>
+<p>
+As input it is given a <code>game_params</code> structure and a random state (see <a href="utils.html#utils-random">section 5.1</a> for the random number API). It must invent a puzzle instance, encode it in string form, and return a dynamically allocated C string containing that encoding.
+</p>
+<p>
+Additionally, it may return a second dynamically allocated string in <code>*aux</code>. (If it doesn't want to, then it can leave that parameter completely alone; it isn't required to set it to <code>NULL</code>, although doing so is harmless.) That string, if present, will be passed to <code>solve()</code> (<a href="#backend-solve">section 2.7.4</a>) later on; so if the puzzle is generated in such a way that a solution is known, then information about that solution can be saved in <code>*aux</code> for <code>solve()</code> to use.
+</p>
+<p>
+The <code>interactive</code> parameter should be ignored by almost all puzzles. Its purpose is to distinguish between generating a puzzle within a GUI context for immediate play, and generating a puzzle in a command-line context for saving to be played later. The only puzzle that currently uses this distinction (and, I fervently hope, the only one which will <em>ever</em> need to use it) is Mines, which chooses a random first-click location when generating puzzles non-interactively, but which waits for the user to place the first click when interactive. If you think you have come up with another puzzle which needs to make use of this parameter, please think for at least ten minutes about whether there is <em>any</em> alternative!
+</p>
+<p>
+Note that game description strings are not required to contain an encoding of parameters such as grid size; a game description is never separated from the <code>game_params</code> it was generated with, so any information contained in that structure need not be encoded again in the game description.
+</p>
+<h3><a name="backend-validate-desc"></a>2.4.2 <code>validate_desc()</code></h3>
+<pre><code>char *(*validate_desc)(game_params *params, char *desc);
+</code></pre>
+<p>
+This function is given a game description, and its job is to validate that it describes a puzzle which makes sense.
+</p>
+<p>
+To some extent it's up to the user exactly how far they take the phrase &#8216;makes sense&#8217;; there are no particularly strict rules about how hard the user is permitted to shoot themself in the foot when typing in a bogus game description by hand. (For example, Rectangles will not verify that the sum of all the numbers in the grid equals the grid's area. So a user could enter a puzzle which was provably not soluble, and the program wouldn't complain; there just wouldn't happen to be any sequence of moves which solved it.)
+</p>
+<p>
+The one non-negotiable criterion is that any game description which makes it through <code>validate_desc()</code> <em>must not</em> subsequently cause a crash or an assertion failure when fed to <code>new_game()</code> and thence to the rest of the back end.
+</p>
+<p>
+The return value is <code>NULL</code> on success, or a non-dynamically-allocated C string containing an error message.
+</p>
+<h3><a name="backend-new-game"></a>2.4.3 <code>new_game()</code></h3>
+<pre><code>game_state *(*new_game)(midend *me, game_params *params,
+                        char *desc);
+</code></pre>
+<p>
+This function takes a game description as input, together with its accompanying <code>game_params</code>, and constructs a <code>game_state</code> describing the initial state of the puzzle. It returns a newly allocated <code>game_state</code> structure.
+</p>
+<p>
+Almost all puzzles should ignore the <code>me</code> parameter. It is required by Mines, which needs it for later passing to <code>midend_supersede_game_desc()</code> (see <a href="#backend-supersede">section 2.11.2</a>) once the user has placed the first click. I fervently hope that no other puzzle will be awkward enough to require it, so everybody else should ignore it. As with the <code>interactive</code> parameter in <code>new_desc()</code> (<a href="#backend-new-desc">section 2.4.1</a>), if you think you have a reason to need this parameter, please try very hard to think of an alternative approach!
+</p>
+<h2><a name="backend-states"></a>2.5 Handling game states</h2>
+<p>
+This section describes the functions which create and destroy <code>game_state</code> structures.
+</p>
+<p>
+(Well, except <code>new_game()</code>, which is in <a href="#backend-new-game">section 2.4.3</a> instead of under here; but it deals with game descriptions <em>and</em> game states and it had to go in one section or the other.)
+</p>
+<h3><a name="backend-dup-game"></a>2.5.1 <code>dup_game()</code></h3>
+<pre><code>game_state *(*dup_game)(game_state *state);
+</code></pre>
+<p>
+This function allocates a new <code>game_state</code> structure and initialises it with an exact copy of the information in the one provided as input. It returns a pointer to the new duplicate.
+</p>
+<h3><a name="backend-free-game"></a>2.5.2 <code>free_game()</code></h3>
+<pre><code>void (*free_game)(game_state *state);
+</code></pre>
+<p>
+This function frees a <code>game_state</code> structure, and any subsidiary allocations contained within it.
+</p>
+<h2><a name="backend-ui"></a>2.6 Handling <code>game_ui</code></h2>
+<h3><a name="backend-new-ui"></a>2.6.1 <code>new_ui()</code></h3>
+<pre><code>game_ui *(*new_ui)(game_state *state);
+</code></pre>
+<p>
+This function allocates and returns a new <code>game_ui</code> structure for playing a particular puzzle. It is passed a pointer to the initial <code>game_state</code>, in case it needs to refer to that when setting up the initial values for the new game.
+</p>
+<h3><a name="backend-free-ui"></a>2.6.2 <code>free_ui()</code></h3>
+<pre><code>void (*free_ui)(game_ui *ui);
+</code></pre>
+<p>
+This function frees a <code>game_ui</code> structure, and any subsidiary allocations contained within it.
+</p>
+<h3><a name="backend-encode-ui"></a>2.6.3 <code>encode_ui()</code></h3>
+<pre><code>char *(*encode_ui)(game_ui *ui);
+</code></pre>
+<p>
+This function encodes any <em>important</em> data in a <code>game_ui</code> structure in string form. It is only called when saving a half-finished game to a file.
+</p>
+<p>
+It should be used sparingly. Almost all data in a <code>game_ui</code> is not important enough to save. The location of the keyboard-controlled cursor, for example, can be reset to a default position on reloading the game without impacting the user experience. If the user should somehow manage to save a game while a mouse drag was in progress, then discarding that mouse drag would be an outright <em>feature</em>.
+</p>
+<p>
+A typical thing that <em>would</em> be worth encoding in this function is the Mines death counter: it's in the <code>game_ui</code> rather than the <code>game_state</code> because it's too important to allow the user to revert it by using Undo, and therefore it's also too important to allow the user to revert it by saving and reloading. (Of course, the user could edit the save file by hand... But if the user is <em>that</em> determined to cheat, they could just as easily modify the game's source.)
+</p>
+<h3><a name="backend-decode-ui"></a>2.6.4 <code>decode_ui()</code></h3>
+<pre><code>void (*decode_ui)(game_ui *ui, char *encoding);
+</code></pre>
+<p>
+This function parses a string previously output by <code>encode_ui()</code>, and writes the decoded data back into the provided <code>game_ui</code> structure.
+</p>
+<h3><a name="backend-changed-state"></a>2.6.5 <code>changed_state()</code></h3>
+<pre><code>void (*changed_state)(game_ui *ui, game_state *oldstate,
+                      game_state *newstate);
+</code></pre>
+<p>
+This function is called by the mid-end whenever the current game state changes, for any reason. Those reasons include:
+</p>
+<ul><li>
+a fresh move being made by <code>interpret_move()</code> and <code>execute_move()</code>
+</li>
+<li>
+a solve operation being performed by <code>solve()</code> and <code>execute_move()</code>
+</li>
+<li>
+the user moving back and forth along the undo list by means of the Undo and Redo operations
+</li>
+<li>
+the user selecting Restart to go back to the initial game state.
+</li>
+</ul>
+<p>
+The job of <code>changed_state()</code> is to update the <code>game_ui</code> for consistency with the new game state, if any update is necessary. For example, Same Game stores data about the currently selected tile group in its <code>game_ui</code>, and this data is intrinsically related to the game state it was derived from. So it's very likely to become invalid when the game state changes; thus, Same Game's <code>changed_state()</code> function clears the current selection whenever it is called.
+</p>
+<p>
+When <code>anim_length()</code> or <code>flash_length()</code> are called, you can be sure that there has been a previous call to <code>changed_state()</code>. So <code>changed_state()</code> can set up data in the <code>game_ui</code> which will be read by <code>anim_length()</code> and <code>flash_length()</code>, and those functions will not have to worry about being called without the data having been initialised.
+</p>
+<h2><a name="backend-moves"></a>2.7 Making moves</h2>
+<p>
+This section describes the functions which actually make moves in the game: that is, the functions which process user input and end up producing new <code>game_state</code>s.
+</p>
+<h3><a name="backend-interpret-move"></a>2.7.1 <code>interpret_move()</code></h3>
+<pre><code>char *(*interpret_move)(game_state *state, game_ui *ui,
+                        game_drawstate *ds,
+                        int x, int y, int button);
+</code></pre>
+<p>
+This function receives user input and processes it. Its input parameters are the current <code>game_state</code>, the current <code>game_ui</code> and the current <code>game_drawstate</code>, plus details of the input event. <code>button</code> is either an ASCII value or a special code (listed below) indicating an arrow or function key or a mouse event; when <code>button</code> is a mouse event, <code>x</code> and <code>y</code> contain the pixel coordinates of the mouse pointer relative to the top left of the puzzle's drawing area.
+</p>
+<p>
+<code>interpret_move()</code> may return in three different ways:
+</p>
+<ul><li>
+Returning <code>NULL</code> indicates that no action whatsoever occurred in response to the input event; the puzzle was not interested in it at all.
+</li>
+<li>
+Returning the empty string (<code>""</code>) indicates that the input event has resulted in a change being made to the <code>game_ui</code> which will require a redraw of the game window, but that no actual <em>move</em> was made (i.e. no new <code>game_state</code> needs to be created).
+</li>
+<li>
+Returning anything else indicates that a move was made and that a new <code>game_state</code> must be created. However, instead of actually constructing a new <code>game_state</code> itself, this function is required to return a string description of the details of the move. This string will be passed to <code>execute_move()</code> (<a href="#backend-execute-move">section 2.7.2</a>) to actually create the new <code>game_state</code>. (Encoding moves as strings in this way means that the mid-end can keep the strings as well as the game states, and the strings can be written to disk when saving the game and fed to <code>execute_move()</code> again on reloading.)
+</li>
+</ul>
+<p>
+The return value from <code>interpret_move()</code> is expected to be dynamically allocated if and only if it is not either <code>NULL</code> <em>or</em> the empty string.
+</p>
+<p>
+After this function is called, the back end is permitted to rely on some subsequent operations happening in sequence:
+</p>
+<ul><li>
+<code>execute_move()</code> will be called to convert this move description into a new <code>game_state</code>
+</li>
+<li>
+<code>changed_state()</code> will be called with the new <code>game_state</code>.
+</li>
+</ul>
+<p>
+This means that if <code>interpret_move()</code> needs to do updates to the <code>game_ui</code> which are easier to perform by referring to the new <code>game_state</code>, it can safely leave them to be done in <code>changed_state()</code> and not worry about them failing to happen.
+</p>
+<p>
+(Note, however, that <code>execute_move()</code> may <em>also</em> be called in other circumstances. It is only <code>interpret_move()</code> which can rely on a subsequent call to <code>changed_state()</code>.)
+</p>
+<p>
+The special key codes supported by this function are:
+</p>
+<dl><dt>
+<code>LEFT_BUTTON</code>, <code>MIDDLE_BUTTON</code>, <code>RIGHT_BUTTON</code>
+</dt>
+<dd>
+Indicate that one of the mouse buttons was pressed down.
+</dd>
+<dt>
+<code>LEFT_DRAG</code>, <code>MIDDLE_DRAG</code>, <code>RIGHT_DRAG</code>
+</dt>
+<dd>
+Indicate that the mouse was moved while one of the mouse buttons was still down. The mid-end guarantees that when one of these events is received, it will always have been preceded by a button-down event (and possibly other drag events) for the same mouse button, and no event involving another mouse button will have appeared in between.
+</dd>
+<dt>
+<code>LEFT_RELEASE</code>, <code>MIDDLE_RELEASE</code>, <code>RIGHT_RELEASE</code>
+</dt>
+<dd>
+Indicate that a mouse button was released. The mid-end guarantees that when one of these events is received, it will always have been preceded by a button-down event (and possibly some drag events) for the same mouse button, and no event involving another mouse button will have appeared in between.
+</dd>
+<dt>
+<code>CURSOR_UP</code>, <code>CURSOR_DOWN</code>, <code>CURSOR_LEFT</code>, <code>CURSOR_RIGHT</code>
+</dt>
+<dd>
+Indicate that an arrow key was pressed.
+</dd>
+<dt>
+<code>CURSOR_SELECT</code>
+</dt>
+<dd>
+On platforms which have a prominent &#8216;select&#8217; button alongside their cursor keys, indicates that that button was pressed.
+</dd>
+</dl>
+<p>
+In addition, there are some modifiers which can be bitwise-ORed into the <code>button</code> parameter:
+</p>
+<dl><dt>
+<code>MOD_CTRL</code>, <code>MOD_SHFT</code>
+</dt>
+<dd>
+These indicate that the Control or Shift key was pressed alongside the key. They only apply to the cursor keys, not to mouse buttons or anything else.
+</dd>
+<dt>
+<code>MOD_NUM_KEYPAD</code>
+</dt>
+<dd>
+This applies to some ASCII values, and indicates that the key code was input via the numeric keypad rather than the main keyboard. Some puzzles may wish to treat this differently (for example, a puzzle might want to use the numeric keypad as an eight-way directional pad), whereas others might not (a game involving numeric input probably just wants to treat the numeric keypad as numbers).
+</dd>
+<dt>
+<code>MOD_MASK</code>
+</dt>
+<dd>
+This mask is the bitwise OR of all the available modifiers; you can bitwise-AND with <code>~MOD_MASK</code> to strip all the modifiers off any input value.
+</dd>
+</dl>
+<h3><a name="backend-execute-move"></a>2.7.2 <code>execute_move()</code></h3>
+<pre><code>game_state *(*execute_move)(game_state *state, char *move);
+</code></pre>
+<p>
+This function takes an input <code>game_state</code> and a move string as output from <code>interpret_move()</code>. It returns a newly allocated <code>game_state</code> which contains the result of applying the specified move to the input game state.
+</p>
+<p>
+This function may return <code>NULL</code> if it cannot parse the move string (and this is definitely preferable to crashing or failing an assertion, since one way this can happen is if loading a corrupt save file). However, it must not return <code>NULL</code> for any move string that really was output from <code>interpret_move()</code>: this is punishable by assertion failure in the mid-end.
+</p>
+<h3><a name="backend-can-solve"></a>2.7.3 <code>can_solve</code></h3>
+<pre><code>int can_solve;
+</code></pre>
+<p>
+This boolean field is set to <code>TRUE</code> if the game's <code>solve()</code> function does something. If it's set to <code>FALSE</code>, the game will not even offer the &#8216;Solve&#8217; menu option.
+</p>
+<h3><a name="backend-solve"></a>2.7.4 <code>solve()</code></h3>
+<pre><code>char *(*solve)(game_state *orig, game_state *curr,
+               char *aux, char **error);
+</code></pre>
+<p>
+This function is called when the user selects the &#8216;Solve&#8217; option from the menu.
+</p>
+<p>
+It is passed two input game states: <code>orig</code> is the game state from the very start of the puzzle, and <code>curr</code> is the current one. (Different games find one or other or both of these convenient.) It is also passed the <code>aux</code> string saved by <code>new_desc()</code> (<a href="#backend-new-desc">section 2.4.1</a>), in case that encodes important information needed to provide the solution.
+</p>
+<p>
+If this function is unable to produce a solution (perhaps, for example, the game has no in-built solver so it can only solve puzzles it invented internally and has an <code>aux</code> string for) then it may return <code>NULL</code>. If it does this, it must also set <code>*error</code> to an error message to be presented to the user (such as &#8216;Solution not known for this puzzle&#8217;); that error message is not expected to be dynamically allocated.
+</p>
+<p>
+If this function <em>does</em> produce a solution, it returns a move string suitable for feeding to <code>execute_move()</code> (<a href="#backend-execute-move">section 2.7.2</a>).
+</p>
+<h2><a name="backend-drawing"></a>2.8 Drawing the game graphics</h2>
+<p>
+This section discusses the back end functions that deal with drawing.
+</p>
+<h3><a name="backend-new-drawstate"></a>2.8.1 <code>new_drawstate()</code></h3>
+<pre><code>game_drawstate *(*new_drawstate)(drawing *dr, game_state *state);
+</code></pre>
+<p>
+This function allocates and returns a new <code>game_drawstate</code> structure for drawing a particular puzzle. It is passed a pointer to a <code>game_state</code>, in case it needs to refer to that when setting up any initial data.
+</p>
+<p>
+This function may not rely on the puzzle having been newly started; a new draw state can be constructed at any time if the front end requests a forced redraw. For games like Pattern, in which initial game states are much simpler than general ones, this might be important to keep in mind.
+</p>
+<p>
+The parameter <code>dr</code> is a drawing object (see <a href="drawing.html#drawing">chapter 3</a>) which the function might need to use to allocate blitters. (However, this isn't recommended; it's usually more sensible to wait to allocate a blitter until <code>set_size()</code> is called, because that way you can tailor it to the scale at which the puzzle is being drawn.)
+</p>
+<h3><a name="backend-free-drawstate"></a>2.8.2 <code>free_drawstate()</code></h3>
+<pre><code>void (*free_drawstate)(drawing *dr, game_drawstate *ds);
+</code></pre>
+<p>
+This function frees a <code>game_drawstate</code> structure, and any subsidiary allocations contained within it.
+</p>
+<p>
+The parameter <code>dr</code> is a drawing object (see <a href="drawing.html#drawing">chapter 3</a>), which might be required if you are freeing a blitter.
+</p>
+<h3><a name="backend-preferred-tilesize"></a>2.8.3 <code>preferred_tilesize</code></h3>
+<pre><code>int preferred_tilesize;
+</code></pre>
+<p>
+Each game is required to define a single integer parameter which expresses, in some sense, the scale at which it is drawn. This is described in the APIs as &#8216;<code>tilesize</code>&#8217;, since most puzzles are on a square (or possibly triangular or hexagonal) grid and hence a sensible interpretation of this parameter is to define it as the size of one grid tile in pixels; however, there's no actual requirement that the &#8216;tile size&#8217; be proportional to the game window size. Window size is required to increase monotonically with &#8216;tile size&#8217;, however.
+</p>
+<p>
+The data element <code>preferred_tilesize</code> indicates the tile size which should be used in the absence of a good reason to do otherwise (such as the screen being too small, or the user explicitly requesting a resize if that ever gets implemented).
+</p>
+<h3><a name="backend-compute-size"></a>2.8.4 <code>compute_size()</code></h3>
+<pre><code>void (*compute_size)(game_params *params, int tilesize,
+                     int *x, int *y);
+</code></pre>
+<p>
+This function is passed a <code>game_params</code> structure and a tile size. It returns, in <code>*x</code> and <code>*y</code>, the size in pixels of the drawing area that would be required to render a puzzle with those parameters at that tile size.
+</p>
+<h3><a name="backend-set-size"></a>2.8.5 <code>set_size()</code></h3>
+<pre><code>void (*set_size)(drawing *dr, game_drawstate *ds,
+                 game_params *params, int tilesize);
+</code></pre>
+<p>
+This function is responsible for setting up a <code>game_drawstate</code> to draw at a given tile size. Typically this will simply involve copying the supplied <code>tilesize</code> parameter into a <code>tilesize</code> field inside the draw state; for some more complex games it might also involve setting up other dimension fields, or possibly allocating a blitter (see <a href="drawing.html#drawing-blitter">section 3.1.11</a>).
+</p>
+<p>
+The parameter <code>dr</code> is a drawing object (see <a href="drawing.html#drawing">chapter 3</a>), which is required if a blitter needs to be allocated.
+</p>
+<p>
+Back ends may assume (and may enforce by assertion) that this function will be called at most once for any <code>game_drawstate</code>. If a puzzle needs to be redrawn at a different size, the mid-end will create a fresh drawstate.
+</p>
+<h3><a name="backend-colours"></a>2.8.6 <code>colours()</code></h3>
+<pre><code>float *(*colours)(frontend *fe, int *ncolours);
+</code></pre>
+<p>
+This function is responsible for telling the front end what colours the puzzle will need to draw itself.
+</p>
+<p>
+It returns the number of colours required in <code>*ncolours</code>, and the return value from the function itself is a dynamically allocated array of three times that many <code>float</code>s, containing the red, green and blue components of each colour respectively as numbers in the range [0,1].
+</p>
+<p>
+The second parameter passed to this function is a front end handle. The only things it is permitted to do with this handle are to call the front-end function called <code>frontend_default_colour()</code> (see <a href="midend.html#frontend-default-colour">section 4.31</a>) or the utility function called <code>game_mkhighlight()</code> (see <a href="utils.html#utils-game-mkhighlight">section 5.4.7</a>). (The latter is a wrapper on the former, so front end implementors only need to provide <code>frontend_default_colour()</code>.) This allows <code>colours()</code> to take local configuration into account when deciding on its own colour allocations. Most games use the front end's default colour as their background, apart from a few which depend on drawing relief highlights so they adjust the background colour if it's too light for highlights to show up against it.
+</p>
+<p>
+Note that the colours returned from this function are for <em>drawing</em>, not for printing. Printing has an entirely different colour allocation policy.
+</p>
+<h3><a name="backend-anim-length"></a>2.8.7 <code>anim_length()</code></h3>
+<pre><code>float (*anim_length)(game_state *oldstate, game_state *newstate,
+                     int dir, game_ui *ui);
+</code></pre>
+<p>
+This function is called when a move is made, undone or redone. It is given the old and the new <code>game_state</code>, and its job is to decide whether the transition between the two needs to be animated or can be instant.
+</p>
+<p>
+<code>oldstate</code> is the state that was current until this call; <code>newstate</code> is the state that will be current after it. <code>dir</code> specifies the chronological order of those states: if it is positive, then the transition is the result of a move or a redo (and so <code>newstate</code> is the later of the two moves), whereas if it is negative then the transition is the result of an undo (so that <code>newstate</code> is the <em>earlier</em> move).
+</p>
+<p>
+If this function decides the transition should be animated, it returns the desired length of the animation in seconds. If not, it returns zero.
+</p>
+<p>
+State changes as a result of a Restart operation are never animated; the mid-end will handle them internally and never consult this function at all. State changes as a result of Solve operations are also not animated by default, although you can change this for a particular game by setting a flag in <code>flags</code> (<a href="#backend-flags">section 2.10.6</a>).
+</p>
+<p>
+The function is also passed a pointer to the local <code>game_ui</code>. It may refer to information in here to help with its decision (see <a href="writing.html#writing-conditional-anim">section 6.3.7</a> for an example of this), and/or it may <em>write</em> information about the nature of the animation which will be read later by <code>redraw()</code>.
+</p>
+<p>
+When this function is called, it may rely on <code>changed_state()</code> having been called previously, so if <code>anim_length()</code> needs to refer to information in the <code>game_ui</code>, then <code>changed_state()</code> is a reliable place to have set that information up.
+</p>
+<p>
+Move animations do not inhibit further input events. If the user continues playing before a move animation is complete, the animation will be abandoned and the display will jump straight to the final state.
+</p>
+<h3><a name="backend-flash-length"></a>2.8.8 <code>flash_length()</code></h3>
+<pre><code>float (*flash_length)(game_state *oldstate, game_state *newstate,
+                      int dir, game_ui *ui);
+</code></pre>
+<p>
+This function is called when a move is completed. (&#8216;Completed&#8217; means that not only has the move been made, but any animation which accompanied it has finished.) It decides whether the transition from <code>oldstate</code> to <code>newstate</code> merits a &#8216;flash&#8217;.
+</p>
+<p>
+A flash is much like a move animation, but it is <em>not</em> interrupted by further user interface activity; it runs to completion in parallel with whatever else might be going on on the display. The only thing which will rush a flash to completion is another flash.
+</p>
+<p>
+The purpose of flashes is to indicate that the game has been completed. They were introduced as a separate concept from move animations because of Net: the habit of most Net players (and certainly me) is to rotate a tile into place and immediately lock it, then move on to another tile. When you make your last move, at the instant the final tile is rotated into place the screen starts to flash to indicate victory &#8211; but if you then press the lock button out of habit, then the move animation is cancelled, and the victory flash does not complete. (And if you <em>don't</em> press the lock button, the completed grid will look untidy because there will be one unlocked square.) Therefore, I introduced a specific concept of a &#8216;flash&#8217; which is separate from a move animation and can proceed in parallel with move animations and any other display activity, so that the victory flash in Net is not cancelled by that final locking move.
+</p>
+<p>
+The input parameters to <code>flash_length()</code> are exactly the same as the ones to <code>anim_length()</code>.
+</p>
+<p>
+Just like <code>anim_length()</code>, when this function is called, it may rely on <code>changed_state()</code> having been called previously, so if it needs to refer to information in the <code>game_ui</code> then <code>changed_state()</code> is a reliable place to have set that information up.
+</p>
+<p>
+(Some games use flashes to indicate defeat as well as victory; Mines, for example, flashes in a different colour when you tread on a mine from the colour it uses when you complete the game. In order to achieve this, its <code>flash_length()</code> function has to store a flag in the <code>game_ui</code> to indicate which flash type is required.)
+</p>
+<h3><a name="backend-redraw"></a>2.8.9 <code>redraw()</code></h3>
+<pre><code>void (*redraw)(drawing *dr, game_drawstate *ds,
+               game_state *oldstate, game_state *newstate, int dir,
+               game_ui *ui, float anim_time, float flash_time);
+</code></pre>
+<p>
+This function is responsible for actually drawing the contents of the game window, and for redrawing every time the game state or the <code>game_ui</code> changes.
+</p>
+<p>
+The parameter <code>dr</code> is a drawing object which may be passed to the drawing API functions (see <a href="drawing.html#drawing">chapter 3</a> for documentation of the drawing API). This function may not save <code>dr</code> and use it elsewhere; it must only use it for calling back to the drawing API functions within its own lifetime.
+</p>
+<p>
+<code>ds</code> is the local <code>game_drawstate</code>, of course, and <code>ui</code> is the local <code>game_ui</code>.
+</p>
+<p>
+<code>newstate</code> is the semantically-current game state, and is always non-<code>NULL</code>. If <code>oldstate</code> is also non-<code>NULL</code>, it means that a move has recently been made and the game is still in the process of displaying an animation linking the old and new states; in this situation, <code>anim_time</code> will give the length of time (in seconds) that the animation has already been running. If <code>oldstate</code> is <code>NULL</code>, then <code>anim_time</code> is unused (and will hopefully be set to zero to avoid confusion).
+</p>
+<p>
+<code>flash_time</code>, if it is is non-zero, denotes that the game is in the middle of a flash, and gives the time since the start of the flash. See <a href="#backend-flash-length">section 2.8.8</a> for general discussion of flashes.
+</p>
+<p>
+The very first time this function is called for a new <code>game_drawstate</code>, it is expected to redraw the <em>entire</em> drawing area. Since this often involves drawing visual furniture which is never subsequently altered, it is often simplest to arrange this by having a special &#8216;first time&#8217; flag in the draw state, and resetting it after the first redraw.
+</p>
+<p>
+When this function (or any subfunction) calls the drawing API, it is expected to pass colour indices which were previously defined by the <code>colours()</code> function.
+</p>
+<h2><a name="backend-printing"></a>2.9 Printing functions</h2>
+<p>
+This section discusses the back end functions that deal with printing puzzles out on paper.
+</p>
+<h3><a name="backend-can-print"></a>2.9.1 <code>can_print</code></h3>
+<pre><code>int can_print;
+</code></pre>
+<p>
+This flag is set to <code>TRUE</code> if the puzzle is capable of printing itself on paper. (This makes sense for some puzzles, such as Solo, which can be filled in with a pencil. Other puzzles, such as Twiddle, inherently involve moving things around and so would not make sense to print.)
+</p>
+<p>
+If this flag is <code>FALSE</code>, then the functions <code>print_size()</code> and <code>print()</code> will never be called.
+</p>
+<h3><a name="backend-can-print-in-colour"></a>2.9.2 <code>can_print_in_colour</code></h3>
+<pre><code>int can_print_in_colour;
+</code></pre>
+<p>
+This flag is set to <code>TRUE</code> if the puzzle is capable of printing itself differently when colour is available. For example, Map can actually print coloured regions in different <em>colours</em> rather than resorting to cross-hatching.
+</p>
+<p>
+If the <code>can_print</code> flag is <code>FALSE</code>, then this flag will be ignored.
+</p>
+<h3><a name="backend-print-size"></a>2.9.3 <code>print_size()</code></h3>
+<pre><code>void (*print_size)(game_params *params, float *x, float *y);
+</code></pre>
+<p>
+This function is passed a <code>game_params</code> structure and a tile size. It returns, in <code>*x</code> and <code>*y</code>, the preferred size in <em>millimetres</em> of that puzzle if it were to be printed out on paper.
+</p>
+<p>
+If the <code>can_print</code> flag is <code>FALSE</code>, this function will never be called.
+</p>
+<h3><a name="backend-print"></a>2.9.4 <code>print()</code></h3>
+<pre><code>void (*print)(drawing *dr, game_state *state, int tilesize);
+</code></pre>
+<p>
+This function is called when a puzzle is to be printed out on paper. It should use the drawing API functions (see <a href="drawing.html#drawing">chapter 3</a>) to print itself.
+</p>
+<p>
+This function is separate from <code>redraw()</code> because it is often very different:
+</p>
+<ul><li>
+The printing function may not depend on pixel accuracy, since printer resolution is variable. Draw as if your canvas had infinite resolution.
+</li>
+<li>
+The printing function sometimes needs to display things in a completely different style. Net, for example, is very different as an on-screen puzzle and as a printed one.
+</li>
+<li>
+The printing function is often much simpler since it has no need to deal with repeated partial redraws.
+</li>
+</ul>
+<p>
+However, there's no reason the printing and redraw functions can't share some code if they want to.
+</p>
+<p>
+When this function (or any subfunction) calls the drawing API, the colour indices it passes should be colours which have been allocated by the <code>print_*_colour()</code> functions within this execution of <code>print()</code>. This is very different from the fixed small number of colours used in <code>redraw()</code>, because printers do not have a limitation on the total number of colours that may be used. Some puzzles' printing functions might wish to allocate only one &#8216;ink&#8217; colour and use it for all drawing; others might wish to allocate <em>more</em> colours than are used on screen.
+</p>
+<p>
+One possible colour policy worth mentioning specifically is that a puzzle's printing function might want to allocate the <em>same</em> colour indices as are used by the redraw function, so that code shared between drawing and printing does not have to keep switching its colour indices. In order to do this, the simplest thing is to make use of the fact that colour indices returned from <code>print_*_colour()</code> are guaranteed to be in increasing order from zero. So if you have declared an <code>enum</code> defining three colours <code>COL_BACKGROUND</code>, <code>COL_THIS</code> and <code>COL_THAT</code>, you might then write
+</p>
+<pre><code>int c;
+c = print_mono_colour(dr, 1); assert(c == COL_BACKGROUND);
+c = print_mono_colour(dr, 0); assert(c == COL_THIS);
+c = print_mono_colour(dr, 0); assert(c == COL_THAT);
+</code></pre>
+<p>
+If the <code>can_print</code> flag is <code>FALSE</code>, this function will never be called.
+</p>
+<h2><a name="backend-misc"></a>2.10 Miscellaneous</h2>
+<h3><a name="backend-can-format-as-text"></a>2.10.1 <code>can_format_as_text</code></h3>
+<pre><code>int can_format_as_text;
+</code></pre>
+<p>
+This boolean field is <code>TRUE</code> if the game supports formatting a game state as ASCII text (typically ASCII art) for copying to the clipboard and pasting into other applications. If it is <code>FALSE</code>, front ends will not offer the &#8216;Copy&#8217; command at all.
+</p>
+<p>
+If this field is <code>FALSE</code>, the function <code>text_format()</code> (<a href="#backend-text-format">section 2.10.2</a>) is not expected to do anything at all.
+</p>
+<h3><a name="backend-text-format"></a>2.10.2 <code>text_format()</code></h3>
+<pre><code>char *(*text_format)(game_state *state);
+</code></pre>
+<p>
+This function is passed a <code>game_state</code>, and returns a newly allocated C string containing an ASCII representation of that game state. It is used to implement the &#8216;Copy&#8217; operation in many front ends.
+</p>
+<p>
+This function should only be called if the back end field <code>can_format_as_text</code> (<a href="#backend-can-format-as-text">section 2.10.1</a>) is <code>TRUE</code>.
+</p>
+<p>
+The returned string may contain line endings (and will probably want to), using the normal C internal &#8216;<code>\n</code>&#8217; convention. For consistency between puzzles, all multi-line textual puzzle representations should <em>end</em> with a newline as well as containing them internally. (There are currently no puzzles which have a one-line ASCII representation, so there's no precedent yet for whether that should come with a newline or not.)
+</p>
+<h3><a name="backend-wants-statusbar"></a>2.10.3 <code>wants_statusbar()</code></h3>
+<pre><code>int wants_statusbar;
+</code></pre>
+<p>
+This boolean field is set to <code>TRUE</code> if the puzzle has a use for a textual status line (to display score, completion status, currently active tiles, etc).
+</p>
+<h3><a name="backend-is-timed"></a>2.10.4 <code>is_timed</code></h3>
+<pre><code>int is_timed;
+</code></pre>
+<p>
+This boolean field is <code>TRUE</code> if the puzzle is time-critical. If so, the mid-end will maintain a game timer while the user plays.
+</p>
+<p>
+If this field is <code>FALSE</code>, then <code>timing_state()</code> will never be called and need not do anything.
+</p>
+<h3><a name="backend-timing-state"></a>2.10.5 <code>timing_state()</code></h3>
+<pre><code>int (*timing_state)(game_state *state, game_ui *ui);
+</code></pre>
+<p>
+This function is passed the current <code>game_state</code> and the local <code>game_ui</code>; it returns <code>TRUE</code> if the game timer should currently be running.
+</p>
+<p>
+A typical use for the <code>game_ui</code> in this function is to note when the game was first completed (by setting a flag in <code>changed_state()</code> &#8211; see <a href="#backend-changed-state">section 2.6.5</a>), and freeze the timer thereafter so that the user can undo back through their solution process without altering their time.
+</p>
+<h3><a name="backend-flags"></a>2.10.6 <code>flags</code></h3>
+<pre><code>int flags;
+</code></pre>
+<p>
+This field contains miscellaneous per-backend flags. It consists of the bitwise OR of some combination of the following:
+</p>
+<dl><dt>
+<code>BUTTON_BEATS(x,y)</code>
+</dt>
+<dd>
+Given any <code>x</code> and <code>y</code> from the set {<code>LEFT_BUTTON</code>, <code>MIDDLE_BUTTON</code>, <code>RIGHT_BUTTON</code>}, this macro evaluates to a bit flag which indicates that when buttons <code>x</code> and <code>y</code> are both pressed simultaneously, the mid-end should consider <code>x</code> to have priority. (In the absence of any such flags, the mid-end will always consider the most recently pressed button to have priority.)
+</dd>
+<dt>
+<code>SOLVE_ANIMATES</code>
+</dt>
+<dd>
+This flag indicates that moves generated by <code>solve()</code> (<a href="#backend-solve">section 2.7.4</a>) are candidates for animation just like any other move. For most games, solve moves should not be animated, so the mid-end doesn't even bother calling <code>anim_length()</code> (<a href="#backend-anim-length">section 2.8.7</a>), thus saving some special-case code in each game. On the rare occasion that animated solve moves are actually required, you can set this flag.
+</dd>
+<dt>
+<code>REQUIRE_RBUTTON</code>
+</dt>
+<dd>
+This flag indicates that the puzzle cannot be usefully played without the use of mouse buttons other than the left one. On some PDA platforms, this flag is used by the front end to enable right-button emulation through an appropriate gesture. Note that a puzzle is not required to set this just because it <em>uses</em> the right button, but only if its use of the right button is critical to playing the game. (Slant, for example, uses the right button to cycle through the three square states in the opposite order from the left button, and hence can manage fine without it.)
+</dd>
+<dt>
+<code>REQUIRE_NUMPAD</code>
+</dt>
+<dd>
+This flag indicates that the puzzle cannot be usefully played without the use of number-key input. On some PDA platforms it causes an emulated number pad to appear on the screen. Similarly to <code>REQUIRE_RBUTTON</code>, a puzzle need not specify this simply if its use of the number keys is not critical.
+</dd>
+</dl>
+<h2><a name="backend-initiative"></a>2.11 Things a back end may do on its own initiative</h2>
+<p>
+This section describes a couple of things that a back end may choose to do by calling functions elsewhere in the program, which would not otherwise be obvious.
+</p>
+<h3><a name="backend-newrs"></a>2.11.1 Create a random state</h3>
+<p>
+If a back end needs random numbers at some point during normal play, it can create a fresh <code>random_state</code> by first calling <code>get_random_seed</code> (<a href="midend.html#frontend-get-random-seed">section 4.27</a>) and then passing the returned seed data to <code>random_new()</code>.
+</p>
+<p>
+This is likely not to be what you want. If a puzzle needs randomness in the middle of play, it's likely to be more sensible to store some sort of random state within the <code>game_state</code>, so that the random numbers are tied to the particular game state and hence the player can't simply keep undoing their move until they get numbers they like better.
+</p>
+<p>
+This facility is currently used only in Net, to implement the &#8216;jumble&#8217; command, which sets every unlocked tile to a new random orientation. This randomness <em>is</em> a reasonable use of the feature, because it's non-adversarial &#8211; there's no advantage to the user in getting different random numbers.
+</p>
+<h3><a name="backend-supersede"></a>2.11.2 Supersede its own game description</h3>
+<p>
+In response to a move, a back end is (reluctantly) permitted to call <code>midend_supersede_game_desc()</code>:
+</p>
+<pre><code>void midend_supersede_game_desc(midend *me,
+                                char *desc, char *privdesc);
+</code></pre>
+<p>
+When the user selects &#8216;New Game&#8217;, the mid-end calls <code>new_desc()</code> (<a href="#backend-new-desc">section 2.4.1</a>) to get a new game description, and (as well as using that to generate an initial game state) stores it for the save file and for telling to the user. The function above overwrites that game description, and also splits it in two. <code>desc</code> becomes the new game description which is provided to the user on request, and is also the one used to construct a new initial game state if the user selects &#8216;Restart&#8217;. <code>privdesc</code> is a &#8216;private&#8217; game description, used to reconstruct the game's initial state when reloading.
+</p>
+<p>
+The distinction between the two, as well as the need for this function at all, comes from Mines. Mines begins with a blank grid and no idea of where the mines actually are; <code>new_desc()</code> does almost no work in interactive mode, and simply returns a string encoding the <code>random_state</code>. When the user first clicks to open a tile, <em>then</em> Mines generates the mine positions, in such a way that the game is soluble from that starting point. Then it uses this function to supersede the random-state game description with a proper one. But it needs two: one containing the initial click location (because that's what you want to happen if you restart the game, and also what you want to send to a friend so that they play <em>the same game</em> as you), and one without the initial click location (because when you save and reload the game, you expect to see the same blank initial state as you had before saving).
+</p>
+<p>
+I should stress again that this function is a horrid hack. Nobody should use it if they're not Mines; if you think you need to use it, think again repeatedly in the hope of finding a better way to do whatever it was you needed to do.
+</p>
+
+<hr><address></address></body>
+</html>
