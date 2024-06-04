@@ -1,0 +1,11 @@
+Flip
+====
+
+Flip groups of squares until they are all lit up.  
+Each click flips the square you click, plus the ones 
+directly above, below, to the right and left.
+
+There is also an option for a click to affect a random
+set of squares for each one clicked.
+
+A-click to flip a square.

@@ -96,6 +96,7 @@ enum {
     COL_TARGET,
     COL_TARGET_HIGHLIGHT,
     COL_TARGET_LOWLIGHT,
+    COL_CURSOR,
     NCOLOURS
 };
 
@@ -388,7 +389,7 @@ static int boardcmp(void *av, void *bv)
 
 static struct board *newboard(int w, int h, unsigned char *data)
 {
-    struct board *b = malloc(sizeof(struct board) + w*h);
+    struct board *b = smalloc(sizeof(struct board) + w*h);
     b->data = (unsigned char *)b + sizeof(struct board);
     memcpy(b->data, data, w*h);
     b->w = w;
@@ -1182,6 +1183,9 @@ struct game_ui {
     int drag_anchor;
     int drag_offset_x, drag_offset_y;
     int drag_currpos;
+    int cursor_x;
+    int cursor_y;
+    int show_cursor;
     unsigned char *reachable;
     int *bfs_queue;		       /* used as scratch in interpret_move */
 };
@@ -1197,7 +1201,8 @@ static game_ui *new_ui(game_state *state)
     ui->reachable = snewn(wh, unsigned char);
     memset(ui->reachable, 0, wh);
     ui->bfs_queue = snewn(wh, int);
-
+    ui->cursor_x=ui->cursor_y=0;
+    ui->show_cursor=FALSE;
     return ui;
 }
 
@@ -1247,9 +1252,39 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
     int tx, ty, i, j;
     int qhead, qtail;
 
-    if (button == LEFT_BUTTON) {
-	tx = FROMCOORD(x);
-	ty = FROMCOORD(y);
+    if(IS_CURSOR_MOVE(button) && !ui->dragging)
+    {
+        ui->show_cursor = TRUE;
+        switch(button)
+        {
+            case CURSOR_LEFT:
+                ui->cursor_x = max(0, ui->cursor_x - 1);
+                break;
+            case CURSOR_RIGHT:
+                ui->cursor_x = min(w, ui->cursor_x + 1);
+                break;
+            case CURSOR_UP:
+                ui->cursor_y = max(0, ui->cursor_y - 1);
+                break;
+            case CURSOR_DOWN:
+                ui->cursor_y = min(h, ui->cursor_y + 1);
+                break;
+        };
+        return("");
+    };
+
+    if((button == LEFT_BUTTON) || ((button == CURSOR_SELECT) && !ui->dragging))
+    {
+        if(button == CURSOR_SELECT)
+        {
+            tx = ui->cursor_x;
+            ty = ui->cursor_y;
+        }
+        else
+        {
+	    tx = FROMCOORD(x);
+    	    ty = FROMCOORD(y);
+        };
 
 	if (tx < 0 || tx >= w || ty < 0 || ty >= h ||
 	    !ISBLOCK(state->board[ty*w+tx]))
@@ -1346,11 +1381,34 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
 	 * of a drag.
 	 */
 	return "";
-    } else if (button == LEFT_DRAG && ui->dragging) {
+    } else if ((button == LEFT_DRAG || IS_CURSOR_MOVE(button)) && ui->dragging) {
 	int dist, distlimit, dx, dy, s, px, py;
 
-	tx = FROMCOORD(x);
-	ty = FROMCOORD(y);
+        if(IS_CURSOR_MOVE(button))
+        {
+            switch(button)
+            {
+                case CURSOR_LEFT:
+                    ui->cursor_x = max(0, ui->cursor_x - 1);
+                    break;
+                case CURSOR_RIGHT:
+                    ui->cursor_x = min(w, ui->cursor_x + 1);
+                    break;
+                case CURSOR_UP:
+                    ui->cursor_y = max(0, ui->cursor_y - 1);
+                    break;
+                case CURSOR_DOWN:
+                    ui->cursor_y = min(h, ui->cursor_y + 1);
+                    break;
+            }
+            tx = ui->cursor_x;
+            ty = ui->cursor_y;
+        }
+        else
+        {
+            tx = FROMCOORD(x);
+	    ty = FROMCOORD(y);
+        };
 
 	tx -= ui->drag_offset_x;
 	ty -= ui->drag_offset_y;
@@ -1377,7 +1435,7 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
 		}
 	}
 	return NULL;		       /* give up - this drag has no effect */
-    } else if (button == LEFT_RELEASE && ui->dragging) {
+    } else if ((button == LEFT_RELEASE || button == CURSOR_SELECT) && ui->dragging) {
 	char data[256], *str;
 
 	/*
@@ -1597,7 +1655,8 @@ static void game_compute_size(game_params *params, int tilesize,
 			      int *x, int *y)
 {
     /* fool the macros */
-    struct dummy { int tilesize; } dummy = { tilesize }, *ds = &dummy;
+    struct dummy { int tilesize; } dummy, *ds = &dummy;
+    dummy.tilesize = tilesize;
 
     *x = params->w * TILESIZE + 2*BORDER;
     *y = params->h * TILESIZE + 2*BORDER;
@@ -1660,6 +1719,10 @@ static float *game_colours(frontend *fe, int *ncolours)
     game_mkhighlight_specific(fe, ret, COL_TARGET,
 			      COL_TARGET_HIGHLIGHT, COL_TARGET_LOWLIGHT);
 
+    ret[COL_CURSOR * 3 + 0] = 1.0;
+    ret[COL_CURSOR * 3 + 1] = 0.7;
+    ret[COL_CURSOR * 3 + 2] = 0.7;
+
     *ncolours = NCOLOURS;
     return ret;
 }
@@ -1698,7 +1761,8 @@ static void game_free_drawstate(drawing *dr, game_drawstate *ds)
 #define FG_DRAGGING     0x00000100UL
 #define FG_SHADOW       0x00000200UL
 #define FG_SOLVEPIECE   0x00000400UL
-#define FG_MAINPIECESH  11
+#define FG_CURSOR       0x00000800UL
+#define FG_MAINPIECESH  12
 #define FG_SHADOWSH     19
 
 #define PIECE_LBORDER   0x00000001UL
@@ -2017,6 +2081,7 @@ static void draw_tile(drawing *dr, game_drawstate *ds,
 	cc = COL_TARGET;
     else
 	cc = COL_BACKGROUND;
+
     ch = cc+1;
     cl = cc+2;
     if (val & FLASH_LOW)
@@ -2024,8 +2089,12 @@ static void draw_tile(drawing *dr, game_drawstate *ds,
     else if (val & FLASH_HIGH)
 	cc = ch;
 
+
     draw_rect(dr, tx, ty, TILESIZE, TILESIZE, cc);
     if (val & BG_FORCEFIELD) {
+        if (val & FG_CURSOR)
+            cl = COL_CURSOR;
+
 	/*
 	 * Cattle-grid effect to indicate that nothing but the
 	 * main block can slide over this square.
@@ -2060,6 +2129,8 @@ static void draw_tile(drawing *dr, game_drawstate *ds,
 	    cc = cl;
 	else if (val & FLASH_HIGH)
 	    cc = ch;
+    if (val & FG_CURSOR)
+        cc = COL_CURSOR;
 
 	draw_wallpart(dr, ds, tx, ty, (val >> FG_MAINPIECESH) & PIECE_MASK,
 		      cl, cc, ch);
@@ -2075,6 +2146,9 @@ static void draw_tile(drawing *dr, game_drawstate *ds,
 	    cc = cl;
 	else if (val & (FLASH_HIGH | FG_SOLVEPIECE))
 	    cc = ch;
+    if (val & FG_CURSOR)
+        cc = COL_CURSOR;
+
 
 	draw_piecepart(dr, ds, tx, ty, (val >> FG_MAINPIECESH) & PIECE_MASK,
 		       cl, cc, ch);
@@ -2232,6 +2306,12 @@ static void game_redraw(drawing *dr, game_drawstate *ds, game_state *oldstate,
 		val |= find_piecepart(w, h, dsf, x, y) << FG_MAINPIECESH;
 	    }
 
+            if(ui->show_cursor)
+            {
+                if((x == ui->cursor_x) && (y == ui->cursor_y))
+                    val |= FG_CURSOR;
+            };
+
 	    /*
 	     * If we're in the middle of showing a solution,
 	     * display a shadow piece for the target of the
@@ -2250,6 +2330,7 @@ static void game_redraw(drawing *dr, game_drawstate *ds, game_state *oldstate,
 		draw_tile(dr, ds, x, y, val);
 		ds->grid[i] = val;
 	    }
+
 	}
 
     /*
@@ -2294,14 +2375,6 @@ static int game_timing_state(game_state *state, game_ui *ui)
     return TRUE;
 }
 
-static void game_print_size(game_params *params, float *x, float *y)
-{
-}
-
-static void game_print(drawing *dr, game_state *state, int tilesize)
-{
-}
-
 #ifdef COMBINED
 #define thegame slide
 #endif
@@ -2337,7 +2410,7 @@ const struct game thegame = {
     game_redraw,
     game_anim_length,
     game_flash_length,
-    FALSE, FALSE, game_print_size, game_print,
+    FALSE, FALSE, NULL, NULL,
     TRUE,			       /* wants_statusbar */
     FALSE, game_timing_state,
     0,				       /* flags */

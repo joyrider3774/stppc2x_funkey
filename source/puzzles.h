@@ -78,6 +78,8 @@ enum {
 #define REQUIRE_NUMPAD ( 1 << 11 )
 /* GP2X: Requires at least a 640x480 resolution */
 #define REQUIRE_LARGE_SCREEN ( 1 << 12 )
+/* GP2X: Can't use cursor-key emulation */
+#define REQUIRE_MOUSE_INPUT ( 1 << 13 )
 /* end of `flags' word definitions */
 
 #ifdef _WIN32_WCE
@@ -261,6 +263,7 @@ char *midend_deserialise(midend *me,
                          void *rctx);
 /* Printing functions supplied by the mid-end */
 char *midend_print_puzzle(midend *me, document *doc, int with_soln);
+int midend_tilesize(midend *me);
 
 /*
  * malloc.c
@@ -307,6 +310,7 @@ void move_cursor(int button, int *x, int *y, int maxw, int maxh, int wrap);
 
 /* Used in netslide.c and sixteen.c for cursor movement around edge. */
 int c2pos(int w, int h, int cx, int cy);
+int c2diff(int w, int h, int cx, int cy, int button);
 void pos2c(int w, int h, int pos, int *cx, int *cy);
 
 /* Draws text with an 'outline' formed by offsetting the text
@@ -518,5 +522,9 @@ extern const int gamecount;
 #else
 extern const game thegame;
 #endif
+
+int max_digit_to_input;
+int min_digit_to_input;
+void game_completed();
 
 #endif /* PUZZLES_PUZZLES_H */

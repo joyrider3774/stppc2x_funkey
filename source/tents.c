@@ -1414,6 +1414,8 @@ struct game_ui {
     int dex, dey;                      /* coords of drag end */
     int drag_button;                   /* -1 for none, or a button code */
     int drag_ok;                       /* dragged off the window, to cancel */
+
+    int cx, cy, cdisp;                 /* cursor position, and ?display. */
 };
 
 static game_ui *new_ui(game_state *state)
@@ -1423,6 +1425,7 @@ static game_ui *new_ui(game_state *state)
     ui->dex = ui->dey = -1;
     ui->drag_button = -1;
     ui->drag_ok = FALSE;
+    ui->cx = ui->cy = ui->cdisp = 0;
     return ui;
 }
 
@@ -1443,6 +1446,7 @@ static void decode_ui(game_ui *ui, char *encoding)
 static void game_changed_state(game_ui *ui, game_state *oldstate,
                                game_state *newstate)
 {
+    if (newstate->completed && ! newstate->used_solve && oldstate && ! oldstate->completed) game_completed();
 }
 
 struct game_drawstate {
@@ -1450,6 +1454,7 @@ struct game_drawstate {
     int started;
     game_params p;
     char *drawn;
+    int cx, cy;         /* last-drawn cursor pos, or (-1,-1) if absent. */
 };
 
 #define PREFERRED_TILESIZE 32
@@ -1514,6 +1519,7 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
 			    int x, int y, int button)
 {
     int w = state->p.w, h = state->p.h;
+    char tmpbuf[80];
 
     if (button == LEFT_BUTTON || button == RIGHT_BUTTON) {
         x = FROMCOORD(x);
@@ -1525,13 +1531,14 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
         ui->dsx = ui->dex = x;
         ui->dsy = ui->dey = y;
         ui->drag_ok = TRUE;
+        ui->cdisp = 0;
         return "";             /* ui updated */
     }
 
     if ((IS_MOUSE_DRAG(button) || IS_MOUSE_RELEASE(button)) &&
         ui->drag_button > 0) {
         int xmin, ymin, xmax, ymax;
-        char *buf, *sep, tmpbuf[80];
+        char *buf, *sep;
         int buflen, bufsize, tmplen;
 
         x = FROMCOORD(x);
@@ -1606,6 +1613,39 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
             buf[buflen] = '\0';
             return buf;
         }
+    }
+
+    if (IS_CURSOR_MOVE(button)) {
+        move_cursor(button, &ui->cx, &ui->cy, w, h, 0);
+        ui->cdisp = 1;
+        return "";
+    }
+    if (ui->cdisp) {
+        char rep = 0;
+        int v = state->grid[ui->cy*w+ui->cx];
+
+        if (v != TREE) {
+#ifdef SINGLE_CURSOR_SELECT
+            if (button == CURSOR_SELECT)
+                /* SELECT cycles T, N, B */
+                rep = v == BLANK ? 'T' : v == TENT ? 'N' : 'B';
+#else
+            if (button == CURSOR_SELECT)
+                rep = v == BLANK ? 'T' : 'B';
+            else if (button == CURSOR_SELECT2)
+                rep = v == BLANK ? 'N' : 'B';
+            else if (button == 'T' || button == 'N' || button == 'B')
+                rep = (char)button;
+#endif
+        }
+
+        if (rep) {
+            sprintf(tmpbuf, "%c%d,%d", (int)rep, ui->cx, ui->cy);
+            return dupstr(tmpbuf);
+        }
+    } else if (IS_CURSOR_SELECT(button)) {
+        ui->cdisp = 1;
+        return "";
     }
 
     return NULL;
@@ -1856,6 +1896,7 @@ static game_drawstate *game_new_drawstate(drawing *dr, game_state *state)
     ds->p = state->p;                  /* structure copy */
     ds->drawn = snewn(w*h, char);
     memset(ds->drawn, MAGIC, w*h);
+    ds->cx = ds->cy = -1;
 
     return ds;
 }
@@ -1867,7 +1908,7 @@ static void game_free_drawstate(drawing *dr, game_drawstate *ds)
 }
 
 static void draw_tile(drawing *dr, game_drawstate *ds,
-                      int x, int y, int v, int printing)
+                      int x, int y, int v, int cur, int printing)
 {
     int tx = COORD(x), ty = COORD(y);
     int cx = tx + TILESIZE/2, cy = ty + TILESIZE/2;
@@ -1911,6 +1952,12 @@ static void draw_tile(drawing *dr, game_drawstate *ds,
         draw_polygon(dr, coords, 3, (printing ? -1 : COL_TENT), COL_TENT);
     }
 
+    if (cur) {
+      int coff = TILESIZE/8;
+      draw_rect_outline(dr, tx + coff, ty + coff,
+                        TILESIZE - coff*2, TILESIZE - coff*2, COL_GRID);
+    }
+
     unclip(dr);
     draw_update(dr, tx+1, ty+1, TILESIZE-1, TILESIZE-1);
 }
@@ -1924,6 +1971,13 @@ static void int_redraw(drawing *dr, game_drawstate *ds, game_state *oldstate,
 {
     int w = state->p.w, h = state->p.h;
     int x, y, flashing;
+    int cx = -1, cy = -1;
+    int cmoved = 0;
+
+    if (ui) {
+      if (ui->cdisp) { cx = ui->cx; cy = ui->cy; }
+      if (cx != ds->cx || cy != ds->cy) cmoved = 1;
+    }
 
     if (printing || !ds->started) {
 	if (!printing) {
@@ -1975,6 +2029,7 @@ static void int_redraw(drawing *dr, game_drawstate *ds, game_state *oldstate,
     for (y = 0; y < h; y++)
         for (x = 0; x < w; x++) {
             int v = state->grid[y*w+x];
+            int credraw = 0;
 
             /*
              * We deliberately do not take drag_ok into account
@@ -1988,12 +2043,18 @@ static void int_redraw(drawing *dr, game_drawstate *ds, game_state *oldstate,
             if (flashing && (v == TREE || v == TENT))
                 v = NONTENT;
 
-            if (printing || ds->drawn[y*w+x] != v) {
-                draw_tile(dr, ds, x, y, v, printing);
+            if (cmoved) {
+              if ((x == cx && y == cy) ||
+                  (x == ds->cx && y == ds->cy)) credraw = 1;
+            }
+
+            if (printing || ds->drawn[y*w+x] != v || credraw) {
+                draw_tile(dr, ds, x, y, v, (x == cx && y == cy), printing);
                 if (!printing)
 		    ds->drawn[y*w+x] = v;
             }
         }
+    if (cmoved) { ds->cx = cx; ds->cy = cy; }
 }
 
 static void game_redraw(drawing *dr, game_drawstate *ds, game_state *oldstate,
@@ -2022,36 +2083,6 @@ static float game_flash_length(game_state *oldstate, game_state *newstate,
 static int game_timing_state(game_state *state, game_ui *ui)
 {
     return TRUE;
-}
-
-static void game_print_size(game_params *params, float *x, float *y)
-{
-    int pw, ph;
-
-    /*
-     * I'll use 6mm squares by default.
-     */
-    game_compute_size(params, 600, &pw, &ph);
-    *x = pw / 100.0;
-    *y = ph / 100.0;
-}
-
-static void game_print(drawing *dr, game_state *state, int tilesize)
-{
-    int c;
-
-    /* Ick: fake up `ds->tilesize' for macro expansion purposes */
-    game_drawstate ads, *ds = &ads;
-    game_set_size(dr, ds, NULL, tilesize);
-
-    c = print_mono_colour(dr, 1); assert(c == COL_BACKGROUND);
-    c = print_mono_colour(dr, 0); assert(c == COL_GRID);
-    c = print_mono_colour(dr, 1); assert(c == COL_GRASS);
-    c = print_mono_colour(dr, 0); assert(c == COL_TREETRUNK);
-    c = print_mono_colour(dr, 0); assert(c == COL_TREELEAF);
-    c = print_mono_colour(dr, 0); assert(c == COL_TENT);
-
-    int_redraw(dr, ds, NULL, state, +1, NULL, 0.0F, 0.0F, TRUE);
 }
 
 #ifdef COMBINED
@@ -2089,7 +2120,7 @@ const struct game thegame = {
     game_redraw,
     game_anim_length,
     game_flash_length,
-    TRUE, FALSE, game_print_size, game_print,
+    FALSE, FALSE, NULL, NULL,
     FALSE,			       /* wants_statusbar */
     FALSE, game_timing_state,
     REQUIRE_RBUTTON,		       /* flags */

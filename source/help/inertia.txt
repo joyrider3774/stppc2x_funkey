@@ -1,0 +1,14 @@
+Inertia
+=======
+
+You are the green circle.  You have to collect all 
+the blue diamonds without hitting the black mines.  
+
+Some squares are solid wall (grey blocks).  Other 
+squares are "stop" spaces (faint circles).
+
+When you move in a direction, you will "slide" until
+you hit a wall, "stop"-space or bomb!
+
+A-click on a square next to the circle to slide in 
+that direction.  You can slide diagonally.

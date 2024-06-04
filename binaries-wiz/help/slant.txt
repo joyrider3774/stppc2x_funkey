@@ -1,0 +1,11 @@
+Slant
+=====
+
+Draw a diagonal line in every box.   The numbered 
+boxes have that number of diagonal lines touching 
+their circles.  
+
+You cannot form a loop anywhere.
+
+A-click a square to change it between a blank and 
+the two types of diagonal line.

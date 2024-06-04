@@ -1,0 +1,11 @@
+Cube
+====
+
+Pick up all the blue squares with the shape's faces by 
+rolling the shape over them.
+
+The options let you try other shapes than a cube, 
+including octahedrons, tetrahedrons and icosahedrons.
+
+A-click on a square to roll the shape in that 
+direction.

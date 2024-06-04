@@ -10,14 +10,19 @@
 
 COMBINED = -DCOMBINED -DSLOW_SYSTEM
 
+SDL_LIBRARY = SDL
+#SDL_LIBRARY = SDL_open2x
+#SDL_LIBRARY = SDL_paeryn
+#SDL_LIBRARY = SDL_senorquack
+ 
 CROSS_COMPILE_DIR= /opt/open2x/gcc-4.1.1-glibc-2.3.6
 CROSS_COMPILE = $(CROSS_COMPILE_DIR)/bin/arm-open2x-linux-
 #LDFLAGS = $(COMBINED) -static -L$(CROSS_COMPILE_DIR)/lib/ -L$(CROSS_COMPILE_DIR)/lib/gcc/arm-open2x-linux/4.1.1/ -L$(CROSS_COMPILE_DIR)/arm-open2x-linux/lib/ -lSDL -lSDL_ttf -lSDL -lSDL_gfx -lSDL_image -lSDL -ljpeg -lpng12 -lz -lfreetype -lm -lgcc -lpthread -lc
 LDFLAGS = $(COMBINED) -static -L$(CROSS_COMPILE_DIR)/lib/ \
 -L$(CROSS_COMPILE_DIR)/lib/gcc/arm-open2x-linux/4.1.1/ \
--L$(CROSS_COMPILE_DIR)/arm-open2x-linux/lib/ \-lSDL -lSDLmain \
+-L$(CROSS_COMPILE_DIR)/arm-open2x-linux/lib/ \-l$(SDL_LIBRARY) -lSDLmain \
 -lSDL_mixer -lsmpeg -lmad \
--lpthread -lSDL -lSDL_ttf -lSDL -lSDL_gfx -lSDL_image -lSDL -ljpeg \
+-lpthread -l$(SDL_LIBRARY) -lSDL_ttf -l$(SDL_LIBRARY) -lSDL_gfx -lSDL_image -l$(SDL_LIBRARY) -ljpeg \
 -lpng12 -lz -lfreetype -lm -lgcc -lpthread -lc
 
 #LDFLAGS = $(COMBINED) -static -L$(CROSS_COMPILE_DIR)/lib/ \
@@ -31,12 +36,12 @@ CC=$(CROSS_COMPILE)gcc
 CPP = $(CROSS_COMPILE)g++
 LD=$(CROSS_COMPILE)ld
 STRIP = $(CROSS_COMPILE)strip
-UPX = /usr/local/sbin/upx -9
+UPX = upx -9
 #UPX = echo
 
 OPTIMISATION=-O3
 
-CXXFLAGS = $(COMBINED) -fsigned-char -I $(CROSS_COMPILE_DIR)/include/ -DTARGET_GP2X $(OPTIMISATION) -Wall -Werror 
+CXXFLAGS = $(COMBINED) -Wall -Werror -fsigned-char -I $(CROSS_COMPILE_DIR)/include/ -DTARGET_GP2X $(OPTIMISATION) -Wall -Werror 
 LIBS = -L$(CROSS_COMPILE_DIR)/lib -lSDL -lSDL_gfx --start-group -lSDL_ttf \
 -lfreetype -lSDL --end-group -lSDL_image -ljpeg -lpng12 -lz --start-group -lSDL_mixer \
 -lvorbisfile -lvorbisidec -l ogg -lmikmod -lsmpeg -lmad -lSDL --end-group -lgcc -lm -lc -lpthread -ldl $(COMBINED)
@@ -49,14 +54,14 @@ all: stppc2x
 stppc2x: blackbox.gpo bridges.gpo combi.gpo cube.gpo dictionary.gpo divvy.gpo dominosa.gpo drawing.gpo dsf.gpo \
                 fastevents.gpo fifteen.gpo filling.gpo flip.gpo galaxies.gpo grid.gpo guess.gpo inertia.gpo \
                 iniparser.gpo latin.gpo lightup.gpo list.gpo loopy.gpo malloc.gpo map.gpo maxflow.gpo maze3d.gpo \
-                maze3dc.gpo midend.gpo mines.gpo misc.gpo mosco.gpo net.gpo netslide.gpo pattern.gpo pegs.gpo printing.gpo \
-                ps.gpo random.gpo rect.gpo samegame.gpo sdl.gpo sixteen.gpo slant.gpo slide.gpo sokoban.gpo \
+                maze3dc.gpo midend.gpo mines.gpo misc.gpo mosco.gpo net.gpo netslide.gpo pattern.gpo pegs.gpo \
+                random.gpo rect.gpo samegame.gpo sdl.gpo sixteen.gpo slant.gpo slide.gpo sokoban.gpo \
                 solo.gpo tents.gpo tree234.gpo twiddle.gpo unequal.gpo untangle.gpo version.gpo
 	$(CPP) -o stppc2x.gpe blackbox.gpo bridges.gpo combi.gpo cube.gpo dictionary.gpo \
 		divvy.gpo dominosa.gpo drawing.gpo dsf.gpo fastevents.gpo fifteen.gpo filling.gpo flip.gpo \
 		galaxies.gpo grid.gpo guess.gpo inertia.gpo iniparser.gpo latin.gpo lightup.gpo list.gpo loopy.gpo \
 		malloc.gpo map.gpo maxflow.gpo maze3d.gpo maze3dc.gpo midend.gpo mines.gpo misc.gpo mosco.gpo net.gpo \
-		netslide.gpo pattern.gpo pegs.gpo printing.gpo ps.gpo random.gpo rect.gpo samegame.gpo sdl.gpo \
+		netslide.gpo pattern.gpo pegs.gpo random.gpo rect.gpo samegame.gpo sdl.gpo \
 		sixteen.gpo slant.gpo slide.gpo sokoban.gpo solo.gpo tents.gpo tree234.gpo twiddle.gpo unequal.gpo \
 		untangle.gpo version.gpo $(LDFLAGS)
 	$(STRIP) stppc2x.gpe
@@ -176,12 +181,6 @@ pattern.gpo: ./pattern.c ./puzzles.h
 pegs.gpo: ./pegs.c ./puzzles.h ./tree234.h
 	$(CC) $(CXXFLAGS) -c $< -o $@
 
-printing.gpo: ./printing.c ./puzzles.h
-	$(CC) $(CXXFLAGS) -c $< -o $@
-
-ps.gpo: ./ps.c ./puzzles.h
-	$(CC) $(CXXFLAGS) -c $< -o $@
-
 random.gpo: ./random.c ./puzzles.h
 	$(CC) $(CXXFLAGS) -c $< -o $@
 
@@ -227,6 +226,6 @@ unequal.gpo: ./unequal.c ./puzzles.h ./latin.h
 untangle.gpo: ./untangle.c ./puzzles.h ./tree234.h
 	$(CC) $(CXXFLAGS) -c $< -o $@
 
-version.gpo: ./version.c
-	$(CC) $(CXXFLAGS) `cat version.def` -c $< -o $@;
+version.gpo: ./version.c ./version.def
+	$(CC) $(CXXFLAGS) `cat version.def` -c $< -o $@
 

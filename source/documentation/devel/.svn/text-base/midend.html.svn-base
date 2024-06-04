@@ -1,0 +1,447 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+"http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+<meta http-equiv="content-type" content="text/html; charset=US-ASCII">
+<title>The API provided by the mid-end</title>
+<link rel="previous" href="drawing.html">
+<link rel="ToC" href="index.html">
+<link rel="up" href="index.html">
+<link rel="next" href="utils.html">
+</head>
+<body>
+<p><a href="drawing.html">Previous</a> | <a href="index.html">Contents</a> | <a href="utils.html">Next</a></p>
+
+<ul>
+<li><a href="#midend">Chapter 4: The API provided by the mid-end</a>
+<ul>
+<li><a href="#midend-new">4.1 <code>midend_new()</code></a></li>
+<li><a href="#midend-free">4.2 <code>midend_free()</code></a></li>
+<li><a href="#midend-set-params">4.3 <code>midend_set_params()</code></a></li>
+<li><a href="#midend-get-params">4.4 <code>midend_get_params()</code></a></li>
+<li><a href="#midend-size">4.5 <code>midend_size()</code></a></li>
+<li><a href="#midend-new-game">4.6 <code>midend_new_game()</code></a></li>
+<li><a href="#midend-restart-game">4.7 <code>midend_restart_game()</code></a></li>
+<li><a href="#midend-force-redraw">4.8 <code>midend_force_redraw()</code></a></li>
+<li><a href="#midend-redraw">4.9 <code>midend_redraw()</code></a></li>
+<li><a href="#midend-process-key">4.10 <code>midend_process_key()</code></a></li>
+<li><a href="#midend-colours">4.11 <code>midend_colours()</code></a></li>
+<li><a href="#midend-timer">4.12 <code>midend_timer()</code></a></li>
+<li><a href="#midend-num-presets">4.13 <code>midend_num_presets()</code></a></li>
+<li><a href="#midend-fetch-preset">4.14 <code>midend_fetch_preset()</code></a></li>
+<li><a href="#midend-which-preset">4.15 <code>midend_which_preset()</code></a></li>
+<li><a href="#midend-wants-statusbar">4.16 <code>midend_wants_statusbar()</code></a></li>
+<li><a href="#midend-get-config">4.17 <code>midend_get_config()</code></a></li>
+<li><a href="#midend-set-config">4.18 <code>midend_set_config()</code></a></li>
+<li><a href="#midend-game-id">4.19 <code>midend_game_id()</code></a></li>
+<li><a href="#midend-get-game-id">4.20 <code>midend_get_game_id()</code></a></li>
+<li><a href="#midend-text-format">4.21 <code>midend_text_format()</code></a></li>
+<li><a href="#midend-solve">4.22 <code>midend_solve()</code></a></li>
+<li><a href="#midend-serialise">4.23 <code>midend_serialise()</code></a></li>
+<li><a href="#midend-deserialise">4.24 <code>midend_deserialise()</code></a></li>
+<li><a href="#frontend-backend">4.25 Direct reference to the back end structure by the front end</a></li>
+<li><a href="#frontend-api">4.26 Mid-end to front-end calls</a></li>
+<li><a href="#frontend-get-random-seed">4.27 <code>get_random_seed()</code></a></li>
+<li><a href="#frontend-activate-timer">4.28 <code>activate_timer()</code></a></li>
+<li><a href="#frontend-deactivate-timer">4.29 <code>deactivate_timer()</code></a></li>
+<li><a href="#frontend-fatal">4.30 <code>fatal()</code></a></li>
+<li><a href="#frontend-default-colour">4.31 <code>frontend_default_colour()</code></a></li>
+</ul></li>
+</ul>
+<h1><a name="midend"></a>Chapter 4: The API provided by the mid-end</h1>
+<p>
+This chapter documents the API provided by the mid-end to be called by the front end. You probably only need to read this if you are a front end implementor, i.e. you are porting Puzzles to a new platform. If you're only interested in writing new puzzles, you can safely skip this chapter.
+</p>
+<p>
+All the persistent state in the mid-end is encapsulated within a <code>midend</code> structure, to facilitate having multiple mid-ends in any port which supports multiple puzzle windows open simultaneously. Each <code>midend</code> is intended to handle the contents of a single puzzle window.
+</p>
+<h2><a name="midend-new"></a>4.1 <code>midend_new()</code></h2>
+<pre><code>midend *midend_new(frontend *fe, const game *ourgame,
+                   const drawing_api *drapi, void *drhandle)
+</code></pre>
+<p>
+Allocates and returns a new mid-end structure.
+</p>
+<p>
+The <code>fe</code> argument is stored in the mid-end. It will be used when calling back to functions such as <code>activate_timer()</code> (<a href="#frontend-activate-timer">section 4.28</a>), and will be passed on to the back end function <code>colours()</code> (<a href="backend.html#backend-colours">section 2.8.6</a>).
+</p>
+<p>
+The parameters <code>drapi</code> and <code>drhandle</code> are passed to <code>drawing_new()</code> (<a href="drawing.html#drawing-new">section 3.3.1</a>) to construct a drawing object which will be passed to the back end function <code>redraw()</code> (<a href="backend.html#backend-redraw">section 2.8.9</a>). Hence, all drawing-related function pointers defined in <code>drapi</code> can expect to be called with <code>drhandle</code> as their first argument.
+</p>
+<p>
+The <code>ourgame</code> argument points to a container structure describing a game back end. The mid-end thus created will only be capable of handling that one game. (So even in a monolithic front end containing all the games, this imposes the constraint that any individual puzzle window is tied to a single game. Unless, of course, you feel brave enough to change the mid-end for the window without closing the window...)
+</p>
+<h2><a name="midend-free"></a>4.2 <code>midend_free()</code></h2>
+<pre><code>void midend_free(midend *me);
+</code></pre>
+<p>
+Frees a mid-end structure and all its associated data.
+</p>
+<h2><a name="midend-set-params"></a>4.3 <code>midend_set_params()</code></h2>
+<pre><code>void midend_set_params(midend *me, game_params *params);
+</code></pre>
+<p>
+Sets the current game parameters for a mid-end. Subsequent games generated by <code>midend_new_game()</code> (<a href="#midend-new-game">section 4.6</a>) will use these parameters until further notice.
+</p>
+<p>
+The usual way in which the front end will have an actual <code>game_params</code> structure to pass to this function is if it had previously got it from <code>midend_fetch_preset()</code> (<a href="#midend-fetch-preset">section 4.14</a>). Thus, this function is usually called in response to the user making a selection from the presets menu.
+</p>
+<h2><a name="midend-get-params"></a>4.4 <code>midend_get_params()</code></h2>
+<pre><code>game_params *midend_get_params(midend *me);
+</code></pre>
+<p>
+Returns the current game parameters stored in this mid-end.
+</p>
+<p>
+The returned value is dynamically allocated, and should be freed when finished with by passing it to the game's own <code>free_params()</code> function (see <a href="backend.html#backend-free-params">section 2.3.5</a>).
+</p>
+<h2><a name="midend-size"></a>4.5 <code>midend_size()</code></h2>
+<pre><code>void midend_size(midend *me, int *x, int *y, int user_size);
+</code></pre>
+<p>
+Tells the mid-end to figure out its window size.
+</p>
+<p>
+On input, <code>*x</code> and <code>*y</code> should contain the maximum or requested size for the window. (Typically this will be the size of the screen that the window has to fit on, or similar.) The mid-end will repeatedly call the back end function <code>compute_size()</code> (<a href="backend.html#backend-compute-size">section 2.8.4</a>), searching for a tile size that best satisfies the requirements. On exit, <code>*x</code> and <code>*y</code> will contain the size needed for the puzzle window's drawing area. (It is of course up to the front end to adjust this for any additional window furniture such as menu bars and window borders, if necessary. The status bar is also not included in this size.)
+</p>
+<p>
+Use <code>user_size</code> to indicate whether <code>*x</code> and <code>*y</code> are a requested size, or just a maximum size.
+</p>
+<p>
+If <code>user_size</code> is set to <code>TRUE</code>, the mid-end will treat the input size as a request, and will pick a tile size which approximates it <em>as closely as possible</em>, going over the game's preferred tile size if necessary to achieve this. The mid-end will also use the resulting tile size as its preferred one until further notice, on the assumption that this size was explicitly requested by the user. Use this option if you want your front end to support dynamic resizing of the puzzle window with automatic scaling of the puzzle to fit.
+</p>
+<p>
+If <code>user_size</code> is set to <code>FALSE</code>, then the game's tile size will never go over its preferred one, although it may go under in order to fit within the maximum bounds specified by <code>*x</code> and <code>*y</code>. This is the recommended approach when opening a new window at default size: the game will use its preferred size unless it has to use a smaller one to fit on the screen. If the tile size is shrunk for this reason, the change will not persist; if a smaller grid is subsequently chosen, the tile size will recover.
+</p>
+<p>
+The mid-end will try as hard as it can to return a size which is less than or equal to the input size, in both dimensions. In extreme circumstances it may fail (if even the lowest possible tile size gives window dimensions greater than the input), in which case it will return a size greater than the input size. Front ends should be prepared for this to happen (i.e. don't crash or fail an assertion), but may handle it in any way they see fit: by rejecting the game parameters which caused the problem, by opening a window larger than the screen regardless of inconvenience, by introducing scroll bars on the window, by drawing on a large bitmap and scaling it into a smaller window, or by any other means you can think of. It is likely that when the tile size is that small the game will be unplayable anyway, so don't put <em>too</em> much effort into handling it creatively.
+</p>
+<p>
+If your platform has no limit on window size (or if you're planning to use scroll bars for large puzzles), you can pass dimensions of <code>INT_MAX</code> as input to this function. You should probably not do that <em>and</em> set the <code>user_size</code> flag, though!
+</p>
+<h2><a name="midend-new-game"></a>4.6 <code>midend_new_game()</code></h2>
+<pre><code>void midend_new_game(midend *me);
+</code></pre>
+<p>
+Causes the mid-end to begin a new game. Normally the game will be a new randomly generated puzzle. However, if you have previously called <code>midend_game_id()</code> or <code>midend_set_config()</code>, the game generated might be dictated by the results of those functions. (In particular, you <em>must</em> call <code>midend_new_game()</code> after calling either of those functions, or else no immediate effect will be visible.)
+</p>
+<p>
+You will probably need to call <code>midend_size()</code> after calling this function, because if the game parameters have been changed since the last new game then the window size might need to change. (If you know the parameters <em>haven't</em> changed, you don't need to do this.)
+</p>
+<p>
+This function will create a new <code>game_drawstate</code>, but does not actually perform a redraw (since you often need to call <code>midend_size()</code> before the redraw can be done). So after calling this function and after calling <code>midend_size()</code>, you should then call <code>midend_redraw()</code>. (It is not necessary to call <code>midend_force_redraw()</code>; that will discard the draw state and create a fresh one, which is unnecessary in this case since there's a fresh one already. It would work, but it's usually excessive.)
+</p>
+<h2><a name="midend-restart-game"></a>4.7 <code>midend_restart_game()</code></h2>
+<pre><code>void midend_restart_game(midend *me);
+</code></pre>
+<p>
+This function causes the current game to be restarted. This is done by placing a new copy of the original game state on the end of the undo list (so that an accidental restart can be undone).
+</p>
+<p>
+This function automatically causes a redraw, i.e. the front end can expect its drawing API to be called from <em>within</em> a call to this function.
+</p>
+<h2><a name="midend-force-redraw"></a>4.8 <code>midend_force_redraw()</code></h2>
+<pre><code>void midend_force_redraw(midend *me);
+</code></pre>
+<p>
+Forces a complete redraw of the puzzle window, by means of discarding the current <code>game_drawstate</code> and creating a new one from scratch before calling the game's <code>redraw()</code> function.
+</p>
+<p>
+The front end can expect its drawing API to be called from within a call to this function.
+</p>
+<h2><a name="midend-redraw"></a>4.9 <code>midend_redraw()</code></h2>
+<pre><code>void midend_redraw(midend *me);
+</code></pre>
+<p>
+Causes a partial redraw of the puzzle window, by means of simply calling the game's <code>redraw()</code> function. (That is, the only things redrawn will be things that have changed since the last redraw.)
+</p>
+<p>
+The front end can expect its drawing API to be called from within a call to this function.
+</p>
+<h2><a name="midend-process-key"></a>4.10 <code>midend_process_key()</code></h2>
+<pre><code>int midend_process_key(midend *me, int x, int y, int button);
+</code></pre>
+<p>
+The front end calls this function to report a mouse or keyboard event. The parameters <code>x</code>, <code>y</code> and <code>button</code> are almost identical to the ones passed to the back end function <code>interpret_move()</code> (<a href="backend.html#backend-interpret-move">section 2.7.1</a>), except that the front end is <em>not</em> required to provide the guarantees about mouse event ordering. The mid-end will sort out multiple simultaneous button presses and changes of button; the front end's responsibility is simply to pass on the mouse events it receives as accurately as possible.
+</p>
+<p>
+(Some platforms may need to emulate absent mouse buttons by means of using a modifier key such as Shift with another mouse button. This tends to mean that if Shift is pressed or released in the middle of a mouse drag, the mid-end will suddenly stop receiving, say, <code>LEFT_DRAG</code> events and start receiving <code>RIGHT_DRAG</code>s, with no intervening button release or press events. This too is something which the mid-end will sort out for you; the front end has no obligation to maintain sanity in this area.)
+</p>
+<p>
+The front end <em>should</em>, however, always eventually send some kind of button release. On some platforms this requires special effort: Windows, for example, requires a call to the system API function <code>SetCapture()</code> in order to ensure that your window receives a mouse-up event even if the pointer has left the window by the time the mouse button is released. On any platform that requires this sort of thing, the front end <em>is</em> responsible for doing it.
+</p>
+<p>
+Calling this function is very likely to result in calls back to the front end's drawing API and/or <code>activate_timer()</code> (<a href="#frontend-activate-timer">section 4.28</a>).
+</p>
+<h2><a name="midend-colours"></a>4.11 <code>midend_colours()</code></h2>
+<pre><code>float *midend_colours(midend *me, int *ncolours);
+</code></pre>
+<p>
+Returns an array of the colours required by the game, in exactly the same format as that returned by the back end function <code>colours()</code> (<a href="backend.html#backend-colours">section 2.8.6</a>). Front ends should call this function rather than calling the back end's version directly, since the mid-end adds standard customisation facilities. (At the time of writing, those customisation facilities are implemented hackily by means of environment variables, but it's not impossible that they may become more full and formal in future.)
+</p>
+<h2><a name="midend-timer"></a>4.12 <code>midend_timer()</code></h2>
+<pre><code>void midend_timer(midend *me, float tplus);
+</code></pre>
+<p>
+If the mid-end has called <code>activate_timer()</code> (<a href="#frontend-activate-timer">section 4.28</a>) to request regular callbacks for purposes of animation or timing, this is the function the front end should call on a regular basis. The argument <code>tplus</code> gives the time, in seconds, since the last time either this function was called or <code>activate_timer()</code> was invoked.
+</p>
+<p>
+One of the major purposes of timing in the mid-end is to perform move animation. Therefore, calling this function is very likely to result in calls back to the front end's drawing API.
+</p>
+<h2><a name="midend-num-presets"></a>4.13 <code>midend_num_presets()</code></h2>
+<pre><code>int midend_num_presets(midend *me);
+</code></pre>
+<p>
+Returns the number of game parameter presets supplied by this game. Front ends should use this function and <code>midend_fetch_preset()</code> to configure their presets menu rather than calling the back end directly, since the mid-end adds standard customisation facilities. (At the time of writing, those customisation facilities are implemented hackily by means of environment variables, but it's not impossible that they may become more full and formal in future.)
+</p>
+<h2><a name="midend-fetch-preset"></a>4.14 <code>midend_fetch_preset()</code></h2>
+<pre><code>void midend_fetch_preset(midend *me, int n,
+                         char **name, game_params **params);
+</code></pre>
+<p>
+Returns one of the preset game parameter structures for the game. On input <code>n</code> must be a non-negative integer and less than the value returned from <code>midend_num_presets()</code>. On output, <code>*name</code> is set to an ASCII string suitable for entering in the game's presets menu, and <code>*params</code> is set to the corresponding <code>game_params</code> structure.
+</p>
+<p>
+Both of the two output values are dynamically allocated, but they are owned by the mid-end structure: the front end should not ever free them directly, because they will be freed automatically during <code>midend_free()</code>.
+</p>
+<h2><a name="midend-which-preset"></a>4.15 <code>midend_which_preset()</code></h2>
+<pre><code>int midend_which_preset(midend *me);
+</code></pre>
+<p>
+Returns the numeric index of the preset game parameter structure which matches the current game parameters, or a negative number if no preset matches. Front ends could use this to maintain a tick beside one of the items in the menu (or tick the &#8216;Custom&#8217; option if the return value is less than zero).
+</p>
+<h2><a name="midend-wants-statusbar"></a>4.16 <code>midend_wants_statusbar()</code></h2>
+<pre><code>int midend_wants_statusbar(midend *me);
+</code></pre>
+<p>
+This function returns <code>TRUE</code> if the puzzle has a use for a textual status line (to display score, completion status, currently active tiles, time, or anything else).
+</p>
+<p>
+Front ends should call this function rather than talking directly to the back end.
+</p>
+<h2><a name="midend-get-config"></a>4.17 <code>midend_get_config()</code></h2>
+<pre><code>config_item *midend_get_config(midend *me, int which,
+                               char **wintitle);
+</code></pre>
+<p>
+Returns a dialog box description for user configuration.
+</p>
+<p>
+On input, <code>which</code> should be set to one of three values, which select which of the various dialog box descriptions is returned:
+</p>
+<dl><dt>
+<code>CFG_SETTINGS</code>
+</dt>
+<dd>
+Requests the GUI parameter configuration box generated by the puzzle itself. This should be used when the user selects &#8216;Custom&#8217; from the game types menu (or equivalent). The mid-end passes this request on to the back end function <code>configure()</code> (<a href="backend.html#backend-configure">section 2.3.8</a>).
+</dd>
+<dt>
+<code>CFG_DESC</code>
+</dt>
+<dd>
+Requests a box suitable for entering a descriptive game ID (and viewing the existing one). The mid-end generates this dialog box description itself. This should be used when the user selects &#8216;Specific&#8217; from the game menu (or equivalent).
+</dd>
+<dt>
+<code>CFG_SEED</code>
+</dt>
+<dd>
+Requests a box suitable for entering a random-seed game ID (and viewing the existing one). The mid-end generates this dialog box description itself. This should be used when the user selects &#8216;Random Seed&#8217; from the game menu (or equivalent).
+</dd>
+</dl>
+<p>
+The returned value is an array of <code>config_item</code>s, exactly as described in <a href="backend.html#backend-configure">section 2.3.8</a>. Another returned value is an ASCII string giving a suitable title for the configuration window, in <code>*wintitle</code>.
+</p>
+<p>
+Both returned values are dynamically allocated and will need to be freed. The window title can be freed in the obvious way; the <code>config_item</code> array is a slightly complex structure, so a utility function <code>free_cfg()</code> is provided to free it for you. See <a href="utils.html#utils-free-cfg">section 5.2.6</a>.
+</p>
+<p>
+(Of course, you will probably not want to free the <code>config_item</code> array until the dialog box is dismissed, because before then you will probably need to pass it to <code>midend_set_config</code>.)
+</p>
+<h2><a name="midend-set-config"></a>4.18 <code>midend_set_config()</code></h2>
+<pre><code>char *midend_set_config(midend *me, int which,
+                        config_item *cfg);
+</code></pre>
+<p>
+Passes the mid-end the results of a configuration dialog box. <code>which</code> should have the same value which it had when <code>midend_get_config()</code> was called; <code>cfg</code> should be the array of <code>config_item</code>s returned from <code>midend_get_config()</code>, modified to contain the results of the user's editing operations.
+</p>
+<p>
+This function returns <code>NULL</code> on success, or otherwise (if the configuration data was in some way invalid) an ASCII string containing an error message suitable for showing to the user.
+</p>
+<p>
+If the function succeeds, it is likely that the game parameters will have been changed and it is certain that a new game will be requested. The front end should therefore call <code>midend_new_game()</code>, and probably also re-think the window size using <code>midend_size()</code> and eventually perform a refresh using <code>midend_redraw()</code>.
+</p>
+<h2><a name="midend-game-id"></a>4.19 <code>midend_game_id()</code></h2>
+<pre><code>char *midend_game_id(midend *me, char *id);
+</code></pre>
+<p>
+Passes the mid-end a string game ID (of any of the valid forms &#8216;<code>params</code>&#8217;, &#8216;<code>params:description</code>&#8217; or &#8216;<code>params#seed</code>&#8217;) which the mid-end will process and use for the next generated game.
+</p>
+<p>
+This function returns <code>NULL</code> on success, or otherwise (if the configuration data was in some way invalid) an ASCII string containing an error message (not dynamically allocated) suitable for showing to the user. In the event of an error, the mid-end's internal state will be left exactly as it was before the call.
+</p>
+<p>
+If the function succeeds, it is likely that the game parameters will have been changed and it is certain that a new game will be requested. The front end should therefore call <code>midend_new_game()</code>, and probably also re-think the window size using <code>midend_size()</code> and eventually case a refresh using <code>midend_redraw()</code>.
+</p>
+<h2><a name="midend-get-game-id"></a>4.20 <code>midend_get_game_id()</code></h2>
+<pre><code>char *midend_get_game_id(midend *me)
+</code></pre>
+<p>
+Returns a descriptive game ID (i.e. one in the form &#8216;<code>params:description</code>&#8217;) describing the game currently active in the mid-end. The returned string is dynamically allocated.
+</p>
+<h2><a name="midend-text-format"></a>4.21 <code>midend_text_format()</code></h2>
+<pre><code>char *midend_text_format(midend *me);
+</code></pre>
+<p>
+Formats the current game's current state as ASCII text suitable for copying to the clipboard. The returned string is dynamically allocated.
+</p>
+<p>
+You should not call this function if the game's <code>can_format_as_text</code> flag is <code>FALSE</code>.
+</p>
+<p>
+If the returned string contains multiple lines (which is likely), it will use the normal C line ending convention (<code>\n</code> only). On platforms which use a different line ending convention for data in the clipboard, it is the front end's responsibility to perform the conversion.
+</p>
+<h2><a name="midend-solve"></a>4.22 <code>midend_solve()</code></h2>
+<pre><code>char *midend_solve(midend *me);
+</code></pre>
+<p>
+Requests the mid-end to perform a Solve operation.
+</p>
+<p>
+On success, <code>NULL</code> is returned. On failure, an error message (not dynamically allocated) is returned, suitable for showing to the user.
+</p>
+<p>
+The front end can expect its drawing API and/or <code>activate_timer()</code> to be called from within a call to this function.
+</p>
+<h2><a name="midend-serialise"></a>4.23 <code>midend_serialise()</code></h2>
+<pre><code>void midend_serialise(midend *me,
+                      void (*write)(void *ctx, void *buf, int len),
+                      void *wctx);
+</code></pre>
+<p>
+Calling this function causes the mid-end to convert its entire internal state into a long ASCII text string, and to pass that string (piece by piece) to the supplied <code>write</code> function.
+</p>
+<p>
+Desktop implementations can use this function to save a game in any state (including half-finished) to a disk file, by supplying a <code>write</code> function which is a wrapper on <code>fwrite()</code> (or local equivalent). Other implementations may find other uses for it, such as compressing the large and sprawling mid-end state into a manageable amount of memory when a palmtop application is suspended so that another one can run; in this case <code>write</code> might want to write to a memory buffer rather than a file. There may be other uses for it as well.
+</p>
+<p>
+This function will call back to the supplied <code>write</code> function a number of times, with the first parameter (<code>ctx</code>) equal to <code>wctx</code>, and the other two parameters pointing at a piece of the output string.
+</p>
+<h2><a name="midend-deserialise"></a>4.24 <code>midend_deserialise()</code></h2>
+<pre><code>char *midend_deserialise(midend *me,
+                         int (*read)(void *ctx, void *buf, int len),
+                         void *rctx);
+</code></pre>
+<p>
+This function is the counterpart to <code>midend_serialise()</code>. It calls the supplied <code>read</code> function repeatedly to read a quantity of data, and attempts to interpret that data as a serialised mid-end as output by <code>midend_serialise()</code>.
+</p>
+<p>
+The <code>read</code> function is called with the first parameter (<code>ctx</code>) equal to <code>rctx</code>, and should attempt to read <code>len</code> bytes of data into the buffer pointed to by <code>buf</code>. It should return <code>FALSE</code> on failure or <code>TRUE</code> on success. It should not report success unless it has filled the entire buffer; on platforms which might be reading from a pipe or other blocking data source, <code>read</code> is responsible for looping until the whole buffer has been filled.
+</p>
+<p>
+If the de-serialisation operation is successful, the mid-end's internal data structures will be replaced by the results of the load, and <code>NULL</code> will be returned. Otherwise, the mid-end's state will be completely unchanged and an error message (typically some variation on &#8216;save file is corrupt&#8217;) will be returned. As usual, the error message string is not dynamically allocated.
+</p>
+<p>
+If this function succeeds, it is likely that the game parameters will have been changed. The front end should therefore probably re-think the window size using <code>midend_size()</code>, and probably cause a refresh using <code>midend_redraw()</code>.
+</p>
+<p>
+Because each mid-end is tied to a specific game back end, this function will fail if you attempt to read in a save file generated by a different game from the one configured in this mid-end, even if your application is a monolithic one containing all the puzzles. (It would be pretty easy to write a function which would look at a save file and determine which game it was for; any front end implementor who needs such a function can probably be accommodated.)
+</p>
+<h2><a name="frontend-backend"></a>4.25 Direct reference to the back end structure by the front end</h2>
+<p>
+Although <em>most</em> things the front end needs done should be done by calling the mid-end, there are a few situations in which the front end needs to refer directly to the game back end structure.
+</p>
+<p>
+The most obvious of these is
+</p>
+<ul><li>
+passing the game back end as a parameter to <code>midend_new()</code>.
+</li>
+</ul>
+<p>
+There are a few other back end features which are not wrapped by the mid-end because there didn't seem much point in doing so:
+</p>
+<ul><li>
+fetching the <code>name</code> field to use in window titles and similar
+</li>
+<li>
+reading the <code>can_configure</code>, <code>can_solve</code> and <code>can_format_as_text</code> fields to decide whether to add those items to the menu bar or equivalent
+</li>
+<li>
+reading the <code>winhelp_topic</code> field (Windows only)
+</li>
+<li>
+the GTK front end provides a &#8216;<code>--generate</code>&#8217; command-line option which directly calls the back end to do most of its work. This is not really part of the main front end code, though, and I'm not sure it counts.
+</li>
+</ul>
+<p>
+In order to find the game back end structure, the front end does one of two things:
+</p>
+<ul><li>
+If the particular front end is compiling a separate binary per game, then the back end structure is a global variable with the standard name &#8216;<code>thegame</code>&#8217;:
+<pre><code>extern const game thegame;
+</code></pre>
+
+</li>
+<li>
+If the front end is compiled as a monolithic application containing all the puzzles together (in which case the preprocessor symbol <code>COMBINED</code> must be defined when compiling most of the code base), then there will be two global variables defined:
+<pre><code>extern const game *gamelist[];
+extern const int gamecount;
+</code></pre>
+<p>
+<code>gamelist</code> will be an array of <code>gamecount</code> game structures, declared in the automatically constructed source module <code>list.c</code>. The application should search that array for the game it wants, probably by reaching into each game structure and looking at its <code>name</code> field.
+</p>
+
+</li>
+</ul>
+<h2><a name="frontend-api"></a>4.26 Mid-end to front-end calls</h2>
+<p>
+This section describes the small number of functions which a front end must provide to be called by the mid-end or other standard utility modules.
+</p>
+<h2><a name="frontend-get-random-seed"></a>4.27 <code>get_random_seed()</code></h2>
+<pre><code>void get_random_seed(void **randseed, int *randseedsize);
+</code></pre>
+<p>
+This function is called by a new mid-end, and also occasionally by game back ends. Its job is to return a piece of data suitable for using as a seed for initialisation of a new <code>random_state</code>.
+</p>
+<p>
+On exit, <code>*randseed</code> should be set to point at a newly allocated piece of memory containing some seed data, and <code>*randseedsize</code> should be set to the length of that data.
+</p>
+<p>
+A simple and entirely adequate implementation is to return a piece of data containing the current system time at the highest conveniently available resolution.
+</p>
+<h2><a name="frontend-activate-timer"></a>4.28 <code>activate_timer()</code></h2>
+<pre><code>void activate_timer(frontend *fe);
+</code></pre>
+<p>
+This is called by the mid-end to request that the front end begin calling it back at regular intervals.
+</p>
+<p>
+The timeout interval is left up to the front end; the finer it is, the smoother move animations will be, but the more CPU time will be used. Current front ends use values around 20ms (i.e. 50Hz).
+</p>
+<p>
+After this function is called, the mid-end will expect to receive calls to <code>midend_timer()</code> on a regular basis.
+</p>
+<h2><a name="frontend-deactivate-timer"></a>4.29 <code>deactivate_timer()</code></h2>
+<pre><code>void deactivate_timer(frontend *fe);
+</code></pre>
+<p>
+This is called by the mid-end to request that the front end stop calling <code>midend_timer()</code>.
+</p>
+<h2><a name="frontend-fatal"></a>4.30 <code>fatal()</code></h2>
+<pre><code>void fatal(char *fmt, ...);
+</code></pre>
+<p>
+This is called by some utility functions if they encounter a genuinely fatal error such as running out of memory. It is a variadic function in the style of <code>printf()</code>, and is expected to show the formatted error message to the user any way it can and then terminate the application. It must not return.
+</p>
+<h2><a name="frontend-default-colour"></a>4.31 <code>frontend_default_colour()</code></h2>
+<pre><code>void frontend_default_colour(frontend *fe, float *output);
+</code></pre>
+<p>
+This function expects to be passed a pointer to an array of three <code>float</code>s. It returns the platform's local preferred background colour in those three floats, as red, green and blue values (in that order) ranging from <code>0.0</code> to <code>1.0</code>.
+</p>
+<p>
+This function should only ever be called by the back end function <code>colours()</code> (<a href="backend.html#backend-colours">section 2.8.6</a>). (Thus, it isn't a <em>midend</em>-to-frontend function as such, but there didn't seem to be anywhere else particularly good to put it. Sorry.)
+</p>
+
+<hr><address></address></body>
+</html>

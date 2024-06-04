@@ -1,0 +1,8 @@
+Pegs (a.k.a. solitaire)                    
+===========================================
+
+Jump pegs over one another (removing the "jumped" 
+peg as in draughts/checkers) until only one peg 
+remains.
+
+Hold A and move the joystick to drag a peg.

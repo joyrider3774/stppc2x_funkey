@@ -1,0 +1,12 @@
+Overall, the puzzles collection (minus music) is under the GPL v2, the text of which can
+be found in the file LICENSE.GPL.  Parts of that software are (c) Lee Dowling (ledow).
+
+The original puzzle code is under the licence found in LICENCE.SimonTatham.
+The music, however, is under the license in LICENSE.Music.
+The code for the Maze3D puzzle,s under the licence found in LICENCE.Maze3D.
+The menu background, under the licence in LICENCE.GUI.
+The INI file parsing code, under the licence in LICENCE.INIParser.
+The various SDL libraries, under the licences in LICENCE.SDL, LICENCE.SDL_gfx and LICENCE.SDL_ttf
+The TrueType font rendering code, under the licence in LICENCE.Freetype.
+The fonts, under the licence in LICENCE.DejaVuFonts.
+The fast SDL events code, under the licence in LICENCE.FastEvents

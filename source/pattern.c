@@ -18,6 +18,7 @@ enum {
     COL_TEXT,
     COL_UNKNOWN,
     COL_GRID,
+    COL_CURSOR,
     NCOLOURS
 };
 
@@ -745,6 +746,7 @@ struct game_ui {
     int drag_end_x;
     int drag_end_y;
     int drag, release, state;
+    int cur_x, cur_y, cur_visible;
 };
 
 static game_ui *new_ui(game_state *state)
@@ -753,6 +755,7 @@ static game_ui *new_ui(game_state *state)
 
     ret = snew(game_ui);
     ret->dragging = FALSE;
+    ret->cur_x = ret->cur_y = ret->cur_visible = 0;
 
     return ret;
 }
@@ -774,6 +777,7 @@ static void decode_ui(game_ui *ui, char *encoding)
 static void game_changed_state(game_ui *ui, game_state *oldstate,
                                game_state *newstate)
 {
+    if (newstate->completed && ! newstate->cheated && oldstate && ! oldstate->completed) game_completed();
 }
 
 struct game_drawstate {
@@ -781,6 +785,7 @@ struct game_drawstate {
     int w, h;
     int tilesize;
     unsigned char *visible;
+    int cur_x, cur_y;
 };
 
 static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
@@ -824,6 +829,7 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
 
         ui->drag_start_x = ui->drag_end_x = x;
         ui->drag_start_y = ui->drag_end_y = y;
+        ui->cur_visible = 0;
 
         return "";		       /* UI activity occurred */
     }
@@ -882,6 +888,35 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
 	    return dupstr(buf);
         } else
             return "";		       /* UI activity occurred */
+    }
+
+    if (IS_CURSOR_MOVE(button)) {
+        move_cursor(button, &ui->cur_x, &ui->cur_y, state->w, state->h, 0);
+        ui->cur_visible = 1;
+        return "";
+    }
+    if (IS_CURSOR_SELECT(button)) {
+        int currstate = state->grid[ui->cur_y * state->w + ui->cur_x];
+        int newstate;
+        char buf[80];
+
+        if (!ui->cur_visible) {
+            ui->cur_visible = 1;
+            return "";
+        }
+
+        if (button == CURSOR_SELECT2)
+            newstate = currstate == GRID_UNKNOWN ? GRID_EMPTY :
+                currstate == GRID_EMPTY ? GRID_FULL : GRID_UNKNOWN;
+        else
+            newstate = currstate == GRID_UNKNOWN ? GRID_FULL :
+                currstate == GRID_FULL ? GRID_EMPTY : GRID_UNKNOWN;
+
+        sprintf(buf, "%c%d,%d,%d,%d",
+                (char)(newstate == GRID_FULL ? 'F' :
+		       newstate == GRID_EMPTY ? 'E' : 'U'),
+                ui->cur_x, ui->cur_y, 1, 1);
+        return dupstr(buf);
     }
 
     return NULL;
@@ -982,28 +1017,20 @@ static void game_set_size(drawing *dr, game_drawstate *ds,
 static float *game_colours(frontend *fe, int *ncolours)
 {
     float *ret = snewn(3 * NCOLOURS, float);
+    int i;
 
     frontend_default_colour(fe, &ret[COL_BACKGROUND * 3]);
 
-    ret[COL_GRID * 3 + 0] = 0.3F;
-    ret[COL_GRID * 3 + 1] = 0.3F;
-    ret[COL_GRID * 3 + 2] = 0.3F;
-
-    ret[COL_UNKNOWN * 3 + 0] = 0.5F;
-    ret[COL_UNKNOWN * 3 + 1] = 0.5F;
-    ret[COL_UNKNOWN * 3 + 2] = 0.5F;
-
-    ret[COL_TEXT * 3 + 0] = 0.0F;
-    ret[COL_TEXT * 3 + 1] = 0.0F;
-    ret[COL_TEXT * 3 + 2] = 0.0F;
-
-    ret[COL_FULL * 3 + 0] = 0.0F;
-    ret[COL_FULL * 3 + 1] = 0.0F;
-    ret[COL_FULL * 3 + 2] = 0.0F;
-
-    ret[COL_EMPTY * 3 + 0] = 1.0F;
-    ret[COL_EMPTY * 3 + 1] = 1.0F;
-    ret[COL_EMPTY * 3 + 2] = 1.0F;
+    for (i = 0; i < 3; i++) {
+        ret[COL_GRID    * 3 + i] = 0.3F;
+        ret[COL_UNKNOWN * 3 + i] = 0.5F;
+        ret[COL_TEXT    * 3 + i] = 0.0F;
+        ret[COL_FULL    * 3 + i] = 0.0F;
+        ret[COL_EMPTY   * 3 + i] = 1.0F;
+    }
+    ret[COL_CURSOR * 3 + 0] = 1.0F;
+    ret[COL_CURSOR * 3 + 1] = 0.25F;
+    ret[COL_CURSOR * 3 + 2] = 0.25F;
 
     *ncolours = NCOLOURS;
     return ret;
@@ -1030,9 +1057,9 @@ static void game_free_drawstate(drawing *dr, game_drawstate *ds)
 }
 
 static void grid_square(drawing *dr, game_drawstate *ds,
-                        int y, int x, int state)
+                        int y, int x, int state, int cur)
 {
-    int xl, xr, yt, yb;
+    int xl, xr, yt, yb, dx, dy, dw, dh;
 
     draw_rect(dr, TOCOORD(ds->w, x), TOCOORD(ds->h, y),
               TILE_SIZE, TILE_SIZE, COL_GRID);
@@ -1042,10 +1069,18 @@ static void grid_square(drawing *dr, game_drawstate *ds,
     xr = (x % 5 == 4 || x == ds->w-1 ? 1 : 0);
     yb = (y % 5 == 4 || y == ds->h-1 ? 1 : 0);
 
-    draw_rect(dr, TOCOORD(ds->w, x) + 1 + xl, TOCOORD(ds->h, y) + 1 + yt,
-              TILE_SIZE - xl - xr - 1, TILE_SIZE - yt - yb - 1,
+    dx = TOCOORD(ds->w, x) + 1 + xl;
+    dy = TOCOORD(ds->h, y) + 1 + yt;
+    dw = TILE_SIZE - xl - xr - 1;
+    dh = TILE_SIZE - yt - yb - 1;
+
+    draw_rect(dr, dx, dy, dw, dh,
               (state == GRID_FULL ? COL_FULL :
                state == GRID_EMPTY ? COL_EMPTY : COL_UNKNOWN));
+    if (cur) {
+        draw_rect_outline(dr, dx, dy, dw, dh, COL_CURSOR);
+        draw_rect_outline(dr, dx+1, dy+1, dw-2, dh-2, COL_CURSOR);
+    }
 
     draw_update(dr, TOCOORD(ds->w, x), TOCOORD(ds->h, y),
                 TILE_SIZE, TILE_SIZE);
@@ -1100,6 +1135,7 @@ static void game_redraw(drawing *dr, game_drawstate *ds, game_state *oldstate,
 {
     int i, j;
     int x1, x2, y1, y2;
+    int cx, cy, cmoved;
 
     if (!ds->started) {
         /*
@@ -1136,13 +1172,20 @@ static void game_redraw(drawing *dr, game_drawstate *ds, game_state *oldstate,
         x1 = x2 = y1 = y2 = -1;        /* placate gcc warnings */
     }
 
+    if (ui->cur_visible) {
+        cx = ui->cur_x; cy = ui->cur_y;
+    } else {
+        cx = cy = -1;
+    }
+    cmoved = (cx != ds->cur_x || cy != ds->cur_y);
+
     /*
      * Now draw any grid squares which have changed since last
      * redraw.
      */
     for (i = 0; i < ds->h; i++) {
         for (j = 0; j < ds->w; j++) {
-            int val;
+            int val, cc = 0;
 
             /*
              * Work out what state this square should be drawn in,
@@ -1153,6 +1196,13 @@ static void game_redraw(drawing *dr, game_drawstate *ds, game_state *oldstate,
             else
                 val = state->grid[i * state->w + j];
 
+            if (cmoved) {
+                /* the cursor has moved; if we were the old or
+                 * the new cursor position we need to redraw. */
+                if (j == cx && i == cy) cc = 1;
+                if (j == ds->cur_x && i == ds->cur_y) cc = 1;
+            }
+
             /*
              * Briefly invert everything twice during a completion
              * flash.
@@ -1162,12 +1212,14 @@ static void game_redraw(drawing *dr, game_drawstate *ds, game_state *oldstate,
                 val != GRID_UNKNOWN)
                 val = (GRID_FULL ^ GRID_EMPTY) ^ val;
 
-            if (ds->visible[i * ds->w + j] != val) {
-                grid_square(dr, ds, i, j, val);
+            if (ds->visible[i * ds->w + j] != val || cc) {
+                grid_square(dr, ds, i, j, val,
+                            (j == cx && i == cy));
                 ds->visible[i * ds->w + j] = val;
             }
         }
     }
+    ds->cur_x = cx; ds->cur_y = cy;
 }
 
 static float game_anim_length(game_state *oldstate,
@@ -1188,70 +1240,6 @@ static float game_flash_length(game_state *oldstate,
 static int game_timing_state(game_state *state, game_ui *ui)
 {
     return TRUE;
-}
-
-static void game_print_size(game_params *params, float *x, float *y)
-{
-    int pw, ph;
-
-    /*
-     * I'll use 5mm squares by default.
-     */
-    game_compute_size(params, 500, &pw, &ph);
-    *x = pw / 100.0;
-    *y = ph / 100.0;
-}
-
-static void game_print(drawing *dr, game_state *state, int tilesize)
-{
-    int w = state->w, h = state->h;
-    int ink = print_mono_colour(dr, 0);
-    int x, y;
-
-    /* Ick: fake up `ds->tilesize' for macro expansion purposes */
-    game_drawstate ads, *ds = &ads;
-    game_set_size(dr, ds, NULL, tilesize);
-
-    /*
-     * Border.
-     */
-    print_line_width(dr, TILE_SIZE / 16);
-    draw_rect_outline(dr, TOCOORD(w, 0), TOCOORD(h, 0),
-		      w*TILE_SIZE, h*TILE_SIZE, ink);
-
-    /*
-     * Grid.
-     */
-    for (x = 1; x < w; x++) {
-	print_line_width(dr, TILE_SIZE / (x % 5 ? 128 : 24));
-	draw_line(dr, TOCOORD(w, x), TOCOORD(h, 0),
-		  TOCOORD(w, x), TOCOORD(h, h), ink);
-    }
-    for (y = 1; y < h; y++) {
-	print_line_width(dr, TILE_SIZE / (y % 5 ? 128 : 24));
-	draw_line(dr, TOCOORD(w, 0), TOCOORD(h, y),
-		  TOCOORD(w, w), TOCOORD(h, y), ink);
-    }
-
-    /*
-     * Clues.
-     */
-    draw_numbers(dr, ds, state, ink);
-
-    /*
-     * Solution.
-     */
-    print_line_width(dr, TILE_SIZE / 128);
-    for (y = 0; y < h; y++)
-	for (x = 0; x < w; x++) {
-	    if (state->grid[y*w+x] == GRID_FULL)
-		draw_rect(dr, TOCOORD(w, x), TOCOORD(h, y),
-			  TILE_SIZE, TILE_SIZE, ink);
-	    else if (state->grid[y*w+x] == GRID_EMPTY)
-		draw_circle(dr, TOCOORD(w, x) + TILE_SIZE/2,
-			    TOCOORD(h, y) + TILE_SIZE/2,
-			    TILE_SIZE/12, ink, ink);
-	}
 }
 
 #ifdef COMBINED
@@ -1289,10 +1277,10 @@ const struct game thegame = {
     game_redraw,
     game_anim_length,
     game_flash_length,
-    TRUE, FALSE, game_print_size, game_print,
+    FALSE, FALSE, NULL, NULL,
     FALSE,			       /* wants_statusbar */
     FALSE, game_timing_state,
-    REQUIRE_RBUTTON | REQUIRE_LARGE_SCREEN,       /* flags */
+    REQUIRE_RBUTTON,		       /* flags */
 };
 
 #ifdef STANDALONE_SOLVER

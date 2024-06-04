@@ -1512,6 +1512,7 @@ static void game_changed_state(game_ui *ui, game_state *oldstate,
 	ui->just_died = FALSE;
     }
     ui->just_made_move = FALSE;
+    if (!newstate->gems && ! newstate->cheated && oldstate && oldstate->gems) game_completed();
 }
 
 struct game_drawstate {
@@ -1665,6 +1666,9 @@ static game_state *execute_move(game_state *state, char *move)
 	if (AT(w, h, ret->grid, ret->px, ret->py) == GEM) {
 	    LV_AT(w, h, ret->grid, ret->px, ret->py) = BLANK;
 	    ret->gems--;
+#ifdef ANDROID
+	    nestedvm_completed();
+#endif
 	}
 
 	if (AT(w, h, ret->grid, ret->px, ret->py) == MINE) {
@@ -2162,14 +2166,6 @@ static int game_timing_state(game_state *state, game_ui *ui)
     return TRUE;
 }
 
-static void game_print_size(game_params *params, float *x, float *y)
-{
-}
-
-static void game_print(drawing *dr, game_state *state, int tilesize)
-{
-}
-
 #ifdef COMBINED
 #define thegame inertia
 #endif
@@ -2205,7 +2201,7 @@ const struct game thegame = {
     game_redraw,
     game_anim_length,
     game_flash_length,
-    FALSE, FALSE, game_print_size, game_print,
+    FALSE, FALSE, NULL, NULL,
     TRUE,			       /* wants_statusbar */
     FALSE, game_timing_state,
     0,				       /* flags */

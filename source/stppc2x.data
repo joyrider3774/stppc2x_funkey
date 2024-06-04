@@ -1,11 +1,11 @@
 blackbox,Find the hidden balls in#the box by bouncing#laser beams off them.
 bridges,Connect all the islands#with a network of#bridges.
-cube,Pick up all the blue#squares by rolling the#shape over them.
+cube,Pick up all the blue#tiles by rolling the#shape over them.
 dominosa,Find the position of the#full set of dominoes.
 fifteen,Slide the tiles using#the empty space until#they are in order.
-filling,Group squares such#that each group has the#numbered tiles.
+filling,Group squares such#that each group has the#numbered amount of tiles.
 flip,Flip groups of squares#to light them all up at#once.
-galaxies,Divide the grid into#symmetrical regions.
+galaxies,Divide the grid into#symmetrical regions#centered on each point.
 guess,Guess the secret#colour code.
 inertia,Collect all the blue#diamonds without#hitting the black#mines.
 lightup,Place lightbulbs to#light up every free#space.

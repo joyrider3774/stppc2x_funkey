@@ -278,6 +278,8 @@ void midend_size(midend *me, int *x, int *y, int user_size)
     *y = me->winheight;
 }
 
+int midend_tilesize(midend *me) { return me->tilesize; }
+
 void midend_set_params(midend *me, game_params *params)
 {
     me->ourgame->free_params(me->params);
@@ -382,6 +384,25 @@ void midend_new_game(midend *me)
      */
     me->states[me->nstates].state =
 	me->ourgame->new_game(me, me->params, me->desc);
+
+    /*
+     * As part of our commitment to self-testing, test the aux
+     * string to make sure nothing ghastly went wrong.
+     */
+    if (me->ourgame->can_solve && me->aux_info) {
+	game_state *s;
+	char *msg, *movestr;
+
+	msg = NULL;
+	movestr = me->ourgame->solve(me->states[0].state,
+				     me->states[0].state,
+				     me->aux_info, &msg);
+	assert(movestr && !msg);
+	s = me->ourgame->execute_move(me->states[0].state, movestr);
+	assert(s);
+	me->ourgame->free_game(s);
+	sfree(movestr);
+    }
 
     me->states[me->nstates].movestr = NULL;
     me->states[me->nstates].movetype = NEWGAME;
@@ -537,6 +558,9 @@ static int midend_really_process_key(midend *me, int x, int y, int button)
 		   button == '\x12' || button == '\x19') {
 	    midend_stop_anim(me);
 	    if (!midend_redo(me))
+		goto done;
+	} else if (button == '\x13' && me->ourgame->can_solve) {
+	    if (midend_solve(me))
 		goto done;
 	} else if (button == 'q' || button == 'Q' || button == '\x11') {
 	    ret = 0;
@@ -1819,42 +1843,3 @@ char *midend_deserialise(midend *me,
     return ret;
 }
 
-char *midend_print_puzzle(midend *me, document *doc, int with_soln)
-{
-    game_state *soln = NULL;
-
-    if (me->statepos < 1)
-	return "No game set up to print";/* _shouldn't_ happen! */
-
-    if (with_soln) {
-	char *msg, *movestr;
-
-	if (!me->ourgame->can_solve)
-	    return "This game does not support the Solve operation";
-
-	msg = "Solve operation failed";/* game _should_ overwrite on error */
-	movestr = me->ourgame->solve(me->states[0].state,
-				     me->states[me->statepos-1].state,
-				     me->aux_info, &msg);
-	if (!movestr)
-	    return msg;
-	soln = me->ourgame->execute_move(me->states[me->statepos-1].state,
-					 movestr);
-	assert(soln);
-
-	sfree(movestr);
-    } else
-	soln = NULL;
-
-    /*
-     * This call passes over ownership of the two game_states and
-     * the game_params. Hence we duplicate the ones we want to
-     * keep, and we don't have to bother freeing soln if it was
-     * non-NULL.
-     */
-    document_add_puzzle(doc, me->ourgame,
-			me->ourgame->dup_params(me->curparams),
-			me->ourgame->dup_game(me->states[0].state), soln);
-
-    return NULL;
-}

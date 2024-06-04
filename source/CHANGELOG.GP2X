@@ -1,4 +1,306 @@
-2008-10-04:
+2008-02-25:
+ - Debounce start button on menu screen because some recent 
+   changes appear to have made the Start button press that 
+   starts the game propogate into the game itself and bring
+   up the Pause menu.  A 1-second delay fixed the problem.
+
+2008-02-24:
+ - Updated Solo to latest SVN (which fixes the interaction 
+   when you have "Killer Jigsaw" games.
+
+2008-02-23:
+ - Updated Solo to latest SVN 8458 (which adds "Killer" Sudoku)
+   and tested it with the changes I've had to make to solo.  It
+   seems just fine - the text is a little small but that's a
+   trivial problem to fix if it gets in people's way.
+ - Change to fix a problem when a large digit is currently 
+   selected and a new game is started which is smaller.  Before,
+   you would be allowed to select the large numbers that are
+   outside the range the game accepts, now you shouldn't be 
+   able to.  Nothing bad could ever had happened anyway, but
+   it should fix the display/usability problem associated with
+   this bug.
+
+2008-02-20:
+ - Compressed all PNG images with pngcrush.  This saves about
+   100Kb in the images/ folder.
+ - Stopped a black box appearing on the Music Credits menu 
+   because of the statusbar timeout code.
+
+2008-02-18:
+ - Hopefully, added proper "diagonal" support to cube, inertia,
+   sokoban when using cursor-key mode.
+ - Added a timeout to statusbar messages so that, for example,
+   the "This game does not support digits" message doesn't stay
+   there forever.
+ - Created a third, low resolution timer to do some things that
+   aren't timing-vital but need to occur regularly (e.g. clear
+   the status bar, update the musical note symbols in the music
+   page, etc.).
+
+2008-02-17:
+ - Removal of some unused code in sdl.c, some tiny optimisations
+   (mainly for executable size), etc.
+
+2008-02-16:
+ - Found a couple of malloc's/free's where they should be
+   using the Puzzle collection's "safe" versions.  There were
+   several in the INIParser code (which is to be expected), 
+   but also a few in the games, including one in Slide and one
+   in Maze3D.
+   This will make sure that they also properly use the upper
+   memory area when they need to.
+ - Moved the INI Parser code to use the puzzle's memory 
+   allocators and the pre-existing strdup function (which
+   both INI Parser and the puzzles were re-creating themselves).
+ - Found and fixed a bug in the GP2X UpperMem realloc function.
+ - Started using a newer version of UPX, which compresses
+   a little bit better (~100Kb disk space saving on the main
+   executable, which is ~200Kb less stuff loaded into RAM).
+ - Removed the game's print functions (we're never going to be
+   able to "print" anything anyway, and the printing backend has
+   already been removed).  Saves about 10Kb/20Kb on top of the 
+   above.
+ - Strip DOS-style line endings from maze3dc.c and maze3dc.h.
+
+2008-02-14:
+ - Fix to the length of string used for comparing the game
+   name to the line in the data file.
+ - Fix to centering of non-square preview images.
+
+2008-02-13:
+ - Slight fix to the way that the .data file is interpreted
+   to prevent future problems with similarly-named games.
+ - Improved look of the preview window if a preview image
+   is missing / corrupt.
+ - Cleanup of various Makefile lines that aren't used.
+ - Massive cleanup of strings... found a couple of bugs, too.
+   I've gone through and sized all dynamic strings to the 
+   largest they can ever conceivably be.  I've also sized all
+   static arrays that are only ever used with fixed-length 
+   strings to sensible sizes (instead of an arbitrary "255").
+ - On the way, I've also rearranged several string-related
+   functions in order to stop silly things like:
+      - Allocating memory for a string, to then allocate more
+      memory for the same string, then only free the last 
+      string.
+      - Writing to the statusbar, then returning to the calling
+      function which also writes the same message to the 
+      statusbar.
+   I also found several improper free()'s, static strings
+   that are only ever copied into a dynamic string, then used
+   and immediately freed without modification, and other stupid
+   things.
+
+2008-02-11:
+ - Removed the files for printing and Postscript generation
+   from the codebase and from the games.  It doesn't save much
+   because the linker and strip utility are smart enough to 
+   remove any unused code anyway, but they don't need to be 
+   there.
+
+2008-02-06:
+ - Updated code to match the latest SVN 8446 more closely,
+   mostly cursor control updates.  Net seems to work slightly
+   oddly... in "mouse mode", you can rotate left, right and 
+   lock the currently-pointed-at square.  In cursor mode, you
+   can rotate left and right but the third button still just
+   locks the *pointed-at* square, which takes no account of 
+   the keyboard cursor, but works from the mouse cursor.
+   It looks a tricky situation to resolve at the moment, so 
+   I've just left it as it is because I don't want to have to
+   change net too much.  The only other option is to have two
+   control in keyboard mode... rotate left and lock.  That 
+   seems a little odd to me, so I've left it alone.
+ - The latest SVN also introduces a change prompted by me...
+   the test case that I found for cube that used enormous
+   amounts of memory has been changed so that it uses almost
+   none.  This means that large cube games are once again
+   playable without crashing.  All we've done is to make the 
+   memory limit harder to reach, not fixed the problem, but
+   with the code to use the GP2X's upper memory areas, this
+   should hopefully bring the problem out of any area where
+   even the best players can hit it.
+ - Removed the option for showing whether keyboard control
+   is available for a puzzle because they are all keyboard
+   controllable now (although Untangle is still a bit messy
+   and Net needs the above-mentioned problem fixed).
+
+2008-02-05:
+ - Removed some cruft from the main SDL file which handled
+   hardware detection - I have just commented it out for now
+   because it may / may not be useful for any ports to other
+   platforms, e.g. The Wiz.  This also allows me to compile
+   against SDL libs that don't have much GP2X-specific code
+   in them.
+ - Removed a pointless structure element from the SDL code.
+ - Edited the GP2X Makefile to allow me to compile easily
+   against the Open2X SDL, or Paeryn's SDL, or any other 
+   GP2X SDL libs that I have.
+ - Properly close the SDL joystick - I don't think it'll make
+   an ounce of difference but this is how it should be done.
+
+2008-02-03:
+ - Added cursor control for Slide.
+ - Added GP2X upper-memory usage for when memory gets 
+   tight (like the test-case mentioned below).
+ - Added cursor-control to Untangle, and also modified
+   the logic so that it can show vertex numbers instead of
+   circles which is helpful when using the cursors.  However
+   this last part seems to be in the wrong place because it 
+   doesn't update the screen correctly.
+
+2008-01-26:
+ - Stopped a potential problem is very large puzzles are 
+   made which use letters to enter digits.
+ - Found a test case for running out of RAM:
+       Run cube, select the configuration for "icosahedron"
+       on a 20 x 20 grid.  After 50 moves (doesn't matter 
+       what they are), the Undo chain fills up memory and
+       hangs the program. 
+   It is a full memory exhaustion because you can track the 
+   same usage under Windows or Linux.  I intend to use this 
+   in order to try and use the full amount of RAM available
+   on the GP2X, it will be a useful test.       
+ - Some small documentation updates.
+ - Test with latest Open2X SDL libraries - seems fine on 
+   F-100 and apparently should work better on F-200.
+
+2008-01-25:
+ - Disabled screenshots by default (I keep pressing Stick-
+   click by accidents and it pauses for seconds, so someone
+   somewhere will think it's crashed).
+ - Removed an unnecessary screen update that made the menu
+   flicker.
+ - Removed hideous hack to show immutable regions in map,
+   replaced it with a simple "the number goes red" instead
+   so people can just press Y to show the region numbers
+   and the ones in red are the immutable ones.
+
+2008-01-23:
+ - Updated PC Makefile to allow Cygwin build.
+ - Removed option for threaded SDL events under Cygwin build.
+ - Simplified PC Makefile.
+
+2008-01-12:
+ - Fixed a bit of breakage that stopped Mosco from doing
+   its completion flash.
+ - Updated loopy to latest SVN (quicker solvers)
+ - Updated guess to latest SVN (fixes a crash bug)
+ - Edited the timing of the Mosco flash.
+ - Updated the manual.
+
+2008-12-23:
+ - Pulled in a shedload of changes from the Palm/Android
+   ports to enable cursor-key control for virtually 
+   every game.  Thanks go to Chris Boyle for his Android
+   port which included most of the newer changes for 
+   loopy etc.
+ - I also included some Android changes which allow a 
+   function to be called when a game is completed... 
+   something which I've always meant to get around to and 
+   never managed.  Now I can have the games be aware of 
+   when they are finished (e.g. bring up the menu or
+   save a screenshot, or record statistics or have our 
+   own completion screens etc.)
+ - Corrected one of the flags on Mosco (it doesn't 
+   support non-mouse, i.e. cursor-control, input yet).  
+   It and "Slide" are the only ones that don't now.
+ - Made a small path change in the Makefile.
+ - Small SVN update to add more Dominosa presets.
+ - Added cursor control to Mosco.
+ - Began work on the manual.
+ 
+=====
+There was a bit of a hiatus in development at this point.
+
+Mainly I was in the middle of changing jobs, which meant
+that I was given a new laptop and I took my time in 
+moving development over to a new machine, especially as
+the new machine had some Linux-affecting bugs such as
+dodgy ACPI tables, barely-supported wireless, hangs on
+reboot, etc.  All of them are due to the crappy hardware
+which is technically fantastic but obviously Linux support
+wasn't on their minds when they made it.
+
+So, I thought I'd try using Cygwin in the meantime.  I gave
+up after a few days of trying to get everything I needed
+installed (e.g. SDL, SDL_gfx, open2x toolchain, etc.) and
+working in a way that would "just work".  Next idea was
+QEMU which was working but inconvenient, so I ended up
+just fixing the problems that I had instead and using
+a standard Slackware setup on dual-boot.
+
+Eventually, I got everything moved over to that machine but
+I still don't have working wireless under a stock Linux 
+kernel so uploading to the SVN is... interesting.
+
+However, it did mean that I had plenty of thinking time
+on the existing code, that compiling is no longer 5-10% of
+my development time (Parallel-compiles on Dual-core!) and 
+that I found a tiny little thing or two about the 
+portability of the Makefiles etc. I was using.  
+=====
+
+2008-11-23:
+ - Replaced a lot of the internals of Mosco to make it
+   properly support non-square grids and to provide a 
+   lot of data structures that are needed when writing 
+   a "real" generator / solver.
+ - Added a load of non-square grids to the Mosco presets
+   (e.g. 6x4 and 8x4) now that they work properly.
+ - More work on Kakuro generator.
+ - Added a feature to Mosco - clicking on a clue will 
+   now highlight all the cells that could affect that
+   clue.
+
+2008-11-16:
+ - Updated SVN (changes to midend to double-check that
+   solvers in games aren't "fake" solvers).
+ - A couple of my smaller, more useless changes end up
+   upstream in Simon Tatham's SVN repository.
+ - Fix to Mosco to make it update the screen properly 
+   when compiled into the normal collection on other 
+   platforms.
+ - More work on Mosco solver/generator.
+ - Started work on Kakuro solver/generator (actually 
+   ages ago but I have enough code for it to do something
+   now, but it's a long way off being a game in the 
+   collection).
+
+2008-11-09:
+ - Fix to unequal because it uses strange logic to
+   select available digits (e.g. it won't use 0 until
+   the grids are a certain size, when it will use it
+   before it uses A, B, C, etc.).
+ - Added indicators on the main menu to tell whether a
+   game requires numeric digit input (e.g.
+   filling, solo, unequal), supports "cursor key" 
+   control (e.g. sokoban, maze3d, etc.) or has its own
+   solver.
+ - Minor tweaks in game descriptions.
+
+2008-11-08:
+ - Minor changes to version numbers and Makefile to 
+   accurately re-compile if the version number changes.
+ - Corrected digit input so that you can play 4x4 Solo
+   and other larger games and so that you can't select
+   an invalid number for the game (e.g. 5 in a 4x4 game
+   of Unequal).
+ - Enabled 4x4 Solo presets to be selected now that 
+   it's playable.
+ - Added end-of-game flash to Mosco.
+
+2008-11-06:
+ - SVN update to Loopy to improve generation of
+   "Great-Hexagonal" games.
+
+2008-11-01:
+ - SVN update to solo to replace my rubbish hack to show
+   all the intermediate lines with a proper one.
+ - Fix a small bug in the completion test for Mosco.
+
+2008-10-04 VERSION 1.0:
  - Various memory cleanups in Mosco.
 
 2008-10-01:

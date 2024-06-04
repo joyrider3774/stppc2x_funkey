@@ -1,0 +1,14 @@
+Sixteen
+=======
+
+This is a sliding-tile puzzle.  Slide the tiles using the
+arrows until they are in order, 1-16, top-to-bottom, 
+left-to-right.
+
+Similar to "fifteen" but this time you have to slide 
+rows/columns as if they were a Rubik's Cube to get 
+the numbers into numerical order.
+
+A-click the arrows to slide a row/column.
+A-click the arrows to slide a row/column the other way.
+

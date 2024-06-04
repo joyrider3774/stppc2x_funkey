@@ -504,6 +504,7 @@ static void game_changed_state(game_ui *ui, game_state *oldstate,
     /* Clean up cursor position */
     if (!ui->markable && ui->peg_cur == newstate->solution->npegs)
 	ui->peg_cur--;
+    if (newstate->solved && oldstate && ! oldstate->solved && newstate->next_go < newstate->params.nguesses) game_completed();
 }
 
 #define PEGSZ   (ds->pegsz)
@@ -655,20 +656,24 @@ static char *interpret_move(game_state *from, game_ui *ui, game_drawstate *ds,
 
     if (from->solved) return NULL;
 
-    if (x >= COL_OX && x <= (COL_OX + COL_W) &&
-        y >= COL_OY && y <= (COL_OY + COL_H)) {
+    if (x >= COL_OX && x < (COL_OX + COL_W) &&
+        y >= COL_OY && y < (COL_OY + COL_H)) {
         over_col = ((y - COL_OY) / PEGOFF) + 1;
+        assert(over_col >= 1 && over_col <= ds->colours->npegs);
     } else if (x >= guess_ox &&
-               y >= guess_oy && y <= (guess_oy + GUESS_H)) {
-        if (x <= (guess_ox + GUESS_W)) {
+               y >= guess_oy && y < (guess_oy + GUESS_H)) {
+        if (x < (guess_ox + GUESS_W)) {
             over_guess = (x - guess_ox) / PEGOFF;
+            assert(over_guess >= 0 && over_guess < ds->solution->npegs);
         } else {
             over_hint = 1;
         }
-    } else if (x >= guess_ox && x <= (guess_ox + GUESS_W) &&
+    } else if (x >= guess_ox && x < (guess_ox + GUESS_W) &&
                y >= GUESS_OY && y < guess_oy) {
         over_past_guess_y = (y - GUESS_OY) / PEGOFF;
         over_past_guess_x = (x - guess_ox) / PEGOFF;
+        assert(over_past_guess_y >= 0 && over_past_guess_y < from->next_go);
+        assert(over_past_guess_x >= 0 && over_past_guess_x < ds->solution->npegs);
     }
     debug(("make_move: over_col %d, over_guess %d, over_hint %d,"
            " over_past_guess (%d,%d)", over_col, over_guess, over_hint,
@@ -1315,14 +1320,6 @@ static int game_timing_state(game_state *state, game_ui *ui)
     return TRUE;
 }
 
-static void game_print_size(game_params *params, float *x, float *y)
-{
-}
-
-static void game_print(drawing *dr, game_state *state, int tilesize)
-{
-}
-
 #ifdef COMBINED
 #define thegame guess
 #endif
@@ -1358,7 +1355,7 @@ const struct game thegame = {
     game_redraw,
     game_anim_length,
     game_flash_length,
-    FALSE, FALSE, game_print_size, game_print,
+    FALSE, FALSE, NULL, NULL,
     FALSE,			       /* wants_statusbar */
     FALSE, game_timing_state,
     0,				       /* flags */

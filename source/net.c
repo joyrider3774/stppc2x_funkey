@@ -1906,6 +1906,7 @@ static void decode_ui(game_ui *ui, char *encoding)
 static void game_changed_state(game_ui *ui, game_state *oldstate,
                                game_state *newstate)
 {
+    if (newstate->completed && ! newstate->used_solve && oldstate && ! oldstate->completed) game_completed();
 }
 
 struct game_drawstate {
@@ -1978,7 +1979,11 @@ static char *interpret_move(game_state *state, game_ui *ui,
              * Middle button never drags: it only toggles the lock.
              */
             action = TOGGLE_LOCK;
-        } else if (button == LEFT_BUTTON || button == RIGHT_BUTTON) {
+        } else if (button == LEFT_BUTTON
+#ifndef STYLUS_BASED
+                   || button == RIGHT_BUTTON /* (see above) */
+#endif
+                  ) {
             /*
              * Otherwise, we note down the start point for a drag.
              */
@@ -1988,7 +1993,11 @@ static char *interpret_move(game_state *state, game_ui *ui,
             ui->dragstarty = y % TILE_SIZE;
             ui->dragged = FALSE;
             return nullret;            /* no actual action */
-        } else if (button == LEFT_DRAG || button == RIGHT_DRAG) {
+        } else if (button == LEFT_DRAG
+#ifndef STYLUS_BASED
+                   || button == RIGHT_DRAG
+#endif
+                  ) {
             /*
              * Find the new drag point and see if it necessitates a
              * rotation.
@@ -2037,7 +2046,11 @@ static char *interpret_move(game_state *state, game_ui *ui,
                 ui->dragstarty = yC;
                 ui->dragged = TRUE;
             }
-        } else if (button == LEFT_RELEASE || button == RIGHT_RELEASE) {
+        } else if (button == LEFT_RELEASE
+#ifndef STYLUS_BASED
+                   || button == RIGHT_RELEASE
+#endif
+                  ) {
             if (!ui->dragged) {
                 /*
                  * There was a click but no perceptible drag:
@@ -2061,8 +2074,7 @@ static char *interpret_move(game_state *state, game_ui *ui,
 
 #endif /* USE_DRAGGING */
 
-    } else if (button == CURSOR_UP || button == CURSOR_DOWN ||
-	       button == CURSOR_RIGHT || button == CURSOR_LEFT) {
+    } else if (IS_CURSOR_MOVE(button)) {
         switch (button) {
           case CURSOR_UP:       dir = U; break;
           case CURSOR_DOWN:     dir = D; break;
@@ -2077,7 +2089,7 @@ static char *interpret_move(game_state *state, game_ui *ui,
     } else if (button == 'a' || button == 's' || button == 'd' ||
 	       button == 'A' || button == 'S' || button == 'D' ||
                button == 'f' || button == 'F' ||
-	       button == CURSOR_SELECT  || button == CURSOR_SELECT2) {
+               IS_CURSOR_SELECT(button)) {
 	tx = ui->cur_x;
 	ty = ui->cur_y;
 	if (button == 'a' || button == 'A' || button == CURSOR_SELECT)
@@ -2105,6 +2117,7 @@ static char *interpret_move(game_state *state, game_ui *ui,
      * accident. If they change their mind, another middle click
      * unlocks it.)
      */
+
     if (action == TOGGLE_LOCK) {
 	char buf[80];
 	sprintf(buf, "L%d,%d", tx, ty);
@@ -2855,141 +2868,6 @@ static int game_timing_state(game_state *state, game_ui *ui)
     return TRUE;
 }
 
-static void game_print_size(game_params *params, float *x, float *y)
-{
-    int pw, ph;
-
-    /*
-     * I'll use 8mm squares by default.
-     */
-    game_compute_size(params, 800, &pw, &ph);
-    *x = pw / 100.0F;
-    *y = ph / 100.0F;
-}
-
-static void draw_diagram(drawing *dr, game_drawstate *ds, int x, int y,
-			 int topleft, int v, int drawlines, int ink)
-{
-    int tx, ty, cx, cy, r, br, k, thick;
-
-    tx = WINDOW_OFFSET + TILE_SIZE * x;
-    ty = WINDOW_OFFSET + TILE_SIZE * y;
-
-    /*
-     * Find our centre point.
-     */
-    if (topleft) {
-	cx = tx + (v & L ? TILE_SIZE / 4 : TILE_SIZE / 6);
-	cy = ty + (v & U ? TILE_SIZE / 4 : TILE_SIZE / 6);
-	r = TILE_SIZE / 8;
-	br = TILE_SIZE / 32;
-    } else {
-	cx = tx + TILE_SIZE / 2;
-	cy = ty + TILE_SIZE / 2;
-	r = TILE_SIZE / 2;
-	br = TILE_SIZE / 8;
-    }
-    thick = r / 20;
-
-    /*
-     * Draw the square block if we have an endpoint.
-     */
-    if (v == 1 || v == 2 || v == 4 || v == 8)
-	draw_rect(dr, cx - br, cy - br, br*2, br*2, ink);
-
-    /*
-     * Draw each radial line.
-     */
-    if (drawlines) {
-	for (k = 1; k < 16; k *= 2)
-	    if (v & k) {
-		int x1 = min(cx, cx + (r-thick) * X(k));
-		int x2 = max(cx, cx + (r-thick) * X(k));
-		int y1 = min(cy, cy + (r-thick) * Y(k));
-		int y2 = max(cy, cy + (r-thick) * Y(k));
-		draw_rect(dr, x1 - thick, y1 - thick,
-			  (x2 - x1) + 2*thick, (y2 - y1) + 2*thick, ink);
-	    }
-    }
-}
-
-static void game_print(drawing *dr, game_state *state, int tilesize)
-{
-    int w = state->width, h = state->height;
-    int ink = print_mono_colour(dr, 0);
-    int x, y;
-
-    /* Ick: fake up `ds->tilesize' for macro expansion purposes */
-    game_drawstate ads, *ds = &ads;
-    game_set_size(dr, ds, NULL, tilesize);
-
-    /*
-     * Border.
-     */
-    print_line_width(dr, TILE_SIZE / (state->wrapping ? 128 : 12));
-    draw_rect_outline(dr, WINDOW_OFFSET, WINDOW_OFFSET,
-		      TILE_SIZE * w, TILE_SIZE * h, ink);
-
-    /*
-     * Grid.
-     */
-    print_line_width(dr, TILE_SIZE / 128);
-    for (x = 1; x < w; x++)
-	draw_line(dr, WINDOW_OFFSET + TILE_SIZE * x, WINDOW_OFFSET,
-		  WINDOW_OFFSET + TILE_SIZE * x, WINDOW_OFFSET + TILE_SIZE * h,
-		  ink);
-    for (y = 1; y < h; y++)
-	draw_line(dr, WINDOW_OFFSET, WINDOW_OFFSET + TILE_SIZE * y,
-		  WINDOW_OFFSET + TILE_SIZE * w, WINDOW_OFFSET + TILE_SIZE * y,
-		  ink);
-
-    /*
-     * Barriers.
-     */
-    for (y = 0; y <= h; y++)
-	for (x = 0; x <= w; x++) {
-	    int b = barrier(state, x % w, y % h);
-	    if (x < w && (b & U))
-		draw_rect(dr, WINDOW_OFFSET + TILE_SIZE * x - TILE_SIZE/24,
-			  WINDOW_OFFSET + TILE_SIZE * y - TILE_SIZE/24,
-			  TILE_SIZE + TILE_SIZE/24 * 2, TILE_SIZE/24 * 2, ink);
-	    if (y < h && (b & L))
-		draw_rect(dr, WINDOW_OFFSET + TILE_SIZE * x - TILE_SIZE/24,
-			  WINDOW_OFFSET + TILE_SIZE * y - TILE_SIZE/24,
-			  TILE_SIZE/24 * 2, TILE_SIZE + TILE_SIZE/24 * 2, ink);
-	}
-
-    /*
-     * Grid contents.
-     */
-    for (y = 0; y < h; y++)
-	for (x = 0; x < w; x++) {
-	    int vx, v = tile(state, x, y);
-	    int locked = v & LOCKED;
-
-	    v &= 0xF;
-
-	    /*
-	     * Rotate into a standard orientation for the top left
-	     * corner diagram.
-	     */
-	    vx = v;
-	    while (vx != 0 && vx != 15 && vx != 1 && vx != 9 && vx != 13 &&
-		   vx != 5)
-		vx = A(vx);
-
-	    /*
-	     * Draw the top left corner diagram.
-	     */
-	    draw_diagram(dr, ds, x, y, TRUE, vx, TRUE, ink);
-
-	    /*
-	     * Draw the real solution diagram, if we're doing so.
-	     */
-	    draw_diagram(dr, ds, x, y, FALSE, v, locked, ink);
-	}
-}
-
 #ifdef COMBINED
 #define thegame net
 #endif
@@ -3025,7 +2903,7 @@ const struct game thegame = {
     game_redraw,
     game_anim_length,
     game_flash_length,
-    TRUE, FALSE, game_print_size, game_print,
+    FALSE, FALSE, NULL, NULL,
     TRUE,			       /* wants_statusbar */
     FALSE, game_timing_state,
     0,				       /* flags */

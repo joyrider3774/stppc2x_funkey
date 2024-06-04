@@ -39,6 +39,7 @@ cannot be so everywhere.  So I am documenting that first.
 #include <ctype.h>
 #include <math.h>
 #include "maze3dc.h"
+#include "puzzles.h"
 
 /*
  * the structure - where everything happens!
@@ -357,11 +358,7 @@ MAZE *maze_new(int xx, int yy, int zz, int target, int isdouble, int seed)
 	t_zz = zz - 1;
 
 
-	if((maze = (MAZE *)malloc(sizeof(MAZE))) == NULL)
-	{
-		fprintf(stderr, "Maze: Cannot allocate maze structure\n");
-		return NULL;
-	}
+	maze = (MAZE *)smalloc(sizeof(MAZE));
 
 	/*
 	 * The seed is 0, find any number (Location of maze im memory maybe?
@@ -396,11 +393,7 @@ MAZE *maze_new(int xx, int yy, int zz, int target, int isdouble, int seed)
 	maze->mode = 0;
 
 	maze->tracklen = (int)((xx + yy + zz) / 12);	/* The length of a track */
-	if((cell = (MAZECELL *)malloc(xx * yy * zz * sizeof(MAZECELL))) == NULL)	/* The maze cells */
-	{
-		fprintf(stderr, "Maze: Cannot allocate cells\n");
-		return NULL;
-	}
+	cell = (MAZECELL *)smalloc(xx * yy * zz * sizeof(MAZECELL));	/* The maze cells */
 	maze->cell = cell;
 
 	
@@ -546,8 +539,8 @@ void maze_free(MAZE *maze)
 	maze->cntref--;
 	if(!maze->cntref)
 	{
-		free(maze->cell);
-		free(maze);
+		sfree(maze->cell);
+		sfree(maze);
 	}
 }
 
@@ -563,7 +556,7 @@ MAZE *maze_copy(MAZE *maze)
 void makeawall(MAZECELL *ordw, int wall)
 {
 	/*
-	 * Makeing adjoining walls
+	 * Making adjoining walls
 	 *
 	 * If the cell has not been initialized then
 	 * I mark it as "adjoining".  This means that
@@ -586,7 +579,7 @@ void make_owall(MAZE *maze, MAZECELL ord, int t_xx, int t_yy, int t_zz)
 	 * are built
 	 */
 	/*
-	 * The position in the matrix (Compas points)
+	 * The position in the matrix (Compass points)
 	 *
 	 * xx = 0=s x=n
 	 * yy = 0=e,y=w
@@ -1727,11 +1720,7 @@ MAZE *maze_load(FILE *fp)
 {
 	MAZE *maze;
 
-	if((maze = (MAZE *)malloc(sizeof(MAZE))) == NULL)
-	{
-		fprintf(stderr, "Maze: Cannot allocate maze structure\n");
-		return NULL;
-	}
+	maze = (MAZE *)smalloc(sizeof(MAZE));
 
 	/*
 	 * The seed is 0, find any number (Location of maze im memory maybe?
@@ -1766,8 +1755,8 @@ MAZE *maze_load(FILE *fp)
 
 	if(maze_load_do(fp, maze))
 	{
-		if(maze->cell != NULL) free(maze->cell);
-		free(maze);
+		if(maze->cell != NULL) sfree(maze->cell);
+		sfree(maze);
 		return NULL;
 	}
 	return maze;
@@ -1836,11 +1825,7 @@ int maze_load_do(FILE *fp, MAZE *maze)
 	if(maze->rotations < 0) return -1;
 	if(maze->seed < 0) return -1;
 		
-	if((maze->cell = (MAZECELL *)malloc(maze->xx * maze->yy * maze->zz * sizeof(MAZECELL))) == NULL)	/* The maze cells */
-	{
-		fprintf(stderr, "Maze: Cannot allocate cells\n");
-		return -1;
-	}
+	maze->cell = (MAZECELL *)smalloc(maze->xx * maze->yy * maze->zz * sizeof(MAZECELL));	/* The maze cells */
 
 	for(i=0;i<maze->xx;i++)
 	{

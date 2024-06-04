@@ -73,6 +73,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <string.h>
 #include <assert.h>
 #include <ctype.h>
@@ -101,6 +102,7 @@ enum {
     COL_HIGHLIGHT,
     COL_MISTAKE,
     COL_SATISFIED,
+    COL_CURSOR,
     NCOLOURS
 };
 
@@ -132,23 +134,16 @@ enum solver_status {
 };
 
 /* ------ Solver state ------ */
-typedef struct normal {
-    /* For each dline, store a bitmask for whether we know:
-     * (bit 0) at least one is YES
-     * (bit 1) at most one is YES */
-    char *dlines;
-} normal_mode_state;
-
-typedef struct hard {
-    int *linedsf;
-} hard_mode_state;
-
 typedef struct solver_state {
     game_state *state;
     enum solver_status solver_status;
     /* NB looplen is the number of dots that are joined together at a point, ie a
      * looplen of 1 means there are no lines to a particular dot */
     int *looplen;
+
+    /* Difficulty level of solver.  Used by solver functions that want to
+     * vary their behaviour depending on the requested difficulty level. */
+    int diff;
 
     /* caches */
     char *dot_yes_count;
@@ -158,8 +153,14 @@ typedef struct solver_state {
     char *dot_solved, *face_solved;
     int *dotdsf;
 
-    normal_mode_state *normal;
-    hard_mode_state *hard;
+    /* Information for Normal level deductions:
+     * For each dline, store a bitmask for whether we know:
+     * (bit 0) at least one is YES
+     * (bit 1) at most one is YES */
+    char *dlines;
+
+    /* Hard level information */
+    int *linedsf;
 } solver_state;
 
 /*
@@ -168,21 +169,39 @@ typedef struct solver_state {
  */
 
 #define DIFFLIST(A) \
-    A(EASY,Easy,e,easy_mode_deductions) \
-    A(NORMAL,Normal,n,normal_mode_deductions) \
-    A(HARD,Hard,h,hard_mode_deductions)
-#define ENUM(upper,title,lower,fn) DIFF_ ## upper,
-#define TITLE(upper,title,lower,fn) #title,
-#define ENCODE(upper,title,lower,fn) #lower
-#define CONFIG(upper,title,lower,fn) ":" #title
-#define SOLVER_FN_DECL(upper,title,lower,fn) static int fn(solver_state *);
-#define SOLVER_FN(upper,title,lower,fn) &fn,
+    A(EASY,Easy,e) \
+    A(NORMAL,Normal,n) \
+    A(TRICKY,Tricky,t) \
+    A(HARD,Hard,h)
+#define ENUM(upper,title,lower) DIFF_ ## upper,
+#define TITLE(upper,title,lower) #title,
+#define ENCODE(upper,title,lower) #lower
+#define CONFIG(upper,title,lower) ":" #title
 enum { DIFFLIST(ENUM) DIFF_MAX };
 static char const *const diffnames[] = { DIFFLIST(TITLE) };
 static char const diffchars[] = DIFFLIST(ENCODE);
 #define DIFFCONFIG DIFFLIST(CONFIG)
-DIFFLIST(SOLVER_FN_DECL)
-static int (*(solver_fns[]))(solver_state *) = { DIFFLIST(SOLVER_FN) };
+
+/*
+ * Solver routines, sorted roughly in order of computational cost.
+ * The solver will run the faster deductions first, and slower deductions are
+ * only invoked when the faster deductions are unable to make progress.
+ * Each function is associated with a difficulty level, so that the generated
+ * puzzles are solvable by applying only the functions with the chosen
+ * difficulty level or lower.
+ */
+#define SOLVERLIST(A) \
+    A(trivial_deductions, DIFF_EASY) \
+    A(dline_deductions, DIFF_NORMAL) \
+    A(linedsf_deductions, DIFF_HARD) \
+    A(loop_deductions, DIFF_EASY)
+#define SOLVER_FN_DECL(fn,diff) static int fn(solver_state *);
+#define SOLVER_FN(fn,diff) &fn,
+#define SOLVER_DIFF(fn,diff) diff,
+SOLVERLIST(SOLVER_FN_DECL)
+static int (*(solver_fns[]))(solver_state *) = { SOLVERLIST(SOLVER_FN) };
+static int const solver_diffs[] = { SOLVERLIST(SOLVER_DIFF) };
+const int NUM_SOLVERS = sizeof(solver_diffs)/sizeof(*solver_diffs);
 
 struct game_params {
     int w, h;
@@ -204,6 +223,10 @@ enum line_drawstate { DS_LINE_YES, DS_LINE_UNKNOWN,
 #define OPP(line_state) \
     (2 - line_state)
 
+/* Define this to display the crosshair cursor. The highlighted-edge
+ * cursor is always displayed (this is the thing you're actually
+ * interested in). */
+#define CURSOR_IS_VISIBLE 1
 
 struct game_drawstate {
     int started;
@@ -212,13 +235,19 @@ struct game_drawstate {
     char *lines;
     char *clue_error;
     char *clue_satisfied;
+
+    int cur_visible;
+#ifdef CURSOR_IS_VISIBLE
+    int cur_bl_x, cur_bl_y;
+    blitter *cur_bl;
+#endif
+    grid_edge *cur_edge;
 };
 
 static char *validate_desc(game_params *params, char *desc);
 static int dot_order(const game_state* state, int i, char line_type);
 static int face_order(const game_state* state, int i, char line_type);
-static solver_state *solve_game_rec(const solver_state *sstate,
-                                    int diff);
+static solver_state *solve_game_rec(const solver_state *sstate);
 
 #ifdef DEBUG_CACHES
 static void check_caches(const solver_state* sstate);
@@ -332,6 +361,7 @@ static solver_state *new_solver_state(game_state *state, int diff) {
     ret->state = dup_game(state);
 
     ret->solver_status = SOLVER_INCOMPLETE;
+    ret->diff = diff;
 
     ret->dotdsf = snew_dsf(num_dots);
     ret->looplen = snewn(num_dots, int);
@@ -355,18 +385,16 @@ static solver_state *new_solver_state(game_state *state, int diff) {
     memset(ret->face_no_count, 0, num_faces);
 
     if (diff < DIFF_NORMAL) {
-        ret->normal = NULL;
+        ret->dlines = NULL;
     } else {
-        ret->normal = snew(normal_mode_state);
-        ret->normal->dlines = snewn(2*num_edges, char);
-        memset(ret->normal->dlines, 0, 2*num_edges);
+        ret->dlines = snewn(2*num_edges, char);
+        memset(ret->dlines, 0, 2*num_edges);
     }
 
     if (diff < DIFF_HARD) {
-        ret->hard = NULL;
+        ret->linedsf = NULL;
     } else {
-        ret->hard = snew(hard_mode_state);
-        ret->hard->linedsf = snew_dsf(state->game_grid->num_edges);
+        ret->linedsf = snew_dsf(state->game_grid->num_edges);
     }
 
     return ret;
@@ -384,15 +412,9 @@ static void free_solver_state(solver_state *sstate) {
         sfree(sstate->face_yes_count);
         sfree(sstate->face_no_count);
 
-        if (sstate->normal) {
-            sfree(sstate->normal->dlines);
-            sfree(sstate->normal);
-        }
-
-        if (sstate->hard) {
-            sfree(sstate->hard->linedsf);
-            sfree(sstate->hard);
-        }
+        /* OK, because sfree(NULL) is a no-op */
+        sfree(sstate->dlines);
+        sfree(sstate->linedsf);
 
         sfree(sstate);
     }
@@ -408,6 +430,7 @@ static solver_state *dup_solver_state(const solver_state *sstate) {
     ret->state = state = dup_game(sstate->state);
 
     ret->solver_status = sstate->solver_status;
+    ret->diff = sstate->diff;
 
     ret->dotdsf = snewn(num_dots, int);
     ret->looplen = snewn(num_dots, int);
@@ -431,22 +454,20 @@ static solver_state *dup_solver_state(const solver_state *sstate) {
     ret->face_no_count = snewn(num_faces, char);
     memcpy(ret->face_no_count, sstate->face_no_count, num_faces);
 
-    if (sstate->normal) {
-        ret->normal = snew(normal_mode_state);
-        ret->normal->dlines = snewn(2*num_edges, char);
-        memcpy(ret->normal->dlines, sstate->normal->dlines,
+    if (sstate->dlines) {
+        ret->dlines = snewn(2*num_edges, char);
+        memcpy(ret->dlines, sstate->dlines,
                2*num_edges);
     } else {
-        ret->normal = NULL;
+        ret->dlines = NULL;
     }
 
-    if (sstate->hard) {
-        ret->hard = snew(hard_mode_state);
-        ret->hard->linedsf = snewn(num_edges, int);
-        memcpy(ret->hard->linedsf, sstate->hard->linedsf,
+    if (sstate->linedsf) {
+        ret->linedsf = snewn(num_edges, int);
+        memcpy(ret->linedsf, sstate->linedsf,
                num_edges * sizeof(int));
     } else {
-        ret->hard = NULL;
+        ret->linedsf = NULL;
     }
 
     return ret;
@@ -631,9 +652,10 @@ static char *validate_params(game_params *params, int full)
     if (params->w < grid_size_limits[params->type].amin ||
 	params->h < grid_size_limits[params->type].amin)
         return grid_size_limits[params->type].aerr;
-    if ((params->w < grid_size_limits[params->type].omin) &&
-	(params->h < grid_size_limits[params->type].omin))
+    if (params->w < grid_size_limits[params->type].omin &&
+	params->h < grid_size_limits[params->type].omin)
         return grid_size_limits[params->type].oerr;
+
     /*
      * This shouldn't be able to happen at all, since decode_params
      * and custom_params will never generate anything that isn't
@@ -761,13 +783,27 @@ static char *encode_solve_move(const game_state *state)
     return ret;
 }
 
+struct game_ui {
+    int cur_x, cur_y; /* grid coordinates. */
+    int cur_visible;
+};
+
+
 static game_ui *new_ui(game_state *state)
 {
-    return NULL;
+    grid *g = state->game_grid;
+    grid_edge *e = g->middle_face->edges[0]; /* an edge on the middle face. */
+
+    game_ui *ui = snew(game_ui);
+    ui->cur_x = (e->dot1->x + e->dot2->x)/2; /* cursor starts in the middle... */
+    ui->cur_y = (e->dot1->y + e->dot2->y)/2; /* ... of that edge. */
+    ui->cur_visible = 0;
+    return ui;
 }
 
 static void free_ui(game_ui *ui)
 {
+    sfree(ui);
 }
 
 static char *encode_ui(game_ui *ui)
@@ -782,6 +818,9 @@ static void decode_ui(game_ui *ui, char *encoding)
 static void game_changed_state(game_ui *ui, game_state *oldstate,
                                game_state *newstate)
 {
+#ifdef ANDROID
+    if (newstate->solved && ! newstate->cheated && oldstate && ! oldstate->solved) nestedvm_completed();
+#endif
 }
 
 static void game_compute_size(game_params *params, int tilesize,
@@ -801,10 +840,23 @@ static void game_compute_size(game_params *params, int tilesize,
     *y = rendered_height + 2 * BORDER(tilesize) + 1;
 }
 
+#ifdef CURSOR_IS_VISIBLE
+#define BLITTER_HSZ ((ds->tilesize)/8)
+#define BLITTER_SZ (2*(BLITTER_HSZ)+1)
+
+#define CUR_HSZ 1
+#define CUR_SZ 3
+#endif
+
 static void game_set_size(drawing *dr, game_drawstate *ds,
 			  game_params *params, int tilesize)
 {
     ds->tilesize = tilesize;
+
+#ifdef CURSOR_IS_VISIBLE
+//    assert(!ds->cur_bl);
+    ds->cur_bl = blitter_new(dr, BLITTER_SZ, BLITTER_SZ);
+#endif
 }
 
 static float *game_colours(frontend *fe, int *ncolours)
@@ -828,6 +880,10 @@ static float *game_colours(frontend *fe, int *ncolours)
     ret[COL_MISTAKE * 3 + 0] = 1.0F;
     ret[COL_MISTAKE * 3 + 1] = 0.0F;
     ret[COL_MISTAKE * 3 + 2] = 0.0F;
+
+    ret[COL_CURSOR * 3 + 0] = 0.5F;
+    ret[COL_CURSOR * 3 + 1] = 0.5F;
+    ret[COL_CURSOR * 3 + 2] = 1.0F;
 
     ret[COL_SATISFIED * 3 + 0] = 0.0F;
     ret[COL_SATISFIED * 3 + 1] = 0.0F;
@@ -854,11 +910,22 @@ static game_drawstate *game_new_drawstate(drawing *dr, game_state *state)
     memset(ds->clue_error, 0, num_faces);
     memset(ds->clue_satisfied, 0, num_faces);
 
+    ds->cur_visible = 0;
+#ifdef CURSOR_IS_VISIBLE
+    ds->cur_bl_x = ds->cur_bl_y = 0;
+    ds->cur_bl = NULL;
+#endif
+    ds->cur_edge = NULL;
+
     return ds;
 }
 
 static void game_free_drawstate(drawing *dr, game_drawstate *ds)
 {
+#ifdef CURSOR_IS_VISIBLE
+    if (ds->cur_bl) blitter_free(dr, ds->cur_bl);
+#endif
+
     sfree(ds->clue_error);
     sfree(ds->clue_satisfied);
     sfree(ds->lines);
@@ -1102,12 +1169,12 @@ static int merge_lines(solver_state *sstate, int i, int j, int inverse
     assert(i < sstate->state->game_grid->num_edges);
     assert(j < sstate->state->game_grid->num_edges);
 
-    i = edsf_canonify(sstate->hard->linedsf, i, &inv_tmp);
+    i = edsf_canonify(sstate->linedsf, i, &inv_tmp);
     inverse ^= inv_tmp;
-    j = edsf_canonify(sstate->hard->linedsf, j, &inv_tmp);
+    j = edsf_canonify(sstate->linedsf, j, &inv_tmp);
     inverse ^= inv_tmp;
 
-    edsf_merge(sstate->hard->linedsf, i, j, inverse);
+    edsf_merge(sstate->linedsf, i, j, inverse);
 
 #ifdef SHOW_WORKING
     if (i != j) {
@@ -1217,33 +1284,34 @@ static int face_setall(solver_state *sstate, int face,
  * Loop generation and clue removal
  */
 
-/* We're going to store a list of current candidate faces for lighting.
+/* We're going to store lists of current candidate faces for colouring black
+ * or white.
  * Each face gets a 'score', which tells us how adding that face right
- * now would affect the length of the solution loop.  We're trying to
+ * now would affect the curliness of the solution loop.  We're trying to
  * maximise that quantity so will bias our random selection of faces to
- * light towards those with high scores */
-struct face {
-    int score;
+ * colour those with high scores */
+struct face_score {
+    int white_score;
+    int black_score;
     unsigned long random;
-    grid_face *f;
+    /* No need to store a grid_face* here.  The 'face_scores' array will
+     * be a list of 'face_score' objects, one for each face of the grid, so
+     * the position (index) within the 'face_scores' array will determine
+     * which face corresponds to a particular face_score.
+     * Having a single 'face_scores' array for all faces simplifies memory
+     * management, and probably improves performance, because we don't have to 
+     * malloc/free each individual face_score, and we don't have to maintain
+     * a mapping from grid_face* pointers to face_score* pointers.
+     */
 };
 
-static int get_face_cmpfn(void *v1, void *v2)
+static int generic_sort_cmpfn(void *v1, void *v2, size_t offset)
 {
-    struct face *f1 = v1;
-    struct face *f2 = v2;
-    /* These grid_face pointers always point into the same list of
-     * 'grid_face's, so it's valid to subtract them. */
-    return f1->f - f2->f;
-}
-
-static int face_sort_cmpfn(void *v1, void *v2)
-{
-    struct face *f1 = v1;
-    struct face *f2 = v2;
+    struct face_score *f1 = v1;
+    struct face_score *f2 = v2;
     int r;
 
-    r = f2->score - f1->score;
+    r = *(int *)((char *)f2 + offset) - *(int *)((char *)f1 + offset);
     if (r) {
         return r;
     }
@@ -1256,64 +1324,74 @@ static int face_sort_cmpfn(void *v1, void *v2)
     /*
      * It's _just_ possible that two faces might have been given
      * the same random value. In that situation, fall back to
-     * comparing based on the positions within the grid's face-list.
+     * comparing based on the positions within the face_scores list.
      * This introduces a tiny directional bias, but not a significant one.
      */
-    return get_face_cmpfn(f1, f2);
+    return f1 - f2;
 }
 
-enum { FACE_LIT, FACE_UNLIT };
+static int white_sort_cmpfn(void *v1, void *v2)
+{
+    return generic_sort_cmpfn(v1, v2, offsetof(struct face_score,white_score));
+}
+
+static int black_sort_cmpfn(void *v1, void *v2)
+{
+    return generic_sort_cmpfn(v1, v2, offsetof(struct face_score,black_score));
+}
+
+enum face_colour { FACE_WHITE, FACE_GREY, FACE_BLACK };
 
 /* face should be of type grid_face* here. */
-#define FACE_LIT_STATE(face) \
-    ( (face) == NULL ? FACE_UNLIT : \
+#define FACE_COLOUR(face) \
+    ( (face) == NULL ? FACE_BLACK : \
 	  board[(face) - g->faces] )
 
 /* 'board' is an array of these enums, indicating which faces are
- * currently lit.  Returns whether it's legal to light up the
- * given face. */
-static int can_light_face(grid *g, char* board, int face_index)
+ * currently black/white/grey.  'colour' is FACE_WHITE or FACE_BLACK.
+ * Returns whether it's legal to colour the given face with this colour. */
+static int can_colour_face(grid *g, char* board, int face_index,
+                           enum face_colour colour)
 {
     int i, j;
     grid_face *test_face = g->faces + face_index;
     grid_face *starting_face, *current_face;
     int transitions;
-    int current_state, s;
-    int found_lit_neighbour = FALSE;
-    assert(board[face_index] == FACE_UNLIT);
+    int current_state, s; /* booleans: equal or not-equal to 'colour' */
+    int found_same_coloured_neighbour = FALSE;
+    assert(board[face_index] != colour);
 
-    /* Can only consider a face for lighting if it's adjacent to an
-     * already lit face. */
+    /* Can only consider a face for colouring if it's adjacent to a face
+     * with the same colour. */
     for (i = 0; i < test_face->order; i++) {
         grid_edge *e = test_face->edges[i];
         grid_face *f = (e->face1 == test_face) ? e->face2 : e->face1;
-        if (FACE_LIT_STATE(f) == FACE_LIT) {
-            found_lit_neighbour = TRUE;
+        if (FACE_COLOUR(f) == colour) {
+            found_same_coloured_neighbour = TRUE;
             break;
         }
     }
-    if (!found_lit_neighbour)
+    if (!found_same_coloured_neighbour)
         return FALSE;
 
-    /* Need to avoid creating a loop of lit faces around some unlit faces.
-     * Also need to avoid meeting another lit face at a corner, with
-     * unlit faces in between.  Here's a simple test that (I believe) takes
-     * care of both these conditions:
+    /* Need to avoid creating a loop of faces of this colour around some
+     * differently-coloured faces.
+     * Also need to avoid meeting a same-coloured face at a corner, with
+     * other-coloured faces in between.  Here's a simple test that (I believe)
+     * takes care of both these conditions:
      *
      * Take the circular path formed by this face's edges, and inflate it
      * slightly outwards.  Imagine walking around this path and consider
      * the faces that you visit in sequence.  This will include all faces
      * touching the given face, either along an edge or just at a corner.
-     * Count the number of LIT/UNLIT transitions you encounter, as you walk
-     * along the complete loop.  This will obviously turn out to be an even
-     * number.
-     * If 0, we're either in a completely unlit zone, or this face is a hole
-     * in a completely lit zone.  If the former, we would create a brand new
-     * island by lighting this face.  And the latter ought to be impossible -
-     * it would mean there's already a lit loop, so something went wrong
-     * earlier.
-     * If 4 or greater, there are too many separate lit regions touching this
-     * face, and lighting it up would create a loop or a corner-violation.
+     * Count the number of 'colour'/not-'colour' transitions you encounter, as
+     * you walk along the complete loop.  This will obviously turn out to be
+     * an even number.
+     * If 0, we're either in the middle of an "island" of this colour (should
+     * be impossible as we're not supposed to create black or white loops),
+     * or we're about to start a new island - also not allowed.
+     * If 4 or greater, there are too many separate coloured regions touching
+     * this face, and colouring it would create a loop or a corner-violation.
      * The only allowed case is when the count is exactly 2. */
 
     /* i points to a dot around the test face.
@@ -1330,7 +1408,7 @@ static int can_light_face(grid *g, char* board, int face_index)
     }
     current_face = starting_face;
     transitions = 0;
-    current_state = FACE_LIT_STATE(current_face);
+    current_state = (FACE_COLOUR(current_face) == colour);
 
     do {
         /* Advance to next face.
@@ -1362,7 +1440,7 @@ static int can_light_face(grid *g, char* board, int face_index)
         }
         /* (i,j) are now advanced to next face */
         current_face = test_face->dots[i]->faces[j];
-        s = FACE_LIT_STATE(current_face);
+        s = (FACE_COLOUR(current_face) == colour);
         if (s != current_state) {
             ++transitions;
             current_state = s;
@@ -1374,53 +1452,121 @@ static int can_light_face(grid *g, char* board, int face_index)
     return (transitions == 2) ? TRUE : FALSE;
 }
 
-/* The 'score' of a face reflects its current desirability for selection
- * as the next face to light.  We want to encourage moving into uncharted
- * areas so we give scores according to how many of the face's neighbours
- * are currently unlit. */
-static int face_score(grid *g, char *board, grid_face *face)
+/* Count the number of neighbours of 'face', having colour 'colour' */
+static int face_num_neighbours(grid *g, char *board, grid_face *face,
+                               enum face_colour colour)
 {
-    /* Simple formula: score = neighbours unlit - neighbours lit */
-    int lit_count = 0, unlit_count = 0;
+    int colour_count = 0;
     int i;
     grid_face *f;
     grid_edge *e;
     for (i = 0; i < face->order; i++) {
         e = face->edges[i];
         f = (e->face1 == face) ? e->face2 : e->face1;
-        if (FACE_LIT_STATE(f) == FACE_LIT)
-            ++lit_count;
-        else
-            ++unlit_count;
+        if (FACE_COLOUR(f) == colour)
+            ++colour_count;
     }
-    return unlit_count - lit_count;
+    return colour_count;
 }
 
-/* Generate a new complete set of clues for the given game_state. */
+/* The 'score' of a face reflects its current desirability for selection
+ * as the next face to colour white or black.  We want to encourage moving
+ * into grey areas and increasing loopiness, so we give scores according to
+ * how many of the face's neighbours are currently coloured the same as the
+ * proposed colour. */
+static int face_score(grid *g, char *board, grid_face *face,
+                      enum face_colour colour)
+{
+    /* Simple formula: score = 0 - num. same-coloured neighbours,
+     * so a higher score means fewer same-coloured neighbours. */
+    return -face_num_neighbours(g, board, face, colour);
+}
+
+/* Generate a new complete set of clues for the given game_state.
+ * The method is to generate a WHITE/BLACK colouring of all the faces,
+ * such that the WHITE faces will define the inside of the path, and the
+ * BLACK faces define the outside.
+ * To do this, we initially colour all faces GREY.  The infinite space outside
+ * the grid is coloured BLACK, and we choose a random face to colour WHITE.
+ * Then we gradually grow the BLACK and the WHITE regions, eliminating GREY
+ * faces, until the grid is filled with BLACK/WHITE.  As we grow the regions,
+ * we avoid creating loops of a single colour, to preserve the topological
+ * shape of the WHITE and BLACK regions.
+ * We also try to make the boundary as loopy and twisty as possible, to avoid
+ * generating paths that are uninteresting.
+ * The algorithm works by choosing a BLACK/WHITE colour, then choosing a GREY
+ * face that can be coloured with that colour (without violating the
+ * topological shape of that region).  It's not obvious, but I think this
+ * algorithm is guaranteed to terminate without leaving any GREY faces behind.
+ * Indeed, if there are any GREY faces at all, both the WHITE and BLACK
+ * regions can be grown.
+ * This is checked using assert()ions, and I haven't seen any failures yet.
+ *
+ * Hand-wavy proof: imagine what can go wrong...
+ *
+ * Could the white faces get completely cut off by the black faces, and still
+ * leave some grey faces remaining?
+ * No, because then the black faces would form a loop around both the white
+ * faces and the grey faces, which is disallowed because we continually
+ * maintain the correct topological shape of the black region.
+ * Similarly, the black faces can never get cut off by the white faces.  That
+ * means both the WHITE and BLACK regions always have some room to grow into
+ * the GREY regions.
+ * Could it be that we can't colour some GREY face, because there are too many
+ * WHITE/BLACK transitions as we walk round the face? (see the
+ * can_colour_face() function for details)
+ * No.  Imagine otherwise, and we see WHITE/BLACK/WHITE/BLACK as we walk
+ * around the face.  The two WHITE faces would be connected by a WHITE path,
+ * and the BLACK faces would be connected by a BLACK path.  These paths would
+ * have to cross, which is impossible.
+ * Another thing that could go wrong: perhaps we can't find any GREY face to
+ * colour WHITE, because it would create a loop-violation or a corner-violation
+ * with the other WHITE faces?
+ * This is a little bit tricky to prove impossible.  Imagine you have such a
+ * GREY face (that is, if you coloured it WHITE, you would create a WHITE loop
+ * or corner violation).
+ * That would cut all the non-white area into two blobs.  One of those blobs
+ * must be free of BLACK faces (because the BLACK stuff is a connected blob).
+ * So we have a connected GREY area, completely surrounded by WHITE
+ * (including the GREY face we've tentatively coloured WHITE).
+ * A well-known result in graph theory says that you can always find a GREY
+ * face whose removal leaves the remaining GREY area connected.  And it says
+ * there are at least two such faces, so we can always choose the one that
+ * isn't the "tentative" GREY face.  Colouring that face WHITE leaves
+ * everything nice and connected, including that "tentative" GREY face which
+ * acts as a gateway to the rest of the non-WHITE grid.
+ */
 static void add_full_clues(game_state *state, random_state *rs)
 {
     signed char *clues = state->clues;
     char *board;
     grid *g = state->game_grid;
-    int i, j, c;
+    int i, j;
     int num_faces = g->num_faces;
-    int first_time = TRUE;
-
-    struct face *face, *tmpface;
-    struct face face_pos;
-
-    /* These will contain exactly the same information, sorted into different
-     * orders */
-    tree234 *lightable_faces_sorted, *lightable_faces_gettable;
-
-#define IS_LIGHTING_CANDIDATE(i) \
-    (board[i] == FACE_UNLIT && \
-	 can_light_face(g, board, i))
+    struct face_score *face_scores; /* Array of face_score objects */
+    struct face_score *fs; /* Points somewhere in the above list */
+    struct grid_face *cur_face;
+    tree234 *lightable_faces_sorted;
+    tree234 *darkable_faces_sorted;
+    int *face_list;
+    int do_random_pass;
 
     board = snewn(num_faces, char);
 
     /* Make a board */
-    memset(board, FACE_UNLIT, num_faces);
+    memset(board, FACE_GREY, num_faces);
+    
+    /* Create and initialise the list of face_scores */
+    face_scores = snewn(num_faces, struct face_score);
+    for (i = 0; i < num_faces; i++) {
+        face_scores[i].random = random_bits(rs, 31);
+    }
+    
+    /* Colour a random, finite face white.  The infinite face is implicitly
+     * coloured black.  Together, they will seed the random growth process
+     * for the black and white areas. */
+    i = random_upto(rs, num_faces);
+    board[i] = FACE_WHITE;
 
     /* We need a way of favouring faces that will increase our loopiness.
      * We do this by maintaining a list of all candidate faces sorted by
@@ -1434,123 +1580,188 @@ static void add_full_clues(game_state *state, random_state *rs)
      * Yes, this means we will be biased towards particular random faces in
      * any one run but that doesn't actually matter. */
 
-    lightable_faces_sorted   = newtree234(face_sort_cmpfn);
-    lightable_faces_gettable = newtree234(get_face_cmpfn);
-#define ADD_FACE(f) \
-    do { \
-        struct face *x = add234(lightable_faces_sorted, f); \
-        assert(x == f); \
-        x = add234(lightable_faces_gettable, f); \
-        assert(x == f); \
-    } while (0)
+    lightable_faces_sorted = newtree234(white_sort_cmpfn);
+    darkable_faces_sorted = newtree234(black_sort_cmpfn);
 
-#define REMOVE_FACE(f) \
-    do { \
-        struct face *x = del234(lightable_faces_sorted, f); \
-        assert(x); \
-        x = del234(lightable_faces_gettable, f); \
-        assert(x); \
-    } while (0)
+    /* Initialise the lists of lightable and darkable faces.  This is
+     * slightly different from the code inside the while-loop, because we need
+     * to check every face of the board (the grid structure does not keep a
+     * list of the infinite face's neighbours). */
+    for (i = 0; i < num_faces; i++) {
+        grid_face *f = g->faces + i;
+        struct face_score *fs = face_scores + i;
+        if (board[i] != FACE_GREY) continue;
+        /* We need the full colourability check here, it's not enough simply
+         * to check neighbourhood.  On some grids, a neighbour of the infinite
+         * face is not necessarily darkable. */
+        if (can_colour_face(g, board, i, FACE_BLACK)) {
+            fs->black_score = face_score(g, board, f, FACE_BLACK);
+            add234(darkable_faces_sorted, fs);
+        }
+        if (can_colour_face(g, board, i, FACE_WHITE)) {
+            fs->white_score = face_score(g, board, f, FACE_WHITE);
+            add234(lightable_faces_sorted, fs);
+        }
+    }
 
-    /* Light faces one at a time until the board is interesting enough */
+    /* Colour faces one at a time until no more faces are colourable. */
     while (TRUE)
     {
-        if (first_time) {
-            first_time = FALSE;
-            /* lightable_faces_xxx are empty, so start the process by
-             * lighting up the middle face.  These tree234s should
-             * remain empty, consistent with what would happen if
-             * first_time were FALSE. */
-            board[g->middle_face - g->faces] = FACE_LIT;
-            face = snew(struct face);
-            face->f = g->middle_face;
-            /* No need to initialise any more of 'face' here, no other fields
-             * are used in this case. */
-        } else {
-            /* We have count234(lightable_faces_gettable) possibilities, and in
-             * lightable_faces_sorted they are sorted with the most desirable
-             * first. */
-            c = count234(lightable_faces_sorted);
-            if (c == 0)
-                break;
-            assert(c == count234(lightable_faces_gettable));
-
-            /* Check that the best face available is any good */
-            face = (struct face *)index234(lightable_faces_sorted, 0);
-            assert(face);
-
-            /*
-             * The situation for a general grid is slightly different from
-             * a square grid.  Decreasing the perimeter should be allowed
-             * sometimes (think about creating a hexagon of lit triangles,
-             * for example).  For if it were _never_ done, then the user would
-             * be able to illicitly deduce certain things.  So we do it
-             * sometimes but not always.
-             */
-            if (face->score <= 0 && random_upto(rs, 2) == 0) {
-                break;
-            }
-
-            assert(face->f); /* not the infinite face */
-            assert(FACE_LIT_STATE(face->f) == FACE_UNLIT);
-
-            /* Update data structures */
-            /* Light up the face and remove it from the lists */
-            board[face->f - g->faces] = FACE_LIT;
-            REMOVE_FACE(face);
+        enum face_colour colour;
+        struct face_score *fs_white, *fs_black;
+        int c_lightable = count234(lightable_faces_sorted);
+        int c_darkable = count234(darkable_faces_sorted);
+        if (c_lightable == 0) {
+            /* No more lightable faces.  Because of how the algorithm
+             * works, there should be no more darkable faces either. */
+            assert(c_darkable == 0);
+            break;
         }
 
-        /* The face we've just lit up potentially affects the lightability
-         * of any neighbouring faces (touching at a corner or edge).  So the
-         * search needs to be conducted around all faces touching the one
-         * we've just lit.  Iterate over its corners, then over each corner's
-         * faces. */
-        for (i = 0; i < face->f->order; i++) {
-            grid_dot *d = face->f->dots[i];
+        fs_white = (struct face_score *)index234(lightable_faces_sorted, 0);
+        fs_black = (struct face_score *)index234(darkable_faces_sorted, 0);
+
+        /* Choose a colour, and colour the best available face
+         * with that colour. */
+        colour = random_upto(rs, 2) ? FACE_WHITE : FACE_BLACK;
+
+        if (colour == FACE_WHITE)
+            fs = fs_white;
+        else
+            fs = fs_black;
+        assert(fs);
+        i = fs - face_scores;
+        assert(board[i] == FACE_GREY);
+        board[i] = colour;
+
+        /* Remove this newly-coloured face from the lists.  These lists should
+         * only contain grey faces. */
+        del234(lightable_faces_sorted, fs);
+        del234(darkable_faces_sorted, fs);
+
+        /* Remember which face we've just coloured */
+        cur_face = g->faces + i;
+
+        /* The face we've just coloured potentially affects the colourability
+         * and the scores of any neighbouring faces (touching at a corner or
+         * edge).  So the search needs to be conducted around all faces
+         * touching the one we've just lit.  Iterate over its corners, then
+         * over each corner's faces.  For each such face, we remove it from
+         * the lists, recalculate any scores, then add it back to the lists
+         * (depending on whether it is lightable, darkable or both). */
+        for (i = 0; i < cur_face->order; i++) {
+            grid_dot *d = cur_face->dots[i];
             for (j = 0; j < d->order; j++) {
-                grid_face *f2 = d->faces[j];
-                if (f2 == NULL)
-                    continue;
-                if (f2 == face->f)
-                    continue;
-                face_pos.f = f2;
-                tmpface = find234(lightable_faces_gettable, &face_pos, NULL);
-                if (tmpface) {
-                    assert(tmpface->f == face_pos.f);
-                    assert(FACE_LIT_STATE(tmpface->f) == FACE_UNLIT);
-                    REMOVE_FACE(tmpface);
-                } else {
-                    tmpface = snew(struct face);
-                    tmpface->f = face_pos.f;
-                    tmpface->random = random_bits(rs, 31);
-                }
-                tmpface->score = face_score(g, board, tmpface->f);
+                grid_face *f = d->faces[j];
+                int fi; /* face index of f */
 
-                if (IS_LIGHTING_CANDIDATE(tmpface->f - g->faces)) {
-                    ADD_FACE(tmpface);
-                } else {
-                    sfree(tmpface);
+                if (f == NULL)
+                    continue;
+                if (f == cur_face)
+                    continue;
+                
+                /* If the face is already coloured, it won't be on our
+                 * lightable/darkable lists anyway, so we can skip it without 
+                 * bothering with the removal step. */
+                if (FACE_COLOUR(f) != FACE_GREY) continue; 
+
+                /* Find the face index and face_score* corresponding to f */
+                fi = f - g->faces;                
+                fs = face_scores + fi;
+
+                /* Remove from lightable list if it's in there.  We do this,
+                 * even if it is still lightable, because the score might
+                 * be different, and we need to remove-then-add to maintain
+                 * correct sort order. */
+                del234(lightable_faces_sorted, fs);
+                if (can_colour_face(g, board, fi, FACE_WHITE)) {
+                    fs->white_score = face_score(g, board, f, FACE_WHITE);
+                    add234(lightable_faces_sorted, fs);
+                }
+                /* Do the same for darkable list. */
+                del234(darkable_faces_sorted, fs);
+                if (can_colour_face(g, board, fi, FACE_BLACK)) {
+                    fs->black_score = face_score(g, board, f, FACE_BLACK);
+                    add234(darkable_faces_sorted, fs);
                 }
             }
         }
-        sfree(face);
     }
 
     /* Clean up */
-    while ((face = delpos234(lightable_faces_gettable, 0)) != NULL)
-        sfree(face);
-    freetree234(lightable_faces_gettable);
     freetree234(lightable_faces_sorted);
+    freetree234(darkable_faces_sorted);
+    sfree(face_scores);
+
+    /* The next step requires a shuffled list of all faces */
+    face_list = snewn(num_faces, int);
+    for (i = 0; i < num_faces; ++i) {
+        face_list[i] = i;
+    }
+    shuffle(face_list, num_faces, sizeof(int), rs);
+
+    /* The above loop-generation algorithm can often leave large clumps
+     * of faces of one colour.  In extreme cases, the resulting path can be 
+     * degenerate and not very satisfying to solve.
+     * This next step alleviates this problem:
+     * Go through the shuffled list, and flip the colour of any face we can
+     * legally flip, and which is adjacent to only one face of the opposite
+     * colour - this tends to grow 'tendrils' into any clumps.
+     * Repeat until we can find no more faces to flip.  This will
+     * eventually terminate, because each flip increases the loop's
+     * perimeter, which cannot increase for ever.
+     * The resulting path will have maximal loopiness (in the sense that it
+     * cannot be improved "locally".  Unfortunately, this allows a player to
+     * make some illicit deductions.  To combat this (and make the path more
+     * interesting), we do one final pass making random flips. */
+
+    /* Set to TRUE for final pass */
+    do_random_pass = FALSE;
+
+    while (TRUE) {
+        /* Remember whether a flip occurred during this pass */
+        int flipped = FALSE;
+
+        for (i = 0; i < num_faces; ++i) {
+            int j = face_list[i];
+            enum face_colour opp =
+                (board[j] == FACE_WHITE) ? FACE_BLACK : FACE_WHITE;
+            if (can_colour_face(g, board, j, opp)) {
+                grid_face *face = g->faces +j;
+                if (do_random_pass) {
+                    /* final random pass */
+                    if (!random_upto(rs, 10))
+                        board[j] = opp;
+                } else {
+                    /* normal pass - flip when neighbour count is 1 */
+                    if (face_num_neighbours(g, board, face, opp) == 1) {
+                        board[j] = opp;
+                        flipped = TRUE;
+                    }
+                }
+            }
+        }
+
+        if (do_random_pass) break;
+        if (!flipped) do_random_pass = TRUE;
+     }
+
+    sfree(face_list);
 
     /* Fill out all the clues by initialising to 0, then iterating over
      * all edges and incrementing each clue as we find edges that border
-     * between LIT/UNLIT faces */
+     * between BLACK/WHITE faces.  While we're at it, we verify that the
+     * algorithm does work, and there aren't any GREY faces still there. */
     memset(clues, 0, num_faces);
     for (i = 0; i < g->num_edges; i++) {
         grid_edge *e = g->edges + i;
         grid_face *f1 = e->face1;
         grid_face *f2 = e->face2;
-        if (FACE_LIT_STATE(f1) != FACE_LIT_STATE(f2)) {
+        enum face_colour c1 = FACE_COLOUR(f1);
+        enum face_colour c2 = FACE_COLOUR(f2);
+        assert(c1 != FACE_GREY);
+        assert(c2 != FACE_GREY);
+        if (c1 != c2) {
             if (f1) clues[f1 - g->faces]++;
             if (f2) clues[f2 - g->faces]++;
         }
@@ -1566,7 +1777,7 @@ static int game_has_unique_soln(const game_state *state, int diff)
     solver_state *sstate_new;
     solver_state *sstate = new_solver_state((game_state *)state, diff);
 
-    sstate_new = solve_game_rec(sstate, diff);
+    sstate_new = solve_game_rec(sstate);
 
     assert(sstate_new->solver_status != SOLVER_MISTAKE);
     ret = (sstate_new->solver_status == SOLVER_SOLVED);
@@ -1880,7 +2091,7 @@ static int check_completion(game_state *state)
  *   Easy Mode
  *   Just implement the rules of the game.
  *
- *   Normal Mode
+ *   Normal and Tricky Modes
  *   For each (adjacent) pair of lines through each dot we store a bit for
  *   whether at least one of them is on and whether at most one is on.  (If we
  *   know both or neither is on that's already stored more directly.)
@@ -2017,7 +2228,7 @@ static int dline_set_opp_atleastone(solver_state *sstate,
             continue;
         /* Found opposite UNKNOWNS and they're next to each other */
         opp_dline_index = dline_index_from_dot(g, d, opp);
-        return set_atleastone(sstate->normal->dlines, opp_dline_index);
+        return set_atleastone(sstate->dlines, opp_dline_index);
     }
     return FALSE;
 }
@@ -2050,8 +2261,8 @@ static int face_setall_identical(solver_state *sstate, int face_index,
                 continue;
 
             /* Found two UNKNOWNS */
-            can1 = edsf_canonify(sstate->hard->linedsf, line1_index, &inv1);
-            can2 = edsf_canonify(sstate->hard->linedsf, line2_index, &inv2);
+            can1 = edsf_canonify(sstate->linedsf, line1_index, &inv1);
+            can2 = edsf_canonify(sstate->linedsf, line2_index, &inv2);
             if (can1 == can2 && inv1 == inv2) {
                 solver_set_line(sstate, line1_index, line_new);
                 solver_set_line(sstate, line2_index, line_new);
@@ -2092,7 +2303,7 @@ static int parity_deductions(solver_state *sstate,
 {
     game_state *state = sstate->state;
     int diff = DIFF_MAX;
-    int *linedsf = sstate->hard->linedsf;
+    int *linedsf = sstate->linedsf;
 
     if (unknown_count == 2) {
         /* Lines are known alike/opposite, depending on inv. */
@@ -2191,7 +2402,7 @@ static int parity_deductions(solver_state *sstate,
  *      Answer: first all squares then all dots.
  */
 
-static int easy_mode_deductions(solver_state *sstate)
+static int trivial_deductions(solver_state *sstate)
 {
     int i, current_yes, current_no;
     game_state *state = sstate->state;
@@ -2286,11 +2497,11 @@ static int easy_mode_deductions(solver_state *sstate)
     return diff;
 }
 
-static int normal_mode_deductions(solver_state *sstate)
+static int dline_deductions(solver_state *sstate)
 {
     game_state *state = sstate->state;
     grid *g = state->game_grid;
-    char *dlines = sstate->normal->dlines;
+    char *dlines = sstate->dlines;
     int i;
     int diff = DIFF_MAX;
 
@@ -2436,29 +2647,34 @@ static int normal_mode_deductions(solver_state *sstate)
                 diff = min(diff, DIFF_EASY);
             }
 
-            /* Now see if we can make dline deduction for edges{j,j+1} */
-            e = f->edges[k];
-            if (state->lines[e - g->edges] != LINE_UNKNOWN)
-                /* Only worth doing this for an UNKNOWN,UNKNOWN pair.
-                 * Dlines where one of the edges is known, are handled in the
-                 * dot-deductions */
-                continue;
-
-            dline_index = dline_index_from_face(g, f, k);
-            k++;
-            if (k >= N) k = 0;
-
-            /* minimum YESs in the complement of this dline */
-            if (mins[k][j] > clue - 2) {
-                /* Adding 2 YESs would break the clue */
-                if (set_atmostone(dlines, dline_index))
-                    diff = min(diff, DIFF_NORMAL);
-            }
-            /* maximum YESs in the complement of this dline */
-            if (maxs[k][j] < clue) {
-                /* Adding 2 NOs would mean not enough YESs */
-                if (set_atleastone(dlines, dline_index))
-                    diff = min(diff, DIFF_NORMAL);
+            /* More advanced deduction that allows propagation along diagonal
+             * chains of faces connected by dots, for example, 3-2-...-2-3
+             * in square grids. */
+            if (sstate->diff >= DIFF_TRICKY) {
+                /* Now see if we can make dline deduction for edges{j,j+1} */
+                e = f->edges[k];
+                if (state->lines[e - g->edges] != LINE_UNKNOWN)
+                    /* Only worth doing this for an UNKNOWN,UNKNOWN pair.
+                     * Dlines where one of the edges is known, are handled in the
+                     * dot-deductions */
+                    continue;
+    
+                dline_index = dline_index_from_face(g, f, k);
+                k++;
+                if (k >= N) k = 0;
+    
+                /* minimum YESs in the complement of this dline */
+                if (mins[k][j] > clue - 2) {
+                    /* Adding 2 YESs would break the clue */
+                    if (set_atmostone(dlines, dline_index))
+                        diff = min(diff, DIFF_NORMAL);
+                }
+                /* maximum YESs in the complement of this dline */
+                if (maxs[k][j] < clue) {
+                    /* Adding 2 NOs would mean not enough YESs */
+                    if (set_atleastone(dlines, dline_index))
+                        diff = min(diff, DIFF_NORMAL);
+                }
             }
         }
     }
@@ -2552,48 +2768,54 @@ static int normal_mode_deductions(solver_state *sstate)
                 }
             }
 
-            /* If we have atleastone set for this dline, infer
-             * atmostone for each "opposite" dline (that is, each
-             * dline without edges in common with this one).
-             * Again, this test is only worth doing if both these
-             * lines are UNKNOWN.  For if one of these lines were YES,
-             * the (yes == 1) test above would kick in instead. */
-            if (is_atleastone(dlines, dline_index)) {
-                int opp;
-                for (opp = 0; opp < N; opp++) {
-                    int opp_dline_index;
-                    if (opp == j || opp == j+1 || opp == j-1)
-                        continue;
-                    if (j == 0 && opp == N-1)
-                        continue;
-                    if (j == N-1 && opp == 0)
-                        continue;
-                    opp_dline_index = dline_index_from_dot(g, d, opp);
-                    if (set_atmostone(dlines, opp_dline_index))
-                        diff = min(diff, DIFF_NORMAL);
-                }
-
-                if (yes == 0 && is_atmostone(dlines, dline_index)) {
-                    /* This dline has *exactly* one YES and there are no
-                     * other YESs.  This allows more deductions. */
-                    if (unknown == 3) {
-                        /* Third unknown must be YES */
-                        for (opp = 0; opp < N; opp++) {
-                            int opp_index;
-                            if (opp == j || opp == k)
-                                continue;
-                            opp_index = d->edges[opp] - g->edges;
-                            if (state->lines[opp_index] == LINE_UNKNOWN) {
-                                solver_set_line(sstate, opp_index, LINE_YES);
-                                diff = min(diff, DIFF_EASY);
-                            }
-                        }
-                    } else if (unknown == 4) {
-                        /* Exactly one of opposite UNKNOWNS is YES.  We've
-                         * already set atmostone, so set atleastone as well.
-                         */
-                        if (dline_set_opp_atleastone(sstate, d, j))
+            /* More advanced deduction that allows propagation along diagonal
+             * chains of faces connected by dots, for example: 3-2-...-2-3
+             * in square grids. */
+            if (sstate->diff >= DIFF_TRICKY) {
+                /* If we have atleastone set for this dline, infer
+                 * atmostone for each "opposite" dline (that is, each
+                 * dline without edges in common with this one).
+                 * Again, this test is only worth doing if both these
+                 * lines are UNKNOWN.  For if one of these lines were YES,
+                 * the (yes == 1) test above would kick in instead. */
+                if (is_atleastone(dlines, dline_index)) {
+                    int opp;
+                    for (opp = 0; opp < N; opp++) {
+                        int opp_dline_index;
+                        if (opp == j || opp == j+1 || opp == j-1)
+                            continue;
+                        if (j == 0 && opp == N-1)
+                            continue;
+                        if (j == N-1 && opp == 0)
+                            continue;
+                        opp_dline_index = dline_index_from_dot(g, d, opp);
+                        if (set_atmostone(dlines, opp_dline_index))
                             diff = min(diff, DIFF_NORMAL);
+                    }
+                    if (yes == 0 && is_atmostone(dlines, dline_index)) {
+                        /* This dline has *exactly* one YES and there are no
+                         * other YESs.  This allows more deductions. */
+                        if (unknown == 3) {
+                            /* Third unknown must be YES */
+                            for (opp = 0; opp < N; opp++) {
+                                int opp_index;
+                                if (opp == j || opp == k)
+                                    continue;
+                                opp_index = d->edges[opp] - g->edges;
+                                if (state->lines[opp_index] == LINE_UNKNOWN) {
+                                    solver_set_line(sstate, opp_index,
+                                                    LINE_YES);
+                                    diff = min(diff, DIFF_EASY);
+                                }
+                            }
+                        } else if (unknown == 4) {
+                            /* Exactly one of opposite UNKNOWNS is YES.  We've
+                             * already set atmostone, so set atleastone as
+                             * well.
+                             */
+                            if (dline_set_opp_atleastone(sstate, d, j))
+                                diff = min(diff, DIFF_NORMAL);
+                        }
                     }
                 }
             }
@@ -2602,11 +2824,11 @@ static int normal_mode_deductions(solver_state *sstate)
     return diff;
 }
 
-static int hard_mode_deductions(solver_state *sstate)
+static int linedsf_deductions(solver_state *sstate)
 {
     game_state *state = sstate->state;
     grid *g = state->game_grid;
-    char *dlines = sstate->normal->dlines;
+    char *dlines = sstate->dlines;
     int i;
     int diff = DIFF_MAX;
     int diff_tmp;
@@ -2676,8 +2898,8 @@ static int hard_mode_deductions(solver_state *sstate)
             if (state->lines[line2_index] != LINE_UNKNOWN)
                 continue;
             /* Infer dline flags from linedsf */
-            can1 = edsf_canonify(sstate->hard->linedsf, line1_index, &inv1);
-            can2 = edsf_canonify(sstate->hard->linedsf, line2_index, &inv2);
+            can1 = edsf_canonify(sstate->linedsf, line1_index, &inv1);
+            can2 = edsf_canonify(sstate->linedsf, line2_index, &inv2);
             if (can1 == can2 && inv1 != inv2) {
                 /* These are opposites, so set dline atmostone/atleastone */
                 if (set_atmostone(dlines, dline_index))
@@ -2711,7 +2933,7 @@ static int hard_mode_deductions(solver_state *sstate)
     for (i = 0; i < g->num_edges; i++) {
         int can, inv;
         enum line_state s;
-        can = edsf_canonify(sstate->hard->linedsf, i, &inv);
+        can = edsf_canonify(sstate->linedsf, i, &inv);
         if (can == i)
             continue;
         s = sstate->state->lines[can];
@@ -2884,52 +3106,59 @@ static int loop_deductions(solver_state *sstate)
 
 /* This will return a dynamically allocated solver_state containing the (more)
  * solved grid */
-static solver_state *solve_game_rec(const solver_state *sstate_start,
-                                    int diff)
+static solver_state *solve_game_rec(const solver_state *sstate_start)
 {
-    solver_state *sstate, *sstate_saved;
-    int solver_progress;
-    game_state *state;
+    solver_state *sstate;
 
-    /* Indicates which solver we should call next.  This is a sensible starting
-     * point */
-    int current_solver = DIFF_EASY, next_solver;
+    /* Index of the solver we should call next. */
+    int i = 0;
+    
+    /* As a speed-optimisation, we avoid re-running solvers that we know
+     * won't make any progress.  This happens when a high-difficulty
+     * solver makes a deduction that can only help other high-difficulty
+     * solvers.
+     * For example: if a new 'dline' flag is set by dline_deductions, the
+     * trivial_deductions solver cannot do anything with this information.
+     * If we've already run the trivial_deductions solver (because it's
+     * earlier in the list), there's no point running it again.
+     *
+     * Therefore: if a solver is earlier in the list than "threshold_index",
+     * we don't bother running it if it's difficulty level is less than
+     * "threshold_diff".
+     */
+    int threshold_diff = 0;
+    int threshold_index = 0;
+    
     sstate = dup_solver_state(sstate_start);
-
-    /* Cache the values of some variables for readability */
-    state = sstate->state;
-
-    sstate_saved = NULL;
-
-    solver_progress = FALSE;
 
     check_caches(sstate);
 
-    do {
+    while (i < NUM_SOLVERS) {
         if (sstate->solver_status == SOLVER_MISTAKE)
             return sstate;
-
-        next_solver = solver_fns[current_solver](sstate);
-
-        if (next_solver == DIFF_MAX) {
-            if (current_solver < diff && current_solver + 1 < DIFF_MAX) {
-                /* Try next beefier solver */
-                next_solver = current_solver + 1;
-            } else {
-                next_solver = loop_deductions(sstate);
-            }
-        }
-
         if (sstate->solver_status == SOLVER_SOLVED ||
             sstate->solver_status == SOLVER_AMBIGUOUS) {
-/*            fprintf(stderr, "Solver completed\n"); */
+            /* solver finished */
             break;
         }
 
-        /* Once we've looped over all permitted solvers then the loop
-         * deductions without making any progress, we'll exit this while loop */
-        current_solver = next_solver;
-    } while (current_solver < DIFF_MAX);
+        if ((solver_diffs[i] >= threshold_diff || i >= threshold_index)
+            && solver_diffs[i] <= sstate->diff) {
+            /* current_solver is eligible, so use it */
+            int next_diff = solver_fns[i](sstate);
+            if (next_diff != DIFF_MAX) {
+                /* solver made progress, so use new thresholds and
+                * start again at top of list. */
+                threshold_diff = next_diff;
+                threshold_index = i;
+                i = 0;
+                continue;
+            }
+        }
+        /* current_solver is ineligible, or failed to make progress, so
+         * go to the next solver in the list */
+        i++;
+    }
 
     if (sstate->solver_status == SOLVER_SOLVED ||
         sstate->solver_status == SOLVER_AMBIGUOUS) {
@@ -2949,7 +3178,7 @@ static char *solve_game(game_state *state, game_state *currstate,
     solver_state *sstate, *new_sstate;
 
     sstate = new_solver_state(state, DIFF_MAX);
-    new_sstate = solve_game_rec(sstate, DIFF_MAX);
+    new_sstate = solve_game_rec(sstate);
 
     if (new_sstate->solver_status == SOLVER_SOLVED) {
         soln = encode_solve_move(new_sstate->state);
@@ -2980,6 +3209,54 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
     char *ret, buf[80];
     char button_char = ' ';
     enum line_state old_state;
+
+    if (IS_CURSOR_MOVE(button)) {
+        int dx = 0, dy = 0, x = ui->cur_x, y = ui->cur_y;
+        grid_edge *newe;
+
+        switch (button) {
+        case CURSOR_UP:         dy = -1; break;
+        case CURSOR_DOWN:       dy = 1; break;
+        case CURSOR_RIGHT:      dx = 1; break;
+        case CURSOR_LEFT:       dx = -1; break;
+        default: assert(!"unknown cursor");
+        }
+
+        /* We keep moving in the offset direction until we reach the sides
+         * of the grid (in which case we don't move the cursor) or we are
+         * nearer to a new edge (in which case we update the cursor position
+         * and return that). */
+        e = newe = grid_nearest_edge(g, ui->cur_x, ui->cur_y);
+        x = ui->cur_x; y = ui->cur_y;
+        while (newe == e || newe == NULL) {
+            x += dx; y += dy;
+            if (x < g->lowest_x || x > g->highest_x) goto hitedge;
+            if (y < g->lowest_y || y > g->highest_y) goto hitedge;
+            newe = grid_nearest_edge(g, x, y);
+        }
+        ui->cur_x = x; ui->cur_y = y;
+hitedge:
+        ui->cur_visible = 1;
+        return "";
+    } else if (IS_CURSOR_SELECT(button)) {
+        if (!ui->cur_visible) {
+            ui->cur_visible = 1;
+            return "";
+        }
+        e = grid_nearest_edge(g, ui->cur_x, ui->cur_y);
+        if (e == NULL)
+            return NULL;
+        i = e - g->edges;
+
+        old_state = state->lines[i];
+
+        if (button == CURSOR_SELECT2)
+            button_char = (old_state == LINE_UNKNOWN) ? 'n' : 'u';
+        else
+            button_char = (old_state == LINE_UNKNOWN) ? 'y' : 'u';
+
+        goto makemove;
+    }
 
     button &= ~MOD_MASK;
 
@@ -3031,7 +3308,9 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
 	return NULL;
     }
 
+    ui->cur_visible = 0;
 
+makemove:
     sprintf(buf, "%d%c", i, (int)button_char);
     ret = dupstr(buf);
 
@@ -3123,6 +3402,24 @@ static void face_text_pos(const game_drawstate *ds, const grid *g,
     grid_to_screen(ds, g, sx, sy, x, y);
 }
 
+#define PERC(s,e,p) (s + ( (((e)-(s)) * p) /100))
+
+static void draw_thickline_perc(drawing *dr, int x1, int y1, int x2, int y2,
+                                int start, int end, int line_colour)
+{
+  int dx = (x1 > x2) ? -1 : ((x1 < x2) ? 1 : 0);
+  int dy = (y1 > y2) ? -1 : ((y1 < y2) ? 1 : 0);
+  int xs = PERC(x1, x2, start), xe = PERC(x1, x2, end);
+  int ys = PERC(y1, y2, start), ye = PERC(y1, y2, end);
+  int points[] = {
+    xs + dy, ys - dx,
+    xs - dy, ys + dx,
+    xe - dy, ye + dx,
+    xe + dy, ye - dx
+  };
+  draw_polygon(dr, points, 4, line_colour, line_colour);
+}
+
 static void game_redraw(drawing *dr, game_drawstate *ds, game_state *oldstate,
                         game_state *state, int dir, game_ui *ui,
                         float animtime, float flashtime)
@@ -3131,9 +3428,24 @@ static void game_redraw(drawing *dr, game_drawstate *ds, game_state *oldstate,
     int border = BORDER(ds->tilesize);
     int i, n;
     char c[2];
-    int line_colour, flash_changed;
+    int line_colour, dot_colour, flash_changed;
     int clue_mistake;
     int clue_satisfied;
+    grid_edge *cur_edge;
+
+#ifdef CURSOR_IS_VISIBLE
+    if (ds->cur_visible) {
+        assert(ds->cur_bl);
+        blitter_load(dr, ds->cur_bl, ds->cur_bl_x, ds->cur_bl_y);
+        draw_update(dr, ds->cur_bl_x, ds->cur_bl_y, BLITTER_SZ, BLITTER_SZ);
+    }
+#endif
+
+    if (ui->cur_visible) {
+        cur_edge = grid_nearest_edge(g, ui->cur_x, ui->cur_y);
+    } else {
+        cur_edge = NULL;
+    }
 
     if (!ds->started) {
         /*
@@ -3284,6 +3596,8 @@ static void game_redraw(drawing *dr, game_drawstate *ds, game_state *oldstate,
         need_draw = (new_ds != ds->lines[i]) ? TRUE : FALSE;
         if (flash_changed && (state->lines[i] == LINE_YES))
             need_draw = TRUE;
+        if (e == cur_edge || e == ds->cur_edge)
+            need_draw = TRUE;
         if (!ds->started)
             need_draw = TRUE; /* draw everything at the start */
         ds->lines[i] = new_ds;
@@ -3300,6 +3614,11 @@ static void game_redraw(drawing *dr, game_drawstate *ds, game_state *oldstate,
         else
             line_colour = COL_FOREGROUND;
 
+        if (e == cur_edge)
+            dot_colour = COL_CURSOR;
+        else
+            dot_colour = COL_FOREGROUND;
+
         /* Convert from grid to screen coordinates */
         grid_to_screen(ds, g, e->dot1->x, e->dot1->y, &x1, &y1);
         grid_to_screen(ds, g, e->dot2->x, e->dot2->y, &x2, &y2);
@@ -3309,6 +3628,11 @@ static void game_redraw(drawing *dr, game_drawstate *ds, game_state *oldstate,
         ymin = min(y1, y2);
         ymax = max(y1, y2);
 
+        draw_thickline_perc(dr, x1, y1, x2, y2, 0, 100, line_colour);
+        if (e == cur_edge) {
+            draw_thickline_perc(dr, x1, y1, x2, y2, 25,  75, COL_CURSOR);
+        }
+#if 0
         if (line_colour != COL_BACKGROUND) {
             /* (dx, dy) points roughly from (x1, y1) to (x2, y2).
              * The line is then "fattened" in a (roughly) perpendicular
@@ -3326,10 +3650,11 @@ static void game_redraw(drawing *dr, game_drawstate *ds, game_state *oldstate,
 	    points[7] = y2 - dx;
             draw_polygon(dr, points, 4, line_colour, line_colour);
         }
+#endif
         if (ds->started) {
             /* Draw dots at ends of the line */
-            draw_circle(dr, x1, y1, 2, COL_FOREGROUND, COL_FOREGROUND);
-            draw_circle(dr, x2, y2, 2, COL_FOREGROUND, COL_FOREGROUND);
+            draw_circle(dr, x1, y1, 2, dot_colour, dot_colour);
+            draw_circle(dr, x2, y2, 2, dot_colour, dot_colour);
         }
         draw_update(dr, xmin-2, ymin-2, xmax - xmin + 4, ymax - ymin + 4);
     }
@@ -3344,6 +3669,26 @@ static void game_redraw(drawing *dr, game_drawstate *ds, game_state *oldstate,
         }
     }
     ds->started = TRUE;
+
+#ifdef CURSOR_IS_VISIBLE
+    /* Draw current cursor, if present (after all other drawing) */
+    if (ui->cur_visible) {
+        int cx, cy;
+        grid_to_screen(ds, g, ui->cur_x, ui->cur_y, &cx, &cy);
+
+        ds->cur_bl_x = cx - BLITTER_HSZ;
+        ds->cur_bl_y = cy - BLITTER_HSZ;
+        blitter_save(dr, ds->cur_bl, ds->cur_bl_x, ds->cur_bl_y);
+
+        draw_rect(dr, ds->cur_bl_x, cy-CUR_HSZ, BLITTER_SZ, CUR_SZ, COL_CURSOR);
+        draw_rect(dr, cx-CUR_HSZ, ds->cur_bl_y, CUR_SZ, BLITTER_SZ, COL_CURSOR);
+
+        draw_update(dr, ds->cur_bl_x, ds->cur_bl_y, BLITTER_SZ, BLITTER_SZ);
+    }
+#endif
+
+    ds->cur_edge = cur_edge;
+    ds->cur_visible = ui->cur_visible;
 }
 
 static float game_flash_length(game_state *oldstate, game_state *newstate,
@@ -3355,97 +3700,6 @@ static float game_flash_length(game_state *oldstate, game_state *newstate,
     }
 
     return 0.0F;
-}
-
-static void game_print_size(game_params *params, float *x, float *y)
-{
-    int pw, ph;
-
-    /*
-     * I'll use 7mm "squares" by default.
-     */
-    game_compute_size(params, 700, &pw, &ph);
-    *x = pw / 100.0F;
-    *y = ph / 100.0F;
-}
-
-static void game_print(drawing *dr, game_state *state, int tilesize)
-{
-    int ink = print_mono_colour(dr, 0);
-    int i;
-    game_drawstate ads, *ds = &ads;
-    grid *g = state->game_grid;
-
-    game_set_size(dr, ds, NULL, tilesize);
-
-    for (i = 0; i < g->num_dots; i++) {
-        int x, y;
-        grid_to_screen(ds, g, g->dots[i].x, g->dots[i].y, &x, &y);
-        draw_circle(dr, x, y, ds->tilesize / 15, ink, ink);
-    }
-
-    /*
-     * Clues.
-     */
-    for (i = 0; i < g->num_faces; i++) {
-        grid_face *f = g->faces + i;
-        int clue = state->clues[i];
-        if (clue >= 0) {
-            char c[2];
-            int x, y;
-            c[0] = CLUE2CHAR(clue);
-            c[1] = '\0';
-            face_text_pos(ds, g, f, &x, &y);
-            draw_text(dr, x, y,
-                      FONT_VARIABLE, ds->tilesize / 2,
-                      ALIGN_VCENTRE | ALIGN_HCENTRE, ink, c);
-        }
-    }
-
-    /*
-     * Lines.
-     */
-    for (i = 0; i < g->num_edges; i++) {
-        int thickness = (state->lines[i] == LINE_YES) ? 30 : 150;
-        grid_edge *e = g->edges + i;
-        int x1, y1, x2, y2;
-        grid_to_screen(ds, g, e->dot1->x, e->dot1->y, &x1, &y1);
-        grid_to_screen(ds, g, e->dot2->x, e->dot2->y, &x2, &y2);
-        if (state->lines[i] == LINE_YES)
-        {
-            /* (dx, dy) points from (x1, y1) to (x2, y2).
-             * The line is then "fattened" in a perpendicular
-             * direction to create a thin rectangle. */
-            double d = sqrt(SQ((double)x1 - x2) + SQ((double)y1 - y2));
-            double dx = (x2 - x1) / d;
-            double dy = (y2 - y1) / d;
-	    int points[8];
-
-            dx = (dx * ds->tilesize) / thickness;
-            dy = (dy * ds->tilesize) / thickness;
-	    points[0] = x1 + (int)dy;
-	    points[1] = y1 - (int)dx;
-	    points[2] = x1 - (int)dy;
-	    points[3] = y1 + (int)dx;
-	    points[4] = x2 - (int)dy;
-	    points[5] = y2 + (int)dx;
-	    points[6] = x2 + (int)dy;
-	    points[7] = y2 - (int)dx;
-            draw_polygon(dr, points, 4, ink, ink);
-        }
-        else
-        {
-            /* Draw a dotted line */
-            int divisions = 6;
-            int j;
-            for (j = 1; j < divisions; j++) {
-                /* Weighted average */
-                int x = (x1 * (divisions -j) + x2 * j) / divisions;
-                int y = (y1 * (divisions -j) + y2 * j) / divisions;
-                draw_circle(dr, x, y, ds->tilesize / thickness, ink, ink);
-            }
-        }
-    }
 }
 
 #ifdef COMBINED
@@ -3483,7 +3737,7 @@ const struct game thegame = {
     game_redraw,
     game_anim_length,
     game_flash_length,
-    TRUE, FALSE, game_print_size, game_print,
+    FALSE, FALSE, NULL, NULL,
     FALSE /* wants_statusbar */,
     FALSE, game_timing_state,
     0,                                       /* mouse_priorities */

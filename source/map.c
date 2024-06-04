@@ -75,7 +75,7 @@ enum {
 };
 
 struct game_params {
-    int w, h, n, diff, show_immutables;
+    int w, h, n, diff;
 };
 
 struct map {
@@ -110,26 +110,24 @@ static game_params *default_params(void)
     ret->n = 30;
     ret->diff = DIFF_NORMAL;
 
-    ret->show_immutables=FALSE;
-
     return ret;
 }
 
 static const struct game_params map_presets[] = {
 #ifdef PORTRAIT_SCREEN
-    {16, 18, 30, DIFF_EASY, 0},
-    {16, 18, 30, DIFF_NORMAL, 0},
-    {16, 18, 30, DIFF_HARD, 0},
-    {16, 18, 30, DIFF_RECURSE 0},
-    {25, 30, 75, DIFF_NORMAL, 0},
-    {25, 30, 75, DIFF_HARD, 0},
+    {16, 18, 30, DIFF_EASY},
+    {16, 18, 30, DIFF_NORMAL},
+    {16, 18, 30, DIFF_HARD},
+    {16, 18, 30, DIFF_RECURSE},
+    {25, 30, 75, DIFF_NORMAL},
+    {25, 30, 75, DIFF_HARD},
 #else
-    {20, 15, 30, DIFF_EASY, 0},
-    {20, 15, 30, DIFF_NORMAL, 0},
-    {20, 15, 30, DIFF_HARD, 0},
-    {20, 15, 30, DIFF_RECURSE, 0},
-    {30, 25, 75, DIFF_NORMAL, 0},
-    {30, 25, 75, DIFF_HARD, 0},
+    {20, 15, 30, DIFF_EASY},
+    {20, 15, 30, DIFF_NORMAL},
+    {20, 15, 30, DIFF_HARD},
+    {20, 15, 30, DIFF_RECURSE},
+    {30, 25, 75, DIFF_NORMAL},
+    {30, 25, 75, DIFF_HARD},
 #endif
 };
 
@@ -145,7 +143,7 @@ static int game_fetch_preset(int i, char **name, game_params **params)
     *ret = map_presets[i];
 
     sprintf(str, "%dx%d, %d regions, %s", ret->w, ret->h, ret->n,
-        map_diffnames[ret->diff]);
+	    map_diffnames[ret->diff]);
 
     *name = dupstr(str);
     *params = ret;
@@ -192,19 +190,14 @@ static void decode_params(game_params *params, char const *string)
 		params->diff = i;
 	if (*p) p++;
     }
-    if(*p == 'i') {
-        p++;
-        params->show_immutables=atoi(p);
-        while (*p && isdigit((unsigned char)*p)) p++;
-    }
 }
 
 static char *encode_params(game_params *params, int full)
 {
     char ret[400];
 
-    sprintf(ret, "%dx%dn%di%d", params->w, params->h, params->n, params->show_immutables);
-    if(full)
+    sprintf(ret, "%dx%dn%d", params->w, params->h, params->n);
+    if (full)
 	sprintf(ret + strlen(ret), "d%c", map_diffchars[params->diff]);
 
     return dupstr(ret);
@@ -215,7 +208,7 @@ static config_item *game_configure(game_params *params)
     config_item *ret;
     char buf[80];
 
-    ret = snewn(6, config_item);
+    ret = snewn(5, config_item);
 
     ret[0].name = "Width";
     ret[0].type = C_STRING;
@@ -240,15 +233,10 @@ static config_item *game_configure(game_params *params)
     ret[3].sval = DIFFCONFIG;
     ret[3].ival = params->diff;
 
-    ret[4].name = "Show Locked Regions";
-    ret[4].type = C_BOOLEAN;
+    ret[4].name = NULL;
+    ret[4].type = C_END;
     ret[4].sval = NULL;
-    ret[4].ival = params->show_immutables;
-
-    ret[5].name = NULL;
-    ret[5].type = C_END;
-    ret[5].sval = NULL;
-    ret[5].ival = 0;
+    ret[4].ival = 0;
 
     return ret;
 }
@@ -261,7 +249,6 @@ static game_params *custom_params(config_item *cfg)
     ret->h = atoi(cfg[1].sval);
     ret->n = atoi(cfg[2].sval);
     ret->diff = cfg[3].ival;
-    ret->show_immutables=cfg[4].ival;
 
     return ret;
 }
@@ -1963,7 +1950,7 @@ static game_state *new_game(midend *me, game_params *params, char *desc)
 
 	for (i = 0; i < state->map->ngraph + n; i++) {
 	    bestx[i] = besty[i] = -1;
-	    best[i] = 2*(w+h)+1;
+	    best[i] = (float)(2*(w+h)+1);
 	    ax[i] = ay[i] = 0.0F;
 	    an[i] = 0;
 	}
@@ -2103,7 +2090,7 @@ static game_state *new_game(midend *me, game_params *params, char *desc)
 			     */
 			    ax[gindex] += ex[i];
 			    ay[gindex] += ey[i];
-			    an[gindex] += 1.0F;
+			    an[gindex] += 1;
 			} else {
 			    /*
 			     * In pass 1, work out whether this
@@ -2115,7 +2102,7 @@ static game_state *new_game(midend *me, game_params *params, char *desc)
 			    assert(an[gindex] > 0);
 			    dx = ex[i] - ax[gindex];
 			    dy = ey[i] - ay[gindex];
-			    d = sqrt(dx*dx + dy*dy);
+			    d = (float)sqrt(dx*dx + dy*dy);
 			    if (d < best[gindex]) {
 				best[gindex] = d;
 				bestx[gindex] = ex[i];
@@ -2283,6 +2270,8 @@ struct game_ui {
     int drag_pencil;
     int dragx, dragy;
     int show_numbers;
+
+    int cur_x, cur_y, cur_visible, cur_moved, cur_lastmove;
 };
 
 static game_ui *new_ui(game_state *state)
@@ -2290,7 +2279,10 @@ static game_ui *new_ui(game_state *state)
     game_ui *ui = snew(game_ui);
     ui->dragx = ui->dragy = -1;
     ui->drag_colour = -2;
+    ui->drag_pencil = 0;
     ui->show_numbers = FALSE;
+    ui->cur_x = ui->cur_y = ui->cur_visible = ui->cur_moved = 0;
+    ui->cur_lastmove = 0;
     return ui;
 }
 
@@ -2311,6 +2303,7 @@ static void decode_ui(game_ui *ui, char *encoding)
 static void game_changed_state(game_ui *ui, game_state *oldstate,
                                game_state *newstate)
 {
+    if (newstate->completed && ! newstate->cheated && oldstate && ! oldstate->completed) game_completed();
 }
 
 struct game_drawstate {
@@ -2336,6 +2329,19 @@ struct game_drawstate {
 #define COORD(x)  ( (x) * TILESIZE + BORDER )
 #define FROMCOORD(x)  ( ((x) - BORDER + TILESIZE) / TILESIZE - 1 )
 
+ /*
+  * EPSILON_FOO are epsilons added to absolute cursor position by
+  * cursor movement, such that in pathological cases (e.g. a very
+  * small diamond-shaped area) it's relatively easy to select the
+  * region you wanted.
+  */
+
+#define EPSILON_X(button) (((button) == CURSOR_RIGHT) ? +1 : \
+                           ((button) == CURSOR_LEFT)  ? -1 : 0)
+#define EPSILON_Y(button) (((button) == CURSOR_DOWN)  ? +1 : \
+                           ((button) == CURSOR_UP)    ? -1 : 0)
+
+
 static int region_from_coords(game_state *state, game_drawstate *ds,
                               int x, int y)
 {
@@ -2359,6 +2365,7 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
 			    int x, int y, int button)
 {
     char *bufp, buf[256];
+    int alt_button;
 
     /*
      * Enable or disable numeric labels on regions.
@@ -2366,6 +2373,43 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
     if (button == 'l' || button == 'L' || button == MIDDLE_BUTTON) {
         ui->show_numbers = !ui->show_numbers;
         return "";
+    }
+
+    if (IS_CURSOR_MOVE(button)) {
+        move_cursor(button, &ui->cur_x, &ui->cur_y, state->p.w, state->p.h, 0);
+        ui->cur_visible = 1;
+        ui->cur_moved = 1;
+        ui->cur_lastmove = button;
+        ui->dragx = COORD(ui->cur_x) + TILESIZE/2 + EPSILON_X(button);
+        ui->dragy = COORD(ui->cur_y) + TILESIZE/2 + EPSILON_Y(button);
+        return "";
+    }
+    if (IS_CURSOR_SELECT(button)) {
+        if (!ui->cur_visible) {
+            ui->dragx = COORD(ui->cur_x) + TILESIZE/2 + EPSILON_X(ui->cur_lastmove);
+            ui->dragy = COORD(ui->cur_y) + TILESIZE/2 + EPSILON_Y(ui->cur_lastmove);
+            ui->cur_visible = 1;
+            return "";
+        }
+        if (ui->drag_colour == -2) { /* not currently cursor-dragging, start. */
+            int r = region_from_coords(state, ds, ui->dragx, ui->dragy);
+            if (r >= 0) {
+                ui->drag_colour = state->colouring[r];
+                ui->drag_pencil = (ui->drag_colour >= 0) ? 0 : state->pencil[r];
+            } else {
+                ui->drag_colour = -1;
+                ui->drag_pencil = 0;
+            }
+            ui->cur_moved = 0;
+            return "";
+        } else { /* currently cursor-dragging; drop the colour in the new region. */
+            x = COORD(ui->cur_x) + TILESIZE/2 + EPSILON_X(ui->cur_lastmove);
+            y = COORD(ui->cur_y) + TILESIZE/2 + EPSILON_Y(ui->cur_lastmove);
+            alt_button = (button == CURSOR_SELECT2) ? 1 : 0;
+            /* Double-select removes current colour. */
+            if (!ui->cur_moved) ui->drag_colour = -1;
+            goto drag_dropped;
+        }
     }
 
     if (button == LEFT_BUTTON || button == RIGHT_BUTTON) {
@@ -2382,6 +2426,7 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
 	}
         ui->dragx = x;
         ui->dragy = y;
+        ui->cur_visible = 0;
         return "";
     }
 
@@ -2394,6 +2439,14 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
 
     if ((button == LEFT_RELEASE || button == RIGHT_RELEASE) &&
         ui->drag_colour > -2) {
+        alt_button = (button == RIGHT_RELEASE) ? 1 : 0;
+        goto drag_dropped;
+    }
+
+    return NULL;
+
+drag_dropped:
+    {
 	int r = region_from_coords(state, ds, x, y);
         int c = ui->drag_colour;
 	int p = ui->drag_pencil;
@@ -2403,7 +2456,6 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
          * Cancel the drag, whatever happens.
          */
         ui->drag_colour = -2;
-        ui->dragx = ui->dragy = -1;
 
 	if (r < 0)
             return "";                 /* drag into border; do nothing else */
@@ -2414,7 +2466,7 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
         if (state->colouring[r] == c && state->pencil[r] == p)
             return "";                 /* don't _need_ to change this region */
 
-	if (button == RIGHT_RELEASE) {
+	if (alt_button) {
 	    if (state->colouring[r] >= 0) {
 		/* Can't pencil on a coloured region */
 		return "";
@@ -2443,8 +2495,6 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
 
 	return dupstr(buf+1);	       /* ignore first semicolon */
     }
-
-    return NULL;
 }
 
 static game_state *execute_move(game_state *state, char *move)
@@ -2754,7 +2804,7 @@ static void draw_square(drawing *dr, game_drawstate *ds,
     /*
      * Draw region numbers, if desired.
      */
-    if (show_numbers || params->show_immutables) {
+    if (show_numbers) {
         oldj = -1;
         for (i = 0; i < 2; i++) {
             j = map->map[(i?BE:TE)*wh+y*w+x];
@@ -2767,22 +2817,11 @@ static void draw_square(drawing *dr, game_drawstate *ds,
             if (xo >= 0 && xo <= 2 && yo >= 0 && yo <= 2) {
                 char buf[80];
                 sprintf(buf, "%d", j);
-                if(show_numbers)
-                {
-                    draw_text(dr, (COORD(x)*2+TILESIZE*xo)/2,
-                              (COORD(y)*2+TILESIZE*yo)/2,
-                              FONT_VARIABLE, 3*TILESIZE/5,
-                              ALIGN_HCENTRE|ALIGN_VCENTRE,
-                              COL_GRID, buf);
-                }
-                else if(params->show_immutables && (map->immutable[j]==TRUE))
-                {
-                    draw_text(dr, (COORD(x)*2+TILESIZE*xo)/2,
+                draw_text(dr, (COORD(x)*2+TILESIZE*xo)/2,
                           (COORD(y)*2+TILESIZE*yo)/2,
                           FONT_VARIABLE, 3*TILESIZE/5,
                           ALIGN_HCENTRE|ALIGN_VCENTRE,
-                          COL_GRID, "o");
-                };
+                          map->immutable[j]?COL_ERROR:COL_GRID, buf);
             }
         }
     }
@@ -2932,13 +2971,26 @@ static void game_redraw(drawing *dr, game_drawstate *ds, game_state *oldstate,
     /*
      * Draw the dragged colour blob if any.
      */
-    if (ui->drag_colour > -2) {
+    if ((ui->drag_colour > -2) || ui->cur_visible) {
+        int bg, iscur = 0;
+        if (ui->drag_colour >= 0)
+            bg = COL_0 + ui->drag_colour;
+        else if (ui->drag_colour == -1) {
+            bg = COL_BACKGROUND;
+        } else {
+            int r = region_from_coords(state, ds, ui->dragx, ui->dragy);
+            int c = (r < 0) ? -1 : state->colouring[r];
+            assert(ui->cur_visible);
+            /*bg = COL_GRID;*/
+            bg = (c < 0) ? COL_BACKGROUND : COL_0 + c;
+            iscur = 1;
+        }
+
         ds->dragx = ui->dragx - TILESIZE/2 - 2;
         ds->dragy = ui->dragy - TILESIZE/2 - 2;
         blitter_save(dr, ds->bl, ds->dragx, ds->dragy);
-        draw_circle(dr, ui->dragx, ui->dragy, TILESIZE/2,
-                    (ui->drag_colour < 0 ? COL_BACKGROUND :
-                     COL_0 + ui->drag_colour), COL_GRID);
+        draw_circle(dr, ui->dragx, ui->dragy,
+                    iscur ? TILESIZE/4 : TILESIZE/2, bg, COL_GRID);
 	for (i = 0; i < FOUR; i++)
 	    if (ui->drag_pencil & (1 << i))
 		draw_circle(dr, ui->dragx + ((i*4+2)%10-3) * TILESIZE/10,
@@ -2966,7 +3018,7 @@ static float game_flash_length(game_state *oldstate, game_state *newstate,
 		flash_type = atoi(env);
 	    else
 		flash_type = 0;
-	    flash_length = (flash_type == 1 ? 0.50 : 0.30);
+	    flash_length = (flash_type == 1 ? 0.50F : 0.30F);
 	}
 	return flash_length;
     } else
@@ -2976,159 +3028,6 @@ static float game_flash_length(game_state *oldstate, game_state *newstate,
 static int game_timing_state(game_state *state, game_ui *ui)
 {
     return TRUE;
-}
-
-static void game_print_size(game_params *params, float *x, float *y)
-{
-    int pw, ph;
-
-    /*
-     * I'll use 4mm squares by default, I think. Simplest way to
-     * compute this size is to compute the pixel puzzle size at a
-     * given tile size and then scale.
-     */
-    game_compute_size(params, 400, &pw, &ph);
-    *x = pw / 100.0;
-    *y = ph / 100.0;
-}
-
-static void game_print(drawing *dr, game_state *state, int tilesize)
-{
-    int w = state->p.w, h = state->p.h, wh = w*h, n = state->p.n;
-    int ink, c[FOUR], i;
-    int x, y, r;
-    int *coords, ncoords, coordsize;
-
-    /* Ick: fake up `ds->tilesize' for macro expansion purposes */
-    struct { int tilesize; } ads, *ds = &ads;
-    /* We can't call game_set_size() here because we don't want a blitter */
-    ads.tilesize = tilesize;
-
-    ink = print_mono_colour(dr, 0);
-    for (i = 0; i < FOUR; i++)
-	c[i] = print_rgb_hatched_colour(dr, map_colours[i][0],
-					map_colours[i][1], map_colours[i][2],
-					map_hatching[i]);
-
-    coordsize = 0;
-    coords = NULL;
-
-    print_line_width(dr, TILESIZE / 16);
-
-    /*
-     * Draw a single filled polygon around each region.
-     */
-    for (r = 0; r < n; r++) {
-	int octants[8], lastdir, d1, d2, ox, oy;
-
-	/*
-	 * Start by finding a point on the region boundary. Any
-	 * point will do. To do this, we'll search for a square
-	 * containing the region and then decide which corner of it
-	 * to use.
-	 */
-	x = w;
-	for (y = 0; y < h; y++) {
-	    for (x = 0; x < w; x++) {
-		if (state->map->map[wh*0+y*w+x] == r ||
-		    state->map->map[wh*1+y*w+x] == r ||
-		    state->map->map[wh*2+y*w+x] == r ||
-		    state->map->map[wh*3+y*w+x] == r)
-		    break;
-	    }
-	    if (x < w)
-		break;
-	}
-	assert(y < h && x < w);	       /* we must have found one somewhere */
-	/*
-	 * This is the first square in lexicographic order which
-	 * contains part of this region. Therefore, one of the top
-	 * two corners of the square must be what we're after. The
-	 * only case in which it isn't the top left one is if the
-	 * square is diagonally divided and the region is in the
-	 * bottom right half.
-	 */
-	if (state->map->map[wh*TE+y*w+x] != r &&
-	    state->map->map[wh*LE+y*w+x] != r)
-	    x++;		       /* could just as well have done y++ */
-
-	/*
-	 * Now we have a point on the region boundary. Trace around
-	 * the region until we come back to this point,
-	 * accumulating coordinates for a polygon draw operation as
-	 * we go.
-	 */
-	lastdir = -1;
-	ox = x;
-	oy = y;
-	ncoords = 0;
-
-	do {
-	    /*
-	     * There are eight possible directions we could head in
-	     * from here. We identify them by octant numbers, and
-	     * we also use octant numbers to identify the spaces
-	     * between them:
-	     * 
-	     *   6   7   0
-	     *    \ 7|0 /
-	     *     \ | /
-	     *    6 \|/ 1
-	     * 5-----+-----1
-	     *    5 /|\ 2
-	     *     / | \
-	     *    / 4|3 \
-	     *   4   3   2
-	     */
-	    octants[0] = x<w && y>0 ? state->map->map[wh*LE+(y-1)*w+x] : -1;
-	    octants[1] = x<w && y>0 ? state->map->map[wh*BE+(y-1)*w+x] : -1;
-	    octants[2] = x<w && y<h ? state->map->map[wh*TE+y*w+x] : -1;
-	    octants[3] = x<w && y<h ? state->map->map[wh*LE+y*w+x] : -1;
-	    octants[4] = x>0 && y<h ? state->map->map[wh*RE+y*w+(x-1)] : -1;
-	    octants[5] = x>0 && y<h ? state->map->map[wh*TE+y*w+(x-1)] : -1;
-	    octants[6] = x>0 && y>0 ? state->map->map[wh*BE+(y-1)*w+(x-1)] :-1;
-	    octants[7] = x>0 && y>0 ? state->map->map[wh*RE+(y-1)*w+(x-1)] :-1;
-
-	    d1 = d2 = -1;
-	    for (i = 0; i < 8; i++)
-		if ((octants[i] == r) ^ (octants[(i+1)%8] == r)) {
-		    assert(d2 == -1);
-		    if (d1 == -1)
-			d1 = i;
-		    else
-			d2 = i;
-		}
-
-	    assert(d1 != -1 && d2 != -1);
-	    if (d1 == lastdir)
-		d1 = d2;
-
-	    /*
-	     * Now we're heading in direction d1. Save the current
-	     * coordinates.
-	     */
-	    if (ncoords + 2 > coordsize) {
-		coordsize += 128;
-		coords = sresize(coords, coordsize, int);
-	    }
-	    coords[ncoords++] = COORD(x);
-	    coords[ncoords++] = COORD(y);
-
-	    /*
-	     * Compute the new coordinates.
-	     */
-	    x += (d1 % 4 == 3 ? 0 : d1 < 4 ? +1 : -1);
-	    y += (d1 % 4 == 1 ? 0 : d1 > 1 && d1 < 5 ? +1 : -1);
-	    assert(x >= 0 && x <= w && y >= 0 && y <= h);
-
-	    lastdir = d1 ^ 4;
-	} while (x != ox || y != oy);
-
-	draw_polygon(dr, coords, ncoords/2,
-		     state->colouring[r] >= 0 ?
-		     c[state->colouring[r]] : -1, ink);
-    }
-    sfree(coords);
 }
 
 #ifdef COMBINED
@@ -3166,7 +3065,7 @@ const struct game thegame = {
     game_redraw,
     game_anim_length,
     game_flash_length,
-    TRUE, TRUE, game_print_size, game_print,
+    FALSE, FALSE, NULL, NULL,
     FALSE,			       /* wants_statusbar */
     FALSE, game_timing_state,
     0,				       /* flags */

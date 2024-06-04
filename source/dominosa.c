@@ -64,6 +64,7 @@ enum {
     COL_DOMINOCLASH,
     COL_DOMINOTEXT,
     COL_EDGE,
+    COL_CURSOR, COL_DOMINOCURSOR,
     NCOLOURS
 };
 
@@ -109,8 +110,12 @@ static int game_fetch_preset(int i, char **name, game_params **params)
 
     switch (i) {
       case 0: n = 3; break;
-      case 1: n = 6; break;
-      case 2: n = 9; break;
+      case 1: n = 4; break;
+      case 2: n = 5; break;
+      case 3: n = 6; break;
+      case 4: n = 7; break;
+      case 5: n = 8; break;
+      case 6: n = 9; break;
       default: return FALSE;
     }
 
@@ -1181,13 +1186,21 @@ static char *game_text_format(game_state *state)
     return NULL;
 }
 
+struct game_ui {
+    int cur_x, cur_y, cur_visible;
+};
+
 static game_ui *new_ui(game_state *state)
 {
-    return NULL;
+    game_ui *ui = snew(game_ui);
+    ui->cur_x = ui->cur_y = 0;
+    ui->cur_visible = 0;
+    return ui;
 }
 
 static void free_ui(game_ui *ui)
 {
+    sfree(ui);
 }
 
 static char *encode_ui(game_ui *ui)
@@ -1202,6 +1215,9 @@ static void decode_ui(game_ui *ui, char *encoding)
 static void game_changed_state(game_ui *ui, game_state *oldstate,
                                game_state *newstate)
 {
+    if (!oldstate->completed && newstate->completed)
+        ui->cur_visible = 0;
+    if (newstate->completed && ! newstate->cheated && oldstate && ! oldstate->completed) game_completed();
 }
 
 #define PREFERRED_TILESIZE 32
@@ -1263,7 +1279,31 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
             (state->grid[d1] != d1 || state->grid[d2] != d2))
             return NULL;
 
+        ui->cur_visible = 0;
         sprintf(buf, "%c%d,%d", (int)(button == RIGHT_BUTTON ? 'E' : 'D'), d1, d2);
+        return dupstr(buf);
+    } else if (IS_CURSOR_MOVE(button)) {
+        move_cursor(button, &ui->cur_x, &ui->cur_y, w*2-1, h*2-1, 0);
+        ui->cur_visible = 1;
+        return "";
+    } else if (IS_CURSOR_SELECT(button)) {
+        int d1, d2;
+        if (!ui->cur_visible) {
+            ui->cur_visible = 1;
+            return "";
+        }
+        /* if we're not on an edge then return. */
+        if ((ui->cur_x % 2) == 0 && (ui->cur_y % 2) == 0) return NULL;
+        if ((ui->cur_x % 2) != 0 && (ui->cur_y % 2) != 0) return NULL;
+
+        d1 = (ui->cur_y/2)*w + (ui->cur_x/2);
+        d2 = d1 + ((ui->cur_x % 2) ? 1 : w);
+
+        if (button == CURSOR_SELECT2 &&
+            (state->grid[d1] != d1 || state->grid[d2] != d2))
+            return NULL;
+
+        sprintf(buf, "%c%d,%d", (int)(button == CURSOR_SELECT2 ? 'E' : 'D'), d1, d2);
         return dupstr(buf);
     }
 
@@ -1466,9 +1506,19 @@ static float *game_colours(frontend *fe, int *ncolours)
     ret[COL_DOMINOTEXT * 3 + 1] = 1.0F;
     ret[COL_DOMINOTEXT * 3 + 2] = 1.0F;
 
-    ret[COL_EDGE * 3 + 0] = ret[COL_BACKGROUND * 3 + 0] * 2 / 3; 
+    ret[COL_EDGE * 3 + 0] = ret[COL_BACKGROUND * 3 + 0] * 2 / 3;
     ret[COL_EDGE * 3 + 1] = ret[COL_BACKGROUND * 3 + 1] * 2 / 3;
     ret[COL_EDGE * 3 + 2] = ret[COL_BACKGROUND * 3 + 2] * 2 / 3;
+
+    /* Cursors are (currently) usually reddish; however, since reddish
+     * is used here for DOMINOCLASH, I'll go greenish. */
+    ret[COL_CURSOR * 3 + 0] = 0.0F;
+    ret[COL_CURSOR * 3 + 1] = 0.5F;
+    ret[COL_CURSOR * 3 + 2] = 0.0F;
+
+    ret[COL_DOMINOCURSOR * 3 + 0] = 0.25F;
+    ret[COL_DOMINOCURSOR * 3 + 1] = 1.0F;
+    ret[COL_DOMINOCURSOR * 3 + 2] = 0.25F;
 
     *ncolours = NCOLOURS;
     return ret;
@@ -1505,12 +1555,26 @@ enum {
     TYPE_MASK = 0x0F
 };
 
+/* These flags must be disjoint with:
+   * the above enum (TYPE_*)    [0x000 -- 0x00F]
+   * EDGE_*                     [0x100 -- 0xF00]
+ * and must fit into an unsigned long (32 bits).
+ */
+#define DF_FLASH        0x40
+#define DF_CLASH        0x80
+
+#define DF_CURSOR       0x1000
+#define DF_CURSOR_DOM   0x2000
+
+#define CEDGE_OFF       (TILESIZE / 8)
+#define IS_EMPTY(s,x,y) ((s)->grid[(y)*(s)->w+(x)] == ((y)*(s)->w+(x)))
+
 static void draw_tile(drawing *dr, game_drawstate *ds, game_state *state,
                       int x, int y, int type)
 {
     int w = state->w /*, h = state->h */;
     int cx = COORD(x), cy = COORD(y);
-    int nc;
+    int nc, noc = -1;
     char str[80];
     int flags;
 
@@ -1530,13 +1594,13 @@ static void draw_tile(drawing *dr, game_drawstate *ds, game_state *state,
          *  - a slight shift in the number
          */
 
-        if (flags & 0x80)
+        if (flags & DF_CLASH)
             bg = COL_DOMINOCLASH;
         else
             bg = COL_DOMINO;
         nc = COL_DOMINOTEXT;
 
-        if (flags & 0x40) {
+        if (flags & DF_FLASH) {
             int tmp = nc;
             nc = bg;
             bg = tmp;
@@ -1587,12 +1651,21 @@ static void draw_tile(drawing *dr, game_drawstate *ds, game_state *state,
         if (flags & EDGE_R)
             draw_rect(dr, cx+TILESIZE-1, cy+DOMINO_GUTTER,
                       1, TILESIZE-2*DOMINO_GUTTER, COL_EDGE);
+
         nc = COL_TEXT;
     }
 
+    if (flags & DF_CURSOR) {
+        noc = nc;
+        if (nc == COL_TEXT)
+            nc = (flags & DF_CURSOR_DOM) ? COL_DOMINOCURSOR : COL_DOMINOTEXT;
+        else
+            nc = (flags & DF_CURSOR_DOM) ? COL_CURSOR : COL_TEXT;
+    }
+
     sprintf(str, "%d", state->numbers->numbers[y*w+x]);
-    draw_text(dr, cx+TILESIZE/2, cy+TILESIZE/2, FONT_VARIABLE, TILESIZE/2,
-              ALIGN_HCENTRE | ALIGN_VCENTRE, nc, str);
+    draw_text_outline(dr, cx+TILESIZE/2, cy+TILESIZE/2, FONT_VARIABLE, TILESIZE/2,
+              ALIGN_HCENTRE | ALIGN_VCENTRE, nc, noc, str);
 
     draw_update(dr, cx, cy, TILESIZE, TILESIZE);
 }
@@ -1655,13 +1728,24 @@ static void game_redraw(drawing *dr, game_drawstate *ds, game_state *oldstate,
                 n2 = state->numbers->numbers[state->grid[n]];
                 di = DINDEX(n1, n2);
                 if (used[di] > 1)
-                    c |= 0x80;         /* highlight a clash */
+                    c |= DF_CLASH;         /* highlight a clash */
             } else {
                 c |= state->edges[n];
             }
 
             if (flashtime != 0)
-                c |= 0x40;             /* we're flashing */
+                c |= DF_FLASH;             /* we're flashing */
+
+            if (ui->cur_visible) {
+                if (ui->cur_x >= (2*x-1) && ui->cur_x <= (2*x+1) &&
+                    ui->cur_y >= (2*y-1) && ui->cur_y <= (2*y+1))
+                    c |= DF_CURSOR;
+
+                if ((ui->cur_x % 2) && !(ui->cur_y % 2))
+                    c |= DF_CURSOR_DOM;
+                if (!(ui->cur_x % 2) && (ui->cur_y % 2))
+                    c |= DF_CURSOR_DOM;
+            }
 
 	    if (ds->visible[n] != c) {
 		draw_tile(dr, ds, state, x, y, c);
@@ -1690,54 +1774,6 @@ static float game_flash_length(game_state *oldstate, game_state *newstate,
 static int game_timing_state(game_state *state, game_ui *ui)
 {
     return TRUE;
-}
-
-static void game_print_size(game_params *params, float *x, float *y)
-{
-    int pw, ph;
-
-    /*
-     * I'll use 6mm squares by default.
-     */
-    game_compute_size(params, 600, &pw, &ph);
-    *x = pw / 100.0;
-    *y = ph / 100.0;
-}
-
-static void game_print(drawing *dr, game_state *state, int tilesize)
-{
-    int w = state->w, h = state->h;
-    int c, x, y;
-
-    /* Ick: fake up `ds->tilesize' for macro expansion purposes */
-    game_drawstate ads, *ds = &ads;
-    game_set_size(dr, ds, NULL, tilesize);
-
-    c = print_mono_colour(dr, 1); assert(c == COL_BACKGROUND);
-    c = print_mono_colour(dr, 0); assert(c == COL_TEXT);
-    c = print_mono_colour(dr, 0); assert(c == COL_DOMINO);
-    c = print_mono_colour(dr, 0); assert(c == COL_DOMINOCLASH);
-    c = print_mono_colour(dr, 1); assert(c == COL_DOMINOTEXT);
-    c = print_mono_colour(dr, 0); assert(c == COL_EDGE);
-
-    for (y = 0; y < h; y++)
-        for (x = 0; x < w; x++) {
-            int n = y*w+x;
-	    unsigned long c;
-
-            if (state->grid[n] == n-1)
-                c = TYPE_R;
-            else if (state->grid[n] == n+1)
-                c = TYPE_L;
-            else if (state->grid[n] == n-w)
-                c = TYPE_B;
-            else if (state->grid[n] == n+w)
-                c = TYPE_T;
-            else
-                c = TYPE_BLANK;
-
-	    draw_tile(dr, ds, state, x, y, c);
-	}
 }
 
 #ifdef COMBINED
@@ -1775,7 +1811,7 @@ const struct game thegame = {
     game_redraw,
     game_anim_length,
     game_flash_length,
-    TRUE, FALSE, game_print_size, game_print,
+    FALSE, FALSE, NULL, NULL,
     FALSE,			       /* wants_statusbar */
     FALSE, game_timing_state,
     0,				       /* flags */

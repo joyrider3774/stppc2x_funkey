@@ -1108,6 +1108,7 @@ static void game_changed_state(game_ui *ui, game_state *oldstate,
      */
     if (newstate->complete || newstate->impossible)
 	ui->displaysel = 0;
+    if (newstate->complete && oldstate && ! oldstate->complete) game_completed();
 }
 
 static char *sel_movedesc(game_ui *ui, game_state *state)
@@ -1616,14 +1617,6 @@ static int game_timing_state(game_state *state, game_ui *ui)
     return TRUE;
 }
 
-static void game_print_size(game_params *params, float *x, float *y)
-{
-}
-
-static void game_print(drawing *dr, game_state *state, int tilesize)
-{
-}
-
 #ifdef COMBINED
 #define thegame samegame
 #endif
@@ -1659,7 +1652,7 @@ const struct game thegame = {
     game_redraw,
     game_anim_length,
     game_flash_length,
-    FALSE, FALSE, game_print_size, game_print,
+    FALSE, FALSE, NULL, NULL,
     TRUE,			       /* wants_statusbar */
     FALSE, game_timing_state,
     0,				       /* flags */

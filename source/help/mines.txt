@@ -1,0 +1,12 @@
+Mines
+=====
+
+Clear all the squares except the hidden mines.
+A number in a square indicates how many of 
+its eight neighbours are mines.
+
+This game is timed - try to beat your best time!
+
+A-click to reveal a square.
+B-click to flag a square as a potential mine.
+

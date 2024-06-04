@@ -1,0 +1,16 @@
+Dominosa
+========
+
+Find the position of the full set of dominoes, which 
+is hidden in the grid.  Some dominoes may be 
+horizontal and some vertical.
+
+Mark out every domino tile within the grid so that 
+they are all present and there are no duplicates.
+
+The options allow you to use smaller or larger sets
+of dominoes.
+
+A-click between two numbers to put a domino over them.
+B-click between two numbers to place a "no domino" 
+barrier.

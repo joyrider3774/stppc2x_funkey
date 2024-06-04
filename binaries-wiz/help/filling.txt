@@ -1,0 +1,14 @@
+Filling
+=======
+
+Mark out the whole grid so that each square has a 
+number and is touching a group of the same number.
+Each group has to have the same amount of tiles as 
+its number.  So all 3's are in a touching group
+that has three 3's in it, etc.
+
+Groups will highlight themselves when they are full
+but they may not be correct.
+
+Use L and R to select a number, A-click to select a 
+square and then X to enter the number in the square.

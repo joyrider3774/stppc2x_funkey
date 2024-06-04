@@ -1,0 +1,106 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+"http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+<meta http-equiv="content-type" content="text/html; charset=US-ASCII">
+<title>Introduction</title>
+<link rel="previous" href="index.html">
+<link rel="ToC" href="index.html">
+<link rel="up" href="index.html">
+<link rel="next" href="backend.html">
+</head>
+<body>
+<p><a href="index.html">Previous</a> | <a href="index.html">Contents</a> | <a href="backend.html">Next</a></p>
+
+<ul>
+<li><a href="#intro">Chapter 1: Introduction</a>
+<ul>
+<li><a href="#intro-frontend">1.1 Front end</a></li>
+<li><a href="#intro-backend">1.2 Back end</a></li>
+<li><a href="#intro-midend">1.3 Middle end</a></li>
+<li><a href="#intro-utils">1.4 Miscellaneous utilities</a></li>
+<li><a href="#intro-structure">1.5 Structure of this guide</a></li>
+</ul></li>
+</ul>
+<h1><a name="intro"></a>Chapter 1: Introduction</h1>
+<p>
+The Puzzles code base is divided into four parts: a set of interchangeable front ends, a set of interchangeable back ends, a universal &#8216;middle end&#8217; which acts as a buffer between the two, and a bunch of miscellaneous utility functions. In the following sections I give some general discussion of each of these parts.
+</p>
+<h2><a name="intro-frontend"></a>1.1 Front end</h2>
+<p>
+The front end is the non-portable part of the code: it's the bit that you replace completely when you port to a different platform. So it's responsible for all system calls, all GUI interaction, and anything else platform-specific.
+</p>
+<p>
+The current front ends in the main code base are for Windows, GTK and MacOS X; I also know of a third-party front end for PalmOS.
+</p>
+<p>
+The front end contains <code>main()</code> or the local platform's equivalent. Top-level control over the application's execution flow belongs to the front end (it isn't, for example, a set of functions called by a universal <code>main()</code> somewhere else).
+</p>
+<p>
+The front end has complete freedom to design the GUI for any given port of Puzzles. There is no centralised mechanism for maintaining the menu layout, for example. This has a cost in consistency (when I <em>do</em> want the same menu layout on more than one platform, I have to edit two pieces of code in parallel every time I make a change), but the advantage is that local GUI conventions can be conformed to and local constraints adapted to. For example, MacOS X has strict human interface guidelines which specify a different menu layout from the one I've used on Windows and GTK; there's nothing stopping the OS X front end from providing a menu layout consistent with those guidelines.
+</p>
+<p>
+Although the front end is mostly caller rather than the callee in its interactions with other parts of the code, it is required to implement a small API for other modules to call, mostly of drawing functions for games to use when drawing their graphics. The drawing API is documented in <a href="drawing.html#drawing">chapter 3</a>; the other miscellaneous front end API functions are documented in <a href="midend.html#frontend-api">section 4.26</a>.
+</p>
+<h2><a name="intro-backend"></a>1.2 Back end</h2>
+<p>
+A &#8216;back end&#8217;, in this collection, is synonymous with a &#8216;puzzle&#8217;. Each back end implements a different game.
+</p>
+<p>
+At the top level, a back end is simply a data structure, containing a few constants (flag words, preferred pixel size) and a large number of function pointers. Back ends are almost invariably callee rather than caller, which means there's a limitation on what a back end can do on its own initiative.
+</p>
+<p>
+The persistent state in a back end is divided into a number of data structures, which are used for different purposes and therefore likely to be switched around, changed without notice, and otherwise updated by the rest of the code. It is important when designing a back end to put the right pieces of data into the right structures, or standard midend-provided features (such as Undo) may fail to work.
+</p>
+<p>
+The functions and variables provided in the back end data structure are documented in <a href="backend.html#backend">chapter 2</a>.
+</p>
+<h2><a name="intro-midend"></a>1.3 Middle end</h2>
+<p>
+Puzzles has a single and universal &#8216;middle end&#8217;. This code is common to all platforms and all games; it sits in between the front end and the back end and provides standard functionality everywhere.
+</p>
+<p>
+People adding new back ends or new front ends should generally not need to edit the middle end. On rare occasions there might be a change that can be made to the middle end to permit a new game to do something not currently anticipated by the middle end's present design; however, this is terribly easy to get wrong and should probably not be undertaken without consulting the primary maintainer (me). Patch submissions containing unannounced mid-end changes will be treated on their merits like any other patch; this is just a friendly warning that mid-end changes will need quite a lot of merits to make them acceptable.
+</p>
+<p>
+Functionality provided by the mid-end includes:
+</p>
+<ul><li>
+Maintaining a list of game state structures and moving back and forth along that list to provide Undo and Redo.
+</li>
+<li>
+Handling timers (for move animations, flashes on completion, and in some cases actually timing the game).
+</li>
+<li>
+Handling the container format of game IDs: receiving them, picking them apart into parameters, description and/or random seed, and so on. The game back end need only handle the individual parts of a game ID (encoded parameters and encoded game description); everything else is handled centrally by the mid-end.
+</li>
+<li>
+Handling standard keystrokes and menu commands, such as &#8216;New Game&#8217;, &#8216;Restart Game&#8217; and &#8216;Quit&#8217;.
+</li>
+<li>
+Pre-processing mouse events so that the game back ends can rely on them arriving in a sensible order (no missing button-release events, no sudden changes of which button is currently pressed, etc).
+</li>
+<li>
+Handling the dialog boxes which ask the user for a game ID.
+</li>
+<li>
+Handling serialisation of entire games (for loading and saving a half-finished game to a disk file, or for handling application shutdown and restart on platforms such as PalmOS where state is expected to be saved).
+</li>
+</ul>
+<p>
+Thus, there's a lot of work done once by the mid-end so that individual back ends don't have to worry about it. All the back end has to do is cooperate in ensuring the mid-end can do its work properly.
+</p>
+<p>
+The API of functions provided by the mid-end to be called by the front end is documented in <a href="midend.html#midend">chapter 4</a>.
+</p>
+<h2><a name="intro-utils"></a>1.4 Miscellaneous utilities</h2>
+<p>
+In addition to these three major structural components, the Puzzles code also contains a variety of utility modules usable by all of the above components. There is a set of functions to provide platform-independent random number generation; functions to make memory allocation easier; functions which implement a balanced tree structure to be used as necessary in complex algorithms; and a few other miscellaneous functions. All of these are documented in <a href="utils.html#utils">chapter 5</a>.
+</p>
+<h2><a name="intro-structure"></a>1.5 Structure of this guide</h2>
+<p>
+There are a number of function call interfaces within Puzzles, and this guide will discuss each one in a chapter of its own. After that, (<a href="writing.html#writing">chapter 6</a>) discusses how to design new games, with some general design thoughts and tips.
+</p>
+
+<hr><address></address></body>
+</html>

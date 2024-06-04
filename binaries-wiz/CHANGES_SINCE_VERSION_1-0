@@ -1,0 +1,44 @@
+Collection
+==========
+
+Display - Show whether a game supports numeric input, a solver, etc.
+          on the main menu, removed a couple of incorrect screen 
+          updates that could make the menu flicker, game preview 
+          images now centre properly (e.g. Maze3D's).
+
+Gameplay - All games now have cursor-mode control, status-bar 
+           messages now "time out" rather than linger forever.
+
+Input - Digit input for large games that need characters rather than
+        just numbers.
+
+Memory - Can now take advantage of the upper 32Mb of RAM should we 
+         ever run out of memory on the GP2X.
+
+Screenshots - Now disabled by default, enable and press Stick-Click
+              to use them.
+
+Size - The size of the executable has been reduced by a number of
+       means: removal of unused code, better final compression,
+       shortening of static buffers, etc.  Also, the images have been
+       compressed more using pngcrush.  This should save up to 
+       500Kb on the GP2X.
+
+Games
+=====
+
+Cube - Massive memory usage (spotted by me) now fixed (by Simon
+       Tatham).
+Dominosa - More presets.
+Guess - Fixed potential crash.
+Loopy - improve generation of "Great-Hexagonal" games, quicker 
+        solvers.
+Map - "Show immutable regions" option now removed - you can just
+      press Y and the regions that can't be changed highlight in
+      red.
+Mosco - Fix completion bug, add end-of-game flash, clicking on the 
+        edge tiles highlights squares that could "point" to them, 
+        non-square grids and new presets.
+Solo - Show intermediate lines properly, enable 4x4 etc. presets,
+       add "Killer" Sudoku mode.
+

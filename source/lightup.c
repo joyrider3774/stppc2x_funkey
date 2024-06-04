@@ -1016,9 +1016,9 @@ static void try_rule_out(game_state *state, int x, int y,
 
     get_surrounds(state, x, y, &s);
     for (i = 0; i < s.npoints; i++) {
-        if (!GRID(state,flags,s.points[i].x,s.points[i].y) & F_NUMBERED)
+        if (!(GRID(state,flags,s.points[i].x,s.points[i].y) & F_NUMBERED))
             continue;
-        /* we have an adjacent clue square; find /it's/ surrounds
+        /* we have an adjacent clue square; find /its/ surrounds
          * and count the remaining lights it needs. */
         get_surrounds(state,s.points[i].x,s.points[i].y,&ss);
         curr_lights = 0;
@@ -1797,6 +1797,7 @@ static void game_changed_state(game_ui *ui, game_state *oldstate,
 {
     if (newstate->completed)
         ui->cur_visible = 0;
+    if (newstate->completed && ! newstate->used_solve && oldstate && ! oldstate->completed) game_completed();
 }
 
 #define DF_BLACK        1       /* black square */
@@ -1843,24 +1844,17 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
     } else if (button == CURSOR_SELECT || button == CURSOR_SELECT2 ||
                button == 'i' || button == 'I' ||
                button == ' ' || button == '\r' || button == '\n') {
-        ui->cur_visible = 1;
-        cx = ui->cur_x;
-        cy = ui->cur_y;
-        action = (button == 'i' || button == 'I' || button == CURSOR_SELECT2) ?
-            FLIP_IMPOSSIBLE : FLIP_LIGHT;
-    } else if (button == CURSOR_UP || button == CURSOR_DOWN ||
-               button == CURSOR_RIGHT || button == CURSOR_LEFT) {
-        int dx = 0, dy = 0;
-        switch (button) {
-        case CURSOR_UP:         dy = -1; break;
-        case CURSOR_DOWN:       dy = 1; break;
-        case CURSOR_RIGHT:      dx = 1; break;
-        case CURSOR_LEFT:       dx = -1; break;
-        default: assert(!"shouldn't get here");
+        if (ui->cur_visible) {
+            /* Only allow cursor-effect operations if the cursor is visible
+             * (otherwise you have no idea which square it might be affecting) */
+            cx = ui->cur_x;
+            cy = ui->cur_y;
+            action = (button == 'i' || button == 'I' || button == CURSOR_SELECT2) ?
+                FLIP_IMPOSSIBLE : FLIP_LIGHT;
         }
-        ui->cur_x += dx; ui->cur_y += dy;
-        ui->cur_x = min(max(ui->cur_x, 0), state->w - 1);
-        ui->cur_y = min(max(ui->cur_y, 0), state->h - 1);
+        ui->cur_visible = 1;
+    } else if (IS_CURSOR_MOVE(button)) {
+        move_cursor(button, &ui->cur_x, &ui->cur_y, state->w, state->h, 0);
         ui->cur_visible = 1;
         nullret = empty;
     } else
@@ -2163,68 +2157,6 @@ static int game_timing_state(game_state *state, game_ui *ui)
     return TRUE;
 }
 
-static void game_print_size(game_params *params, float *x, float *y)
-{
-    int pw, ph;
-
-    /*
-     * I'll use 6mm squares by default.
-     */
-    game_compute_size(params, 600, &pw, &ph);
-    *x = pw / 100.0F;
-    *y = ph / 100.0F;
-}
-
-static void game_print(drawing *dr, game_state *state, int tilesize)
-{
-    int w = state->w, h = state->h;
-    int ink = print_mono_colour(dr, 0);
-    int paper = print_mono_colour(dr, 1);
-    int x, y;
-
-    /* Ick: fake up `ds->tilesize' for macro expansion purposes */
-    game_drawstate ads, *ds = &ads;
-    game_set_size(dr, ds, NULL, tilesize);
-
-    /*
-     * Border.
-     */
-    print_line_width(dr, TILE_SIZE / 16);
-    draw_rect_outline(dr, COORD(0), COORD(0),
-		      TILE_SIZE * w, TILE_SIZE * h, ink);
-
-    /*
-     * Grid.
-     */
-    print_line_width(dr, TILE_SIZE / 24);
-    for (x = 1; x < w; x++)
-	draw_line(dr, COORD(x), COORD(0), COORD(x), COORD(h), ink);
-    for (y = 1; y < h; y++)
-	draw_line(dr, COORD(0), COORD(y), COORD(w), COORD(y), ink);
-
-    /*
-     * Grid contents.
-     */
-    for (y = 0; y < h; y++)
-	for (x = 0; x < w; x++) {
-            unsigned int ds_flags = tile_flags(ds, state, NULL, x, y, FALSE);
-	    int dx = COORD(x), dy = COORD(y);
-	    if (ds_flags & DF_BLACK) {
-		draw_rect(dr, dx, dy, TILE_SIZE, TILE_SIZE, ink);
-		if (ds_flags & DF_NUMBERED) {
-		    char str[10];
-		    sprintf(str, "%d", GRID(state, lights, x, y));
-		    draw_text(dr, dx + TILE_SIZE/2, dy + TILE_SIZE/2,
-			      FONT_VARIABLE, TILE_SIZE*3/5,
-			      ALIGN_VCENTRE | ALIGN_HCENTRE, paper, str);
-		}
-	    } else if (ds_flags & DF_LIGHT) {
-		draw_circle(dr, dx + TILE_SIZE/2, dy + TILE_SIZE/2,
-			    TILE_RADIUS, -1, ink);
-	    }
-	}
-}
-
 #ifdef COMBINED
 #define thegame lightup
 #endif
@@ -2260,7 +2192,7 @@ const struct game thegame = {
     game_redraw,
     game_anim_length,
     game_flash_length,
-    TRUE, FALSE, game_print_size, game_print,
+    FALSE, FALSE, NULL, NULL,
     FALSE,			       /* wants_statusbar */
     FALSE, game_timing_state,
     0,				       /* flags */

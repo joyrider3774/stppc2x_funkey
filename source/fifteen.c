@@ -451,6 +451,7 @@ static void decode_ui(game_ui *ui, char *encoding)
 static void game_changed_state(game_ui *ui, game_state *oldstate,
                                game_state *newstate)
 {
+    if (newstate->completed && ! newstate->used_solve && oldstate && ! oldstate->completed) game_completed();
 }
 
 struct game_drawstate {
@@ -835,14 +836,6 @@ static int game_timing_state(game_state *state, game_ui *ui)
     return TRUE;
 }
 
-static void game_print_size(game_params *params, float *x, float *y)
-{
-}
-
-static void game_print(drawing *dr, game_state *state, int tilesize)
-{
-}
-
 #ifdef COMBINED
 #define thegame fifteen
 #endif
@@ -878,7 +871,7 @@ const struct game thegame = {
     game_redraw,
     game_anim_length,
     game_flash_length,
-    FALSE, FALSE, game_print_size, game_print,
+    FALSE, FALSE, NULL, NULL, 
     TRUE,			       /* wants_statusbar */
     FALSE, game_timing_state,
     0,				       /* flags */

@@ -1,0 +1,16 @@
+Maze 3D
+=======
+
+Navigate the maze to find the exit. The maze is fully 3D
+(so don't forget to check up and down too!)
+
+A-click on the window to *turn* in that direction, 
+e.g. click the top part of the window to turn upwards, 
+the left part to turn left, etc.
+
+B-click to mark squares to help you remember where
+you've been.
+
+For your first few games, you may find it helpful to 
+play on a "2D" maze (height 1) or "solve" a puzzle and 
+follow the yellow trace towards the exit.

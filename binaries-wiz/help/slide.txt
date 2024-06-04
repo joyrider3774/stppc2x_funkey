@@ -1,0 +1,7 @@
+Slide
+=====
+
+Slide the blocks so that the blue block ends up
+in the gate.
+
+A-drag to slide.

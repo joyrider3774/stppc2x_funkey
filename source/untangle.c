@@ -1034,6 +1034,11 @@ struct game_ui {
     int just_dragged;		       /* reset in game_changed_state */
     int just_moved;		       /* _set_ in game_changed_state */
     float anim_length;
+    int cursor_enabled;
+    int cursor_selected;
+    int cursor_x;
+    int cursor_y;
+    int show_vertex_numbers;
 };
 
 static game_ui *new_ui(game_state *state)
@@ -1041,6 +1046,7 @@ static game_ui *new_ui(game_state *state)
     game_ui *ui = snew(game_ui);
     ui->dragpoint = -1;
     ui->just_moved = ui->just_dragged = FALSE;
+    ui->cursor_x = ui->cursor_y = ui->cursor_selected = ui->show_vertex_numbers = 0;
     return ui;
 }
 
@@ -1064,6 +1070,7 @@ static void game_changed_state(game_ui *ui, game_state *oldstate,
     ui->dragpoint = -1;
     ui->just_moved = ui->just_dragged;
     ui->just_dragged = FALSE;
+    if (newstate->completed && ! newstate->cheated && oldstate && ! oldstate->completed) game_completed();
 }
 
 struct game_drawstate {
@@ -1077,7 +1084,13 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
 {
     int n = state->params.n;
 
-    if (IS_MOUSE_DOWN(button)) {
+    if(button == MIDDLE_BUTTON)
+    {
+        ui->show_vertex_numbers = !ui->show_vertex_numbers;
+        return("");
+    };
+
+    if (IS_MOUSE_DOWN(button) || (IS_CURSOR_SELECT(button) && ui->dragpoint < 0)) {
 	int i, best;
         long bestd;
 
@@ -1103,7 +1116,26 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
 	    }
 	}
 
-	if (bestd <= DRAG_THRESHOLD * DRAG_THRESHOLD) {
+        if(IS_CURSOR_SELECT(button))
+        {
+            if(button == CURSOR_SELECT)
+                ui->cursor_selected++;
+            if(button == CURSOR_SELECT2)
+                ui->cursor_selected--;
+            if(ui->cursor_selected < 0)
+                ui->cursor_selected=n-1;
+            best=ui->cursor_selected % n;
+            ui->dragpoint = best;
+            ui->newpoint.x = state->pts[best].x * ds->tilesize / state->pts[best].d;
+            ui->newpoint.y = state->pts[best].y * ds->tilesize / state->pts[best].d;
+            ui->newpoint.d = ds->tilesize;
+            ui->cursor_x = ui->newpoint.x;
+            ui->cursor_y = ui->newpoint.y;
+            return "";
+        };
+
+        if (bestd <= DRAG_THRESHOLD * DRAG_THRESHOLD)
+        {
 	    ui->dragpoint = best;
 	    ui->newpoint.x = x;
 	    ui->newpoint.y = y;
@@ -1111,12 +1143,32 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
 	    return "";
 	}
 
-    } else if (IS_MOUSE_DRAG(button) && ui->dragpoint >= 0) {
+    } else if ((IS_MOUSE_DRAG(button) || IS_CURSOR_MOVE(button)) && ui->dragpoint >= 0) {
+        if(IS_CURSOR_MOVE(button))
+        {
+            switch(button)
+            {
+                case CURSOR_UP:
+                    ui->cursor_y = max(0, ui->cursor_y - ds->tilesize);
+                    break;
+                case CURSOR_DOWN:
+                    ui->cursor_y = min(state->h * ds->tilesize, ui->cursor_y + ds->tilesize);
+                    break;
+                case CURSOR_LEFT:
+                    ui->cursor_x = max(0, ui->cursor_x - ds->tilesize);
+                    break;
+                case CURSOR_RIGHT:
+                    ui->cursor_x = min(state->w * ds->tilesize, ui->cursor_x + ds->tilesize);
+                    break;
+            };
+            x = ui->cursor_x;
+            y = ui->cursor_y;
+        };
 	ui->newpoint.x = x;
 	ui->newpoint.y = y;
 	ui->newpoint.d = ds->tilesize;
 	return "";
-    } else if (IS_MOUSE_RELEASE(button) && ui->dragpoint >= 0) {
+    } else if ((IS_MOUSE_RELEASE(button) || IS_CURSOR_SELECT(button)) && ui->dragpoint >= 0) {
 	int p = ui->dragpoint;
 	char buf[80];
 
@@ -1371,19 +1423,22 @@ static void game_redraw(drawing *dr, game_drawstate *ds, game_state *oldstate,
 	    }
 
 	    if (c == thisc) {
-#ifdef VERTEX_NUMBERS
-		draw_circle(dr, ds->x[i], ds->y[i], DRAG_THRESHOLD, bg, bg);
-		{
-		    char buf[80];
-		    sprintf(buf, "%d", i);
-		    draw_text(dr, ds->x[i], ds->y[i], FONT_VARIABLE,
-                              DRAG_THRESHOLD*3/2,
-			      ALIGN_VCENTRE|ALIGN_HCENTRE, c, buf);
-		}
-#else
-		draw_circle(dr, ds->x[i], ds->y[i], CIRCLE_RADIUS,
+                if(ui->show_vertex_numbers)
+                {
+                    draw_circle(dr, ds->x[i], ds->y[i], DRAG_THRESHOLD, bg, bg);
+		    {
+		        char buf[80];
+		        sprintf(buf, "%d", i);
+		        draw_text(dr, ds->x[i], ds->y[i], FONT_VARIABLE,
+                                  DRAG_THRESHOLD,
+                        ALIGN_VCENTRE|ALIGN_HCENTRE, c, buf);
+		    }
+                }
+                else
+                {
+                    draw_circle(dr, ds->x[i], ds->y[i], CIRCLE_RADIUS,
                             c, COL_OUTLINE);
-#endif
+                };
 	    }
 	}
     }
@@ -1415,14 +1470,6 @@ static float game_flash_length(game_state *oldstate, game_state *newstate,
 static int game_timing_state(game_state *state, game_ui *ui)
 {
     return TRUE;
-}
-
-static void game_print_size(game_params *params, float *x, float *y)
-{
-}
-
-static void game_print(drawing *dr, game_state *state, int tilesize)
-{
 }
 
 #ifdef COMBINED
@@ -1460,7 +1507,7 @@ const struct game thegame = {
     game_redraw,
     game_anim_length,
     game_flash_length,
-    FALSE, FALSE, game_print_size, game_print,
+    FALSE, FALSE, NULL, NULL,
     FALSE,			       /* wants_statusbar */
     FALSE, game_timing_state,
     SOLVE_ANIMATES,		       /* flags */

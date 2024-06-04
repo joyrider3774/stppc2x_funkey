@@ -26,6 +26,9 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "puzzles.h"
+#include "malloc.h"
+
 /** Maximum value size for integers and doubles. */
 #define MAXVALSZ	1024
 
@@ -45,35 +48,14 @@ static void * mem_double(void * ptr, int size)
 {
     void * newptr ;
  
-    newptr = calloc(2*size, 1);
+    newptr = scalloc(2*size, 1);
     if (newptr==NULL) {
         return NULL ;
     }
+    memset(newptr, 0, 2*size);
     memcpy(newptr, ptr, size);
-    free(ptr);
+    sfree(ptr);
     return newptr ;
-}
-
-/*-------------------------------------------------------------------------*/
-/**
-  @brief    Duplicate a string
-  @param    s String to duplicate
-  @return   Pointer to a newly allocated string, to be freed with free()
-
-  This is a replacement for strdup(). This implementation is provided
-  for systems that do not have it.
- */
-/*--------------------------------------------------------------------------*/
-static char * xstrdup(char * s)
-{
-    char * t ;
-    if (!s)
-        return NULL ;
-    t = malloc(strlen(s)+1) ;
-    if (t) {
-        strcpy(t,s);
-    }
-    return t ;
 }
 
 /*---------------------------------------------------------------------------
@@ -127,13 +109,21 @@ dictionary * dictionary_new(int size)
 	/* If no size was specified, allocate space for DICTMINSZ */
 	if (size<DICTMINSZ) size=DICTMINSZ ;
 
-	if (!(d = (dictionary *)calloc(1, sizeof(dictionary)))) {
+	if (!(d = (dictionary *)scalloc(1, sizeof(dictionary)))) {
 		return NULL;
 	}
+        memset(d, 0, sizeof(dictionary));
+
 	d->size = size ;
-	d->val  = (char **)calloc(size, sizeof(char*));
-	d->key  = (char **)calloc(size, sizeof(char*));
-	d->hash = (unsigned int *)calloc(size, sizeof(unsigned));
+	d->val  = (char **)scalloc(size, sizeof(char*));
+        memset(d->val, 0, size * sizeof(char*));
+
+	d->key  = (char **)scalloc(size, sizeof(char*));
+        memset(d->key, 0, size * sizeof(char*));
+
+	d->hash = (unsigned int *)scalloc(size, sizeof(unsigned));
+        memset(d->hash, 0, size * sizeof(char*));
+
 	return d ;
 }
 
@@ -153,14 +143,14 @@ void dictionary_del(dictionary * d)
 	if (d==NULL) return ;
 	for (i=0 ; i<d->size ; i++) {
 		if (d->key[i]!=NULL)
-			free(d->key[i]);
+			sfree(d->key[i]);
 		if (d->val[i]!=NULL)
-			free(d->val[i]);
+			sfree(d->val[i]);
 	}
-	free(d->val);
-	free(d->key);
-	free(d->hash);
-	free(d);
+	sfree(d->val);
+	sfree(d->key);
+	sfree(d->hash);
+	sfree(d);
 	return ;
 }
 
@@ -242,8 +232,8 @@ int dictionary_set(dictionary * d, char * key, char * val)
 				if (!strcmp(key, d->key[i])) {	 /* Same key */
 					/* Found a value: modify and return */
 					if (d->val[i]!=NULL)
-						free(d->val[i]);
-                    d->val[i] = val ? xstrdup(val) : NULL ;
+						sfree(d->val[i]);
+                    d->val[i] = val ? dupstr(val) : NULL ;
                     /* Value has been modified: return */
 					return 0 ;
 				}
@@ -274,8 +264,8 @@ int dictionary_set(dictionary * d, char * key, char * val)
         }
     }
 	/* Copy key */
-	d->key[i]  = xstrdup(key);
-    d->val[i]  = val ? xstrdup(val) : NULL ;
+	d->key[i]  = dupstr(key);
+    d->val[i]  = val ? dupstr(val) : NULL ;
 	d->hash[i] = hash;
 	d->n ++ ;
 	return 0 ;
@@ -318,10 +308,10 @@ void dictionary_unset(dictionary * d, char * key)
         /* Key not found */
         return ;
 
-    free(d->key[i]);
+    sfree(d->key[i]);
     d->key[i] = NULL ;
     if (d->val[i]!=NULL) {
-        free(d->val[i]);
+        sfree(d->val[i]);
         d->val[i] = NULL ;
     }
     d->hash[i] = 0 ;

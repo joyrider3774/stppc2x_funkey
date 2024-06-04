@@ -39,6 +39,7 @@ enum {
     COL_SLANT1,
     COL_SLANT2,
     COL_ERROR,
+    COL_CURSOR, COL_LOWLIGHT, /* LOWLIGHT currently not used. */
     NCOLOURS
 };
 
@@ -1594,13 +1595,20 @@ static char *game_text_format(game_state *state)
     return ret;
 }
 
+struct game_ui {
+    int cur_x, cur_y, cur_visible;
+};
+
 static game_ui *new_ui(game_state *state)
 {
-    return NULL;
+    game_ui *ui = snew(game_ui);
+    ui->cur_x = ui->cur_y = ui->cur_visible = 0;
+    return ui;
 }
 
 static void free_ui(game_ui *ui)
 {
+    sfree(ui);
 }
 
 static char *encode_ui(game_ui *ui)
@@ -1615,6 +1623,7 @@ static void decode_ui(game_ui *ui, char *encoding)
 static void game_changed_state(game_ui *ui, game_state *oldstate,
                                game_state *newstate)
 {
+    if (newstate->completed && ! newstate->used_solve && oldstate && ! oldstate->completed) game_completed();
 }
 
 #define PREFERRED_TILESIZE 32
@@ -1648,6 +1657,7 @@ static void game_changed_state(game_ui *ui, game_state *oldstate,
 #define ERR_TR    0x00008000L
 #define ERR_BL    0x00010000L
 #define ERR_BR    0x00020000L
+#define CURSOR    0x00040000L
 
 struct game_drawstate {
     int tilesize;
@@ -1660,11 +1670,11 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
 			    int x, int y, int button)
 {
     int w = state->p.w, h = state->p.h;
+    int v;
+    char buf[80];
+    enum { CLOCKWISE, ANTICLOCKWISE, NONE } action = NONE;
 
     if (button == LEFT_BUTTON || button == RIGHT_BUTTON) {
-        int v;
-        char buf[80];
-
 	/*
 	 * This is an utterly awful hack which I should really sort out
 	 * by means of a proper configuration mechanism. One Slant
@@ -1687,13 +1697,29 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
 		    button = LEFT_BUTTON;
 	    }
 	}
+        action = (button == LEFT_BUTTON) ? CLOCKWISE : ANTICLOCKWISE;
 
         x = FROMCOORD(x);
         y = FROMCOORD(y);
         if (x < 0 || y < 0 || x >= w || y >= h)
             return NULL;
+    } else if (IS_CURSOR_SELECT(button)) {
+        if (!ui->cur_visible) {
+            ui->cur_visible = 1;
+            return "";
+        }
+        x = ui->cur_x;
+        y = ui->cur_y;
 
-        if (button == LEFT_BUTTON) {
+        action = (button == CURSOR_SELECT2) ? ANTICLOCKWISE : CLOCKWISE;
+    } else if (IS_CURSOR_MOVE(button)) {
+        move_cursor(button, &ui->cur_x, &ui->cur_y, w, h, 0);
+        ui->cur_visible = 1;
+        return "";
+    }
+
+    if (action != NONE) {
+        if (action == CLOCKWISE) {
             /*
              * Left-clicking cycles blank -> \ -> / -> blank.
              */
@@ -1784,7 +1810,8 @@ static float *game_colours(frontend *fe, int *ncolours)
 {
     float *ret = snewn(3 * NCOLOURS, float);
 
-    frontend_default_colour(fe, &ret[COL_BACKGROUND * 3]);
+    /* CURSOR colour is a background highlight. LOWLIGHT is unused. */
+    game_mkhighlight(fe, ret, COL_BACKGROUND, COL_CURSOR, COL_LOWLIGHT);
 
     ret[COL_GRID * 3 + 0] = ret[COL_BACKGROUND * 3 + 0] * 0.7F;
     ret[COL_GRID * 3 + 1] = ret[COL_BACKGROUND * 3 + 1] * 0.7F;
@@ -1843,7 +1870,7 @@ static void draw_clue(drawing *dr, game_drawstate *ds,
     if (v < 0)
 	return;
 
-    p[0] = v + '0';
+    p[0] = (char)v + '0';
     p[1] = '\0';
     draw_circle(dr, COORD(x), COORD(y), CLUE_RADIUS,
 		bg >= 0 ? bg : COL_BACKGROUND, ccol);
@@ -1862,7 +1889,8 @@ static void draw_tile(drawing *dr, game_drawstate *ds, game_clues *clues,
     clip(dr, COORD(x), COORD(y), TILESIZE, TILESIZE);
 
     draw_rect(dr, COORD(x), COORD(y), TILESIZE, TILESIZE,
-	      (v & FLASH) ? COL_GRID : COL_BACKGROUND);
+	      (v & FLASH) ? COL_GRID :
+              (v & CURSOR) ? COL_CURSOR : COL_BACKGROUND);
 
     /*
      * Draw the grid lines.
@@ -2001,6 +2029,8 @@ static void game_redraw(drawing *dr, game_drawstate *ds, game_state *oldstate,
                     ds->todraw[(y+2)*(w+2)+(x+1)] |= ERR_T_L | ERR_C_TL;
                 }
 	    }
+            if (ui->cur_visible && ui->cur_x == x && ui->cur_y == y)
+                ds->todraw[(y+1)*(w+2)+(x+1)] |= CURSOR;
 	}
     }
 
@@ -2048,77 +2078,6 @@ static int game_timing_state(game_state *state, game_ui *ui)
     return TRUE;
 }
 
-static void game_print_size(game_params *params, float *x, float *y)
-{
-    int pw, ph;
-
-    /*
-     * I'll use 6mm squares by default.
-     */
-    game_compute_size(params, 600, &pw, &ph);
-    *x = pw / 100.0;
-    *y = ph / 100.0;
-}
-
-static void game_print(drawing *dr, game_state *state, int tilesize)
-{
-    int w = state->p.w, h = state->p.h, W = w+1;
-    int ink = print_mono_colour(dr, 0);
-    int paper = print_mono_colour(dr, 1);
-    int x, y;
-
-    /* Ick: fake up `ds->tilesize' for macro expansion purposes */
-    game_drawstate ads, *ds = &ads;
-    game_set_size(dr, ds, NULL, tilesize);
-
-    /*
-     * Border.
-     */
-    print_line_width(dr, TILESIZE / 16);
-    draw_rect_outline(dr, COORD(0), COORD(0), w*TILESIZE, h*TILESIZE, ink);
-
-    /*
-     * Grid.
-     */
-    print_line_width(dr, TILESIZE / 24);
-    for (x = 1; x < w; x++)
-	draw_line(dr, COORD(x), COORD(0), COORD(x), COORD(h), ink);
-    for (y = 1; y < h; y++)
-	draw_line(dr, COORD(0), COORD(y), COORD(w), COORD(y), ink);
-
-    /*
-     * Solution.
-     */
-    print_line_width(dr, TILESIZE / 12);
-    for (y = 0; y < h; y++)
-	for (x = 0; x < w; x++)
-	    if (state->soln[y*w+x]) {
-		int ly, ry;
-		/*
-		 * To prevent nasty line-ending artefacts at
-		 * corners, I'll do something slightly cunning
-		 * here.
-		 */
-		clip(dr, COORD(x), COORD(y), TILESIZE, TILESIZE);
-		if (state->soln[y*w+x] < 0)
-		    ly = y-1, ry = y+2;
-		else
-		    ry = y-1, ly = y+2;
-		draw_line(dr, COORD(x-1), COORD(ly), COORD(x+2), COORD(ry),
-			  ink);
-		unclip(dr);
-	    }
-
-    /*
-     * Clues.
-     */
-    print_line_width(dr, TILESIZE / 24);
-    for (y = 0; y <= h; y++)
-	for (x = 0; x <= w; x++)
-	    draw_clue(dr, ds, x, y, state->clues->clues[y*W+x],
-		      FALSE, paper, ink);
-}
-
 #ifdef COMBINED
 #define thegame slant
 #endif
@@ -2154,7 +2113,7 @@ const struct game thegame = {
     game_redraw,
     game_anim_length,
     game_flash_length,
-    TRUE, FALSE, game_print_size, game_print,
+    FALSE, FALSE, NULL, NULL,
     FALSE,			       /* wants_statusbar */
     FALSE, game_timing_state,
     0,				       /* flags */

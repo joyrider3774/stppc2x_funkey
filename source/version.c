@@ -11,6 +11,8 @@ char ver[] = "Revision: r" STR(REVISION);
 
 #else
 
-char ver[] = "Unidentified build, " __DATE__ " " __TIME__;
+char ver[] = "Unknown version";
 
 #endif
+
+char stppc2x_ver[] = "STPPC2x v1.1";

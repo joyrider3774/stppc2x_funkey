@@ -81,6 +81,7 @@ enum {
     COL_GRID,
     COL_EDGE,
     COL_ARROW,
+    COL_CURSOR,
     NCOLOURS
 };
 
@@ -2258,12 +2259,15 @@ struct game_ui {
     int dx, dy;         /* pixel coords of drag pos. */
     int dotx, doty;     /* grid coords of dot we're dragging from. */
     int srcx, srcy;     /* grid coords of drag start */
+    int cur_x, cur_y, cur_visible;
 };
 
 static game_ui *new_ui(game_state *state)
 {
     game_ui *ui = snew(game_ui);
     ui->dragging = FALSE;
+    ui->cur_x = ui->cur_y = 1;
+    ui->cur_visible = 0;
     return ui;
 }
 
@@ -2284,6 +2288,7 @@ static void decode_ui(game_ui *ui, char *encoding)
 static void game_changed_state(game_ui *ui, game_state *oldstate,
                                game_state *newstate)
 {
+    if (newstate->completed && ! newstate->used_solve && oldstate && ! oldstate->completed) game_completed();
 }
 
 #define FLASH_TIME 0.15F
@@ -2301,6 +2306,8 @@ static void game_changed_state(game_ui *ui, game_state *oldstate,
 #define DRAW_WIDTH      (BORDER * 2 + ds->w * TILE_SIZE)
 #define DRAW_HEIGHT     (BORDER * 2 + ds->h * TILE_SIZE)
 
+#define CURSOR_SIZE DOT_SIZE
+
 struct game_drawstate {
     int started;
     int w, h;
@@ -2312,6 +2319,9 @@ struct game_drawstate {
     int dragging, dragx, dragy;
 
     int *colour_scratch;
+
+    int cx, cy, cur_visible;
+    blitter *cur_bl;
 };
 
 #define CORNER_TOLERANCE 0.15F
@@ -2409,9 +2419,11 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
      * Add or remove dot (left-click)
      */
     char buf[80];
-    const char *sep;
+    const char *sep = "";
     int px, py;
     struct space *sp, *dot;
+
+    buf[0] = '\0';
 
     if (button == 'H' || button == 'h' || button == MIDDLE_BUTTON) {
         char *ret;
@@ -2423,6 +2435,7 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
     }
 
     if (button == LEFT_BUTTON) {
+        ui->cur_visible = 0;
         coord_round_to_edge(FROMCOORD((float)x), FROMCOORD((float)y),
                             &px, &py);
 
@@ -2436,6 +2449,8 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
         }
     } else if (button == RIGHT_BUTTON) {
         int px1, py1;
+
+        ui->cur_visible = 0;
 
         px = (int)(2*FROMCOORD((float)x) + 0.5);
         py = (int)(2*FROMCOORD((float)y) + 0.5);
@@ -2513,9 +2528,6 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
 	if (px == ui->srcx && py == ui->srcy)
 	    return "";
 
-	sep = "";
-	buf[0] = '\0';
-
 	/*
 	 * Otherwise, we remove the arrow from its starting
 	 * square if we didn't start from a dot...
@@ -2542,6 +2554,56 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
 	    return dupstr(buf);
 	else
 	    return "";
+    } else if (IS_CURSOR_MOVE(button)) {
+        move_cursor(button, &ui->cur_x, &ui->cur_y, state->sx-1, state->sy-1, 0);
+        if (ui->cur_x < 1) ui->cur_x = 1;
+        if (ui->cur_y < 1) ui->cur_y = 1;
+        ui->cur_visible = 1;
+        if (ui->dragging) {
+            ui->dx = SCOORD(ui->cur_x);
+            ui->dy = SCOORD(ui->cur_y);
+        }
+        return "";
+    } else if (IS_CURSOR_SELECT(button)) {
+        if (!ui->cur_visible) {
+            ui->cur_visible = 1;
+            return "";
+        }
+        sp = &SPACE(state, ui->cur_x, ui->cur_y);
+        if (ui->dragging) {
+            ui->dragging = FALSE;
+
+            if ((ui->srcx != ui->dotx || ui->srcy != ui->doty) &&
+                SPACE(state, ui->srcx, ui->srcy).flags & F_TILE_ASSOC) {
+                sprintf(buf, "%sU%d,%d", sep, ui->srcx, ui->srcy);
+                sep = ";";
+            }
+            if (sp->type == s_tile && !(sp->flags & F_DOT) && !(sp->flags & F_TILE_ASSOC)) {
+                sprintf(buf + strlen(buf), "%sA%d,%d,%d,%d",
+                        sep, ui->cur_x, ui->cur_y, ui->dotx, ui->doty);
+            }
+            return dupstr(buf);
+        } else if (sp->flags & F_DOT) {
+            ui->dragging = TRUE;
+            ui->dx = SCOORD(ui->cur_x);
+            ui->dy = SCOORD(ui->cur_y);
+            ui->dotx = ui->srcx = ui->cur_x;
+            ui->doty = ui->srcy = ui->cur_y;
+            return "";
+        } else if (sp->flags & F_TILE_ASSOC) {
+            assert(sp->type == s_tile);
+            ui->dragging = TRUE;
+            ui->dx = SCOORD(ui->cur_x);
+            ui->dy = SCOORD(ui->cur_y);
+            ui->dotx = sp->dotx;
+            ui->doty = sp->doty;
+            ui->srcx = ui->cur_x;
+            ui->srcy = ui->cur_y;
+            return "";
+        } else if (sp->type == s_edge) {
+            sprintf(buf, "E%d,%d", ui->cur_x, ui->cur_y);
+            return dupstr(buf);
+        }
     }
 
     return NULL;
@@ -2822,7 +2884,12 @@ static game_state *execute_move(game_state *state, char *move)
             goto badmove;
     }
     if (check_complete(ret, NULL, NULL))
+    {
         ret->completed = 1;
+#ifdef ANDROID
+        nestedvm_completed();
+#endif
+    }
     return ret;
 
 badmove:
@@ -2867,6 +2934,9 @@ static void game_set_size(drawing *dr, game_drawstate *ds,
 
     assert(!ds->bl);
     ds->bl = blitter_new(dr, TILE_SIZE, TILE_SIZE);
+
+    assert(!ds->cur_bl);
+    ds->cur_bl = blitter_new(dr, TILE_SIZE, TILE_SIZE);
 }
 
 static float *game_colours(frontend *fe, int *ncolours)
@@ -2912,9 +2982,12 @@ static float *game_colours(frontend *fe, int *ncolours)
     /* tinge the edit background to bluey */
     ret[COL_BACKGROUND * 3 + 0] = ret[COL_BACKGROUND * 3 + 0] * 0.8F;
     ret[COL_BACKGROUND * 3 + 1] = ret[COL_BACKGROUND * 3 + 0] * 0.8F;
-    ret[COL_BACKGROUND * 3 + 2] = ret[COL_BACKGROUND * 3 + 0] * 1.4F;
-    if (ret[COL_BACKGROUND * 3 + 2] > 1.0F) ret[COL_BACKGROUND * 3 + 2] = 1.0F;
+    ret[COL_BACKGROUND * 3 + 2] = max(ret[COL_BACKGROUND * 3 + 0] * 1.4F, 1.0F);
 #endif
+
+    ret[COL_CURSOR * 3 + 0] = max(ret[COL_BACKGROUND * 3 + 0] * 1.4F, 1.0F);
+    ret[COL_CURSOR * 3 + 1] = ret[COL_BACKGROUND * 3 + 0] * 0.8F;
+    ret[COL_CURSOR * 3 + 2] = ret[COL_BACKGROUND * 3 + 0] * 0.8F;
 
     *ncolours = NCOLOURS;
     return ret;
@@ -2941,11 +3014,16 @@ static game_drawstate *game_new_drawstate(drawing *dr, game_state *state)
 
     ds->colour_scratch = snewn(ds->w * ds->h, int);
 
+    ds->cur_bl = NULL;
+    ds->cx = ds->cy = 0;
+    ds->cur_visible = 0;
+
     return ds;
 }
 
 static void game_free_drawstate(drawing *dr, game_drawstate *ds)
 {
+    if (ds->cur_bl) blitter_free(dr, ds->cur_bl);
     sfree(ds->colour_scratch);
     if (ds->bl) blitter_free(dr, ds->bl);
     sfree(ds->dx);
@@ -2965,7 +3043,8 @@ static void game_free_drawstate(drawing *dr, game_drawstate *ds)
 #define DRAW_WHITE     0x0100
 #define DRAW_BLACK     0x0200
 #define DRAW_ARROW     0x0400
-#define DOT_SHIFT_C    11
+#define DRAW_CURSOR    0x0800
+#define DOT_SHIFT_C    12
 #define DOT_SHIFT_M    2
 #define DOT_WHITE      1UL
 #define DOT_BLACK      2UL
@@ -2975,7 +3054,7 @@ static void game_free_drawstate(drawing *dr, game_drawstate *ds)
  * (ddx,ddy). (I.e. pointing at the point (cx+ddx, cy+ddy).
  */
 static void draw_arrow(drawing *dr, game_drawstate *ds,
-                       int cx, int cy, int ddx, int ddy)
+                       int cx, int cy, int ddx, int ddy, int col)
 {
     float vlen = (float)sqrt(ddx*ddx+ddy*ddy);
     float xdx = ddx/vlen, xdy = ddy/vlen;
@@ -2985,9 +3064,9 @@ static void draw_arrow(drawing *dr, game_drawstate *ds,
     int adx = (int)((ydx-xdx)*TILE_SIZE/8), ady = (int)((ydy-xdy)*TILE_SIZE/8);
     int adx2 = (int)((-ydx-xdx)*TILE_SIZE/8), ady2 = (int)((-ydy-xdy)*TILE_SIZE/8);
 
-    draw_line(dr, e1x, e1y, e2x, e2y, COL_ARROW);
-    draw_line(dr, e1x, e1y, e1x+adx, e1y+ady, COL_ARROW);
-    draw_line(dr, e1x, e1y, e1x+adx2, e1y+ady2, COL_ARROW);
+    draw_line(dr, e1x, e1y, e2x, e2y, col);
+    draw_line(dr, e1x, e1y, e1x+adx, e1y+ady, col);
+    draw_line(dr, e1x, e1y, e1x+adx2, e1y+ady2, col);
 }
 
 static void draw_square(drawing *dr, game_drawstate *ds, int x, int y,
@@ -3014,10 +3093,17 @@ static void draw_square(drawing *dr, game_drawstate *ds, int x, int y,
     draw_rect(dr, lx, ly, TILE_SIZE, 1, gridcol);
 
     /*
-     * Draw the arrow.
+     * Draw the arrow, if present, or the cursor, if here.
      */
     if (flags & DRAW_ARROW)
-        draw_arrow(dr, ds, lx + TILE_SIZE/2, ly + TILE_SIZE/2, ddx, ddy);
+        draw_arrow(dr, ds, lx + TILE_SIZE/2, ly + TILE_SIZE/2, ddx, ddy,
+                   (flags & DRAW_CURSOR) ? COL_CURSOR : COL_ARROW);
+    else if (flags & DRAW_CURSOR)
+        draw_rect_outline(dr,
+                          lx + TILE_SIZE/2 - CURSOR_SIZE,
+                          ly + TILE_SIZE/2 - CURSOR_SIZE,
+                          2*CURSOR_SIZE+1, 2*CURSOR_SIZE+1,
+                          COL_CURSOR);
 
     /*
      * Draw the edges.
@@ -3081,6 +3167,12 @@ static void game_redraw(drawing *dr, game_drawstate *ds, game_state *oldstate,
         blitter_load(dr, ds->bl, ds->dragx, ds->dragy);
         draw_update(dr, ds->dragx, ds->dragy, TILE_SIZE, TILE_SIZE);
         ds->dragging = FALSE;
+    }
+    if (ds->cur_visible) {
+        assert(ds->cur_bl);
+        blitter_load(dr, ds->cur_bl, ds->cx, ds->cy);
+        draw_update(dr, ds->cx, ds->cy, CURSOR_SIZE*2+1, CURSOR_SIZE*2+1);
+        ds->cur_visible = FALSE;
     }
 
     if (!ds->started) {
@@ -3175,6 +3267,15 @@ static void game_redraw(drawing *dr, game_drawstate *ds, game_state *oldstate,
                 }
 
             /*
+             * Now work out if we have to draw a cursor for this square;
+             * cursors-on-lines are taken care of below.
+             */
+            if (ui->cur_visible &&
+                ui->cur_x == x*2+1 && ui->cur_y == y*2+1 &&
+                !(SPACE(state, x*2+1, y*2+1).flags & F_DOT))
+                flags |= DRAW_CURSOR;
+
+            /*
              * Now we have everything we're going to need. Draw the
              * square.
              */
@@ -3188,6 +3289,33 @@ static void game_redraw(drawing *dr, game_drawstate *ds, game_state *oldstate,
             }
         }
 
+    /*
+     * Draw a cursor. This secondary blitter is much less invasive than trying
+     * to fix up all of the rest of the code with sufficient flags to be able to
+     * display this sensibly.
+     */
+    if (ui->cur_visible) {
+        space *sp = &SPACE(state, ui->cur_x, ui->cur_y);
+        ds->cur_visible = TRUE;
+        ds->cx = SCOORD(ui->cur_x) - CURSOR_SIZE;
+        ds->cy = SCOORD(ui->cur_y) - CURSOR_SIZE;
+        blitter_save(dr, ds->cur_bl, ds->cx, ds->cy);
+        if (sp->flags & F_DOT) {
+            /* draw a red dot (over the top of whatever would be there already) */
+            draw_circle(dr, SCOORD(ui->cur_x), SCOORD(ui->cur_y), DOT_SIZE,
+                        COL_CURSOR, COL_BLACKDOT);
+        } else if (sp->type != s_tile) {
+            /* draw an edge/vertex square; tile cursors are dealt with above. */
+            int dx = (ui->cur_x % 2) ? CURSOR_SIZE : CURSOR_SIZE/3;
+            int dy = (ui->cur_y % 2) ? CURSOR_SIZE : CURSOR_SIZE/3;
+            int x1 = SCOORD(ui->cur_x)-dx, y1 = SCOORD(ui->cur_y)-dy;
+            int xs = dx*2+1, ys = dy*2+1;
+
+            draw_rect(dr, x1, y1, xs, ys, COL_CURSOR);
+        }
+        draw_update(dr, ds->cx, ds->cy, CURSOR_SIZE*2+1, CURSOR_SIZE*2+1);
+    }
+
     if (ui->dragging) {
         ds->dragging = TRUE;
         ds->dragx = ui->dx - TILE_SIZE/2;
@@ -3195,7 +3323,7 @@ static void game_redraw(drawing *dr, game_drawstate *ds, game_state *oldstate,
         blitter_save(dr, ds->bl, ds->dragx, ds->dragy);
         draw_arrow(dr, ds, ui->dx, ui->dy,
                    SCOORD(ui->dotx) - ui->dx,
-                   SCOORD(ui->doty) - ui->dy);
+                   SCOORD(ui->doty) - ui->dy, COL_ARROW);
     }
 #ifdef EDITOR
     {
@@ -3229,182 +3357,6 @@ static int game_timing_state(game_state *state, game_ui *ui)
 {
     return TRUE;
 }
-
-#ifndef EDITOR
-static void game_print_size(game_params *params, float *x, float *y)
-{
-   int pw, ph;
-
-   /*
-    * 8mm squares by default. (There isn't all that much detail
-    * that needs to go in each square.)
-    */
-   game_compute_size(params, 800, &pw, &ph);
-   *x = pw / 100.0F;
-   *y = ph / 100.0F;
-}
-
-static void game_print(drawing *dr, game_state *state, int sz)
-{
-    int w = state->w, h = state->h;
-    int white, black, blackish;
-    int x, y, i, j;
-    int *colours, *dsf;
-    int *coords = NULL;
-    int ncoords = 0, coordsize = 0;
-
-    /* Ick: fake up `ds->tilesize' for macro expansion purposes */
-    game_drawstate ads, *ds = &ads;
-    ds->tilesize = sz;
-
-    white = print_mono_colour(dr, 1);
-    black = print_mono_colour(dr, 0);
-    blackish = print_hatched_colour(dr, HATCH_X);
-
-    /*
-     * Get the completion information.
-     */
-    dsf = snewn(w * h, int);
-    colours = snewn(w * h, int);
-    check_complete(state, dsf, colours);
-
-    /*
-     * Draw the grid.
-     */
-    print_line_width(dr, TILE_SIZE / 64);
-    for (x = 1; x < w; x++)
-	draw_line(dr, COORD(x), COORD(0), COORD(x), COORD(h), black);
-    for (y = 1; y < h; y++)
-	draw_line(dr, COORD(0), COORD(y), COORD(w), COORD(y), black);
-
-    /*
-     * Shade the completed regions. Just in case any particular
-     * printing platform deals badly with adjacent
-     * similarly-hatched regions, we'll fill each one as a single
-     * polygon.
-     */
-    for (i = 0; i < w*h; i++) {
-	j = dsf_canonify(dsf, i);
-	if (colours[j] != 0) {
-	    int dx, dy, t;
-
-	    /*
-	     * This is the first square we've run into belonging to
-	     * this polyomino, which means an edge of the polyomino
-	     * is certain to be to our left. (After we finish
-	     * tracing round it, we'll set the colours[] entry to
-	     * zero to prevent accidentally doing it again.)
-	     */
-
-	    x = i % w;
-	    y = i / w;
-	    dx = -1;
-	    dy = 0;
-	    ncoords = 0;
-	    while (1) {
-		/*
-		 * We are currently sitting on square (x,y), which
-		 * we know to be in our polyomino, and we also know
-		 * that (x+dx,y+dy) is not. The way I visualise
-		 * this is that we're standing to the right of a
-		 * boundary line, stretching our left arm out to
-		 * point to the exterior square on the far side.
-		 */
-
-		/*
-		 * First, check if we've gone round the entire
-		 * polyomino.
-		 */
-		if (ncoords > 0 &&
-		    (x == i%w && y == i/w && dx == -1 && dy == 0))
-		    break;
-
-		/*
-		 * Add to our coordinate list the coordinate
-		 * backwards and to the left of where we are.
-		 */
-		if (ncoords + 2 > coordsize) {
-		    coordsize = (ncoords * 3 / 2) + 64;
-		    coords = sresize(coords, coordsize, int);
-		}
-		coords[ncoords++] = COORD((2*x+1 + dx + dy) / 2);
-		coords[ncoords++] = COORD((2*y+1 + dy - dx) / 2);
-
-		/*
-		 * Follow the edge round. If the square directly in
-		 * front of us is not part of the polyomino, we
-		 * turn right; if it is and so is the square in
-		 * front of (x+dx,y+dy), we turn left; otherwise we
-		 * go straight on.
-		 */
-		if (x-dy < 0 || x-dy >= w || y+dx < 0 || y+dx >= h ||
-		    dsf_canonify(dsf, (y+dx)*w+(x-dy)) != j) {
-		    /* Turn right. */
-		    t = dx;
-		    dx = -dy;
-		    dy = t;
-		} else if (x+dx-dy >= 0 && x+dx-dy < w &&
-			   y+dy+dx >= 0 && y+dy+dx < h &&
-			   dsf_canonify(dsf, (y+dy+dx)*w+(x+dx-dy)) == j) {
-		    /* Turn left. */
-		    x += dx;
-		    y += dy;
-		    t = dx;
-		    dx = dy;
-		    dy = -t;
-		    x -= dx;
-		    y -= dy;
-		} else {
-		    /* Straight on. */
-		    x -= dy;
-		    y += dx;
-		}
-	    }
-
-	    /*
-	     * Now we have our polygon complete, so fill it.
-	     */
-	    draw_polygon(dr, coords, ncoords/2,
-			 colours[j] == 2 ? blackish : -1, black);
-
-	    /*
-	     * And mark this polyomino as done.
-	     */
-	    colours[j] = 0;
-	}
-    }
-
-    /*
-     * Draw the edges.
-     */
-    for (y = 0; y <= h; y++)
-	for (x = 0; x <= w; x++) {
-	    if (x < w && SPACE(state, x*2+1, y*2).flags & F_EDGE_SET)
-		draw_rect(dr, COORD(x)-EDGE_THICKNESS, COORD(y)-EDGE_THICKNESS,
-			  EDGE_THICKNESS * 2 + TILE_SIZE, EDGE_THICKNESS * 2,
-			  black);
-	    if (y < h && SPACE(state, x*2, y*2+1).flags & F_EDGE_SET)
-		draw_rect(dr, COORD(x)-EDGE_THICKNESS, COORD(y)-EDGE_THICKNESS,
-			  EDGE_THICKNESS * 2, EDGE_THICKNESS * 2 + TILE_SIZE,
-			  black);
-	}
-
-    /*
-     * Draw the dots.
-     */
-    for (y = 0; y <= 2*h; y++)
-	for (x = 0; x <= 2*w; x++)
-	    if (SPACE(state, x, y).flags & F_DOT) {
-                draw_circle(dr, (int)COORD(x/2.0), (int)COORD(y/2.0), DOT_SIZE,
-                            (SPACE(state, x, y).flags & F_DOT_BLACK ?
-			     black : white), black);
-	    }
-
-    sfree(dsf);
-    sfree(colours);
-    sfree(coords);
-}
-#endif
 
 #ifdef COMBINED
 #define thegame galaxies
@@ -3449,7 +3401,7 @@ const struct game thegame = {
     FALSE, FALSE, NULL, NULL,
     TRUE,                              /* wants_statusbar */
 #else
-    TRUE, FALSE, game_print_size, game_print,
+    FALSE, FALSE, NULL, NULL,
     FALSE,			       /* wants_statusbar */
 #endif
     FALSE, game_timing_state,

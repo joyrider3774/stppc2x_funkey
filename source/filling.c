@@ -104,13 +104,13 @@ struct game_state {
     int completed, cheated;
 };
 
-static const struct game_params defaults[3] = {{7, 9}, {9, 13}, {13, 17}};
+static const struct game_params filling_defaults[3] = {{7, 9}, {9, 13}, {13, 17}};
 
 static game_params *default_params(void)
 {
     game_params *ret = snew(game_params);
 
-    *ret = defaults[1]; /* struct copy */
+    *ret = filling_defaults[1]; /* struct copy */
 
     return ret;
 }
@@ -119,10 +119,10 @@ static int game_fetch_preset(int i, char **name, game_params **params)
 {
     char buf[64];
 
-    if (i < 0 || i >= lenof(defaults)) return FALSE;
+    if (i < 0 || i >= lenof(filling_defaults)) return FALSE;
     *params = snew(game_params);
-    **params = defaults[i]; /* struct copy */
-    sprintf(buf, "%dx%d", defaults[i].h, defaults[i].w);
+    **params = filling_defaults[i]; /* struct copy */
+    sprintf(buf, "%dx%d", filling_defaults[i].h, filling_defaults[i].w);
     *name = dupstr(buf);
 
     return TRUE;
@@ -306,7 +306,7 @@ static void print_board(int *board, int w, int h) {
     if (verbose) {
 	char *repr = board_to_string(board, w, h);
 	printv("%s\n", repr);
-	free(repr);
+	sfree(repr);
     }
 }
 
@@ -340,7 +340,7 @@ static void make_board(int *board, int w, int h, random_state *rs) {
 
     /* I abuse the board variable: when generating the puzzle, it
      * contains a shuffled list of numbers {0, ..., nsq-1}. */
-    for (i = 0; i < sz; ++i) board[i] = i;
+    for (i = 0; i < (int)sz; ++i) board[i] = i;
 
     while (1) {
 	int change;
@@ -349,7 +349,7 @@ static void make_board(int *board, int w, int h, random_state *rs) {
 	/* while the board can in principle be fixed */
 	do {
 	    change = FALSE;
-	    for (i = 0; i < sz; ++i) {
+	    for (i = 0; i < (int)sz; ++i) {
 		int a = SENTINEL;
 		int b = SENTINEL;
 		int c = SENTINEL;
@@ -381,7 +381,7 @@ static void make_board(int *board, int w, int h, random_state *rs) {
 	    }
 	} while (change);
 
-	for (i = 0; i < sz; ++i) board[i] = dsf_size(dsf, i);
+	for (i = 0; i < (int)sz; ++i) board[i] = dsf_size(dsf, i);
 
 	sfree(dsf);
 	printv("returning board number %d\n", nboards);
@@ -875,6 +875,10 @@ static char *new_game_desc(game_params *params, random_state *rs,
     int *randomize = snewn(sz, int);
     char *game_description = snewn(sz + 1, char);
     int i;
+    extern int max_digit_to_input;
+    extern int min_digit_to_input;
+    max_digit_to_input = 9;
+    min_digit_to_input = 1;
 
     for (i = 0; i < sz; ++i) {
         board[i] = EMPTY;
@@ -919,6 +923,12 @@ static char *validate_desc(game_params *params, char *desc)
 	    return "too large digit in string";
     if (desc[i]) return "string too long";
     else if (i < sz) return "string too short";
+
+    extern int max_digit_to_input;
+    extern int min_digit_to_input;
+    max_digit_to_input = 9;
+    min_digit_to_input = 1;
+
     return NULL;
 }
 
@@ -982,6 +992,7 @@ static char *solve_game(game_state *state, game_state *currstate,
 
 struct game_ui {
     int *sel; /* w*h highlighted squares, or NULL */
+    int cur_x, cur_y, cur_visible;
 };
 
 static game_ui *new_ui(game_state *state)
@@ -989,6 +1000,7 @@ static game_ui *new_ui(game_state *state)
     game_ui *ui = snew(game_ui);
 
     ui->sel = NULL;
+    ui->cur_x = ui->cur_y = ui->cur_visible = 0;
 
     return ui;
 }
@@ -1017,6 +1029,7 @@ static void game_changed_state(game_ui *ui, game_state *oldstate,
         sfree(ui->sel);
         ui->sel = NULL;
     }
+    if (newstate->completed && ! newstate->cheated && oldstate && ! oldstate->completed) game_completed();
 }
 
 #define PREFERRED_TILE_SIZE 32
@@ -1065,10 +1078,28 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
             if (!state->shared->clues[w*ty+tx])
                 ui->sel[w*ty+tx] = 1;
         }
+        ui->cur_visible = 0;
         return ""; /* redraw */
     }
 
-    if (!ui->sel) return NULL;
+    if (IS_CURSOR_MOVE(button)) {
+        ui->cur_visible = 1;
+        move_cursor(button, &ui->cur_x, &ui->cur_y, w, h, 0);
+        return "";
+    }
+    if (IS_CURSOR_SELECT(button)) {
+        if (!ui->cur_visible) {
+            ui->cur_visible = 1;
+            return "";
+        }
+        if (!ui->sel) {
+            ui->sel = snewn(w*h, int);
+            memset(ui->sel, 0, w*h*sizeof(int));
+        }
+        if (state->shared->clues[w*ui->cur_y + ui->cur_x] == 0)
+            ui->sel[w*ui->cur_y + ui->cur_x] ^= 1;
+        return "";
+    }
 
     switch (button) {
       case ' ':
@@ -1076,7 +1107,7 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
       case '\n':
       case '\b':
       case '\177':
-      case RIGHT_BUTTON:
+      case MIDDLE_BUTTON:
         button = 0;
         break;
       default:
@@ -1087,8 +1118,9 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
 
     for (i = 0; i < w*h; i++) {
         char buf[32];
-        if (ui->sel[i]) {
-            assert(state->shared->clues[i] == 0);
+        if ((ui->sel && ui->sel[i]) ||
+            (!ui->sel && ui->cur_visible && (w*ui->cur_y+ui->cur_x) == i)) {
+            if (state->shared->clues[i] != 0) continue; /* in case cursor is on clue */
             if (state->board[i] != button) {
                 sprintf(buf, "%s%d", move ? "," : "", i);
                 if (move) {
@@ -1107,6 +1139,7 @@ static char *interpret_move(game_state *state, game_ui *ui, game_drawstate *ds,
         move = srealloc(move, strlen(move)+strlen(buf)+1);
         strcat(move, buf);
     }
+    if (!ui->sel) return move ? move : NULL;
     sfree(ui->sel);
     ui->sel = NULL;
     /* Need to update UI at least, as we cleared the selection */
@@ -1174,6 +1207,7 @@ enum {
     COL_CORRECT,
     COL_ERROR,
     COL_USER,
+    COL_CURSOR,
     NCOLOURS
 };
 
@@ -1207,6 +1241,10 @@ static float *game_colours(frontend *fe, int *ncolours)
     ret[COL_CORRECT * 3 + 0] = 0.9F * ret[COL_BACKGROUND * 3 + 0];
     ret[COL_CORRECT * 3 + 1] = 0.9F * ret[COL_BACKGROUND * 3 + 1];
     ret[COL_CORRECT * 3 + 2] = 0.9F * ret[COL_BACKGROUND * 3 + 2];
+
+    ret[COL_CURSOR * 3 + 0] = 0.5F * ret[COL_BACKGROUND * 3 + 0];
+    ret[COL_CURSOR * 3 + 1] = 0.5F * ret[COL_BACKGROUND * 3 + 1];
+    ret[COL_CURSOR * 3 + 2] = 0.5F * ret[COL_BACKGROUND * 3 + 2];
 
     ret[COL_ERROR * 3 + 0] = 1.0F;
     ret[COL_ERROR * 3 + 1] = 0.85F * ret[COL_BACKGROUND * 3 + 1];
@@ -1255,10 +1293,11 @@ static void game_free_drawstate(drawing *dr, game_drawstate *ds)
 #define BORDER_DR  0x020
 #define BORDER_UL  0x040
 #define BORDER_DL  0x080
-#define CURSOR_BG  0x100
+#define HIGH_BG    0x100
 #define CORRECT_BG 0x200
 #define ERROR_BG   0x400
 #define USER_COL   0x800
+#define CURSOR_SQ 0x1000
 
 static void draw_square(drawing *dr, game_drawstate *ds, int x, int y,
                         int n, int flags)
@@ -1280,7 +1319,7 @@ static void draw_square(drawing *dr, game_drawstate *ds, int x, int y,
               BORDER + y*TILE_SIZE,
               TILE_SIZE,
               TILE_SIZE,
-              (flags & CURSOR_BG ? COL_HIGHLIGHT :
+              (flags & HIGH_BG ? COL_HIGHLIGHT :
                flags & ERROR_BG ? COL_ERROR :
                flags & CORRECT_BG ? COL_CORRECT : COL_BACKGROUND));
 
@@ -1368,6 +1407,16 @@ static void draw_square(drawing *dr, game_drawstate *ds, int x, int y,
                   BORDER_WIDTH,
                   BORDER_WIDTH,
                   COL_GRID);
+
+    if (flags & CURSOR_SQ) {
+        int coff = TILE_SIZE/8;
+        draw_rect_outline(dr,
+                          BORDER + x*TILE_SIZE + coff,
+                          BORDER + y*TILE_SIZE + coff,
+                          TILE_SIZE - coff*2,
+                          TILE_SIZE - coff*2,
+                          COL_CURSOR);
+    }
 
     unclip(dr);
 
@@ -1458,7 +1507,7 @@ static void draw_grid(drawing *dr, game_drawstate *ds, game_state *state,
             if (flashy || !shading) {
                 /* clear all background flags */
             } else if (ui->sel && ui->sel[y*w+x]) {
-                flags |= CURSOR_BG;
+                flags |= HIGH_BG;
             } else if (v) {
                 int size = dsf_size(ds->dsf_scratch, y*w+x);
                 if (size == v)
@@ -1466,6 +1515,8 @@ static void draw_grid(drawing *dr, game_drawstate *ds, game_state *state,
                 else if (size > v)
                     flags |= ERROR_BG;
             }
+            if (ui->cur_visible && x == ui->cur_x && y == ui->cur_y)
+              flags |= CURSOR_SQ;
 
             /*
              * Borders at the very edges of the grid are
@@ -1578,64 +1629,6 @@ static int game_timing_state(game_state *state, game_ui *ui)
     return TRUE;
 }
 
-static void game_print_size(game_params *params, float *x, float *y)
-{
-    int pw, ph;
-
-    /*
-     * I'll use 6mm squares by default.
-     */
-    game_compute_size(params, 600, &pw, &ph);
-    *x = pw / 100.0;
-    *y = ph / 100.0;
-}
-
-static void game_print(drawing *dr, game_state *state, int tilesize)
-{
-    const int w = state->shared->params.w;
-    const int h = state->shared->params.h;
-    int c, i, borders;
-
-    /* Ick: fake up `ds->tilesize' for macro expansion purposes */
-    game_drawstate *ds = game_new_drawstate(dr, state);
-    game_set_size(dr, ds, NULL, tilesize);
-
-    c = print_mono_colour(dr, 1); assert(c == COL_BACKGROUND);
-    c = print_mono_colour(dr, 0); assert(c == COL_GRID);
-    c = print_mono_colour(dr, 1); assert(c == COL_HIGHLIGHT);
-    c = print_mono_colour(dr, 1); assert(c == COL_CORRECT);
-    c = print_mono_colour(dr, 1); assert(c == COL_ERROR);
-    c = print_mono_colour(dr, 0); assert(c == COL_USER);
-
-    /*
-     * Border.
-     */
-    draw_rect(dr, BORDER - BORDER_WIDTH, BORDER - BORDER_WIDTH,
-              w*TILE_SIZE + 2*BORDER_WIDTH + 1,
-              h*TILE_SIZE + 2*BORDER_WIDTH + 1,
-              COL_GRID);
-
-    /*
-     * We'll draw borders between the ominoes iff the grid is not
-     * pristine. So scan it to see if it is.
-     */
-    borders = FALSE;
-    for (i = 0; i < w*h; i++)
-        if (state->board[i] && !state->shared->clues[i])
-            borders = TRUE;
-
-    /*
-     * Draw grid.
-     */
-    print_line_width(dr, TILE_SIZE / 64);
-    draw_grid(dr, ds, state, NULL, FALSE, borders, FALSE);
-
-    /*
-     * Clean up.
-     */
-    game_free_drawstate(dr, ds);
-}
-
 #ifdef COMBINED
 #define thegame filling
 #endif
@@ -1671,7 +1664,7 @@ const struct game thegame = {
     game_redraw,
     game_anim_length,
     game_flash_length,
-    TRUE, FALSE, game_print_size, game_print,
+    FALSE, FALSE, NULL, NULL,
     FALSE,				   /* wants_statusbar */
     FALSE, game_timing_state,
     REQUIRE_NUMPAD,		       /* flags */

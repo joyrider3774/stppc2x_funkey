@@ -3,8 +3,6 @@
  *        Specifically targetted at the GP2X Linux-based handheld console.
  */
 
-#define STPPC2X_VERSION "STPPC2x v1.0"
-
 // DEBUGGING
 // =========
 
@@ -30,6 +28,16 @@
 // doesn't seem to bother Valgrind anyway.
 // #define OPTION_USE_THREADS
 
+// Define this to show a tickmark in the main menu for games with the
+// REQUIRE_MOUSE_INPUT flag (currently, there are no games that NEED a mouse
+// anymore)
+// #define OPTION_SHOW_IF_MOUSE_NEEDED
+
+// Define this to check whether we are running on a GP2X and the model we are
+// using.  Pretty useless for now, but might come in handy for, e.g. The Wiz.
+// #define OPTION_CHECK_HARDWARE
+
+
 // VIDEO STORAGE AND ACCELERATION
 // ==============================
 
@@ -48,7 +56,12 @@
  
 #define FAST_SDL_EVENTS              // Use the SDL Fast Events code
 #define WAIT_FOR_EVENTS              // Sleep briefly when no events are pending
-#define EVENTS_IN_SEPERATE_THREAD    // Spawn a seperate thread to handle events
+
+#if defined(_WIN32) || defined(__CYGWIN__)
+    // Windows-ish thing detected.  Probably doesn't support pthreads.  Disabling event threads.
+#else
+    #define EVENTS_IN_SEPERATE_THREAD    // Spawn a seperate thread to handle events
+#endif
 
 // Standard C includes
 // ===================
@@ -68,6 +81,7 @@
 // Puzzle collection include
 // =========================
 #include "puzzles.h"
+#include "malloc.h"
 
 // SDL library includes
 // ====================
@@ -129,14 +143,22 @@
 #define FCLK_64                         15
 
 // Constants used in SDL user-defined events
-#define RUN_GAME_TIMER_LOOP	(1)  // Game timer for midend
-#define RUN_MOUSE_TIMER_LOOP	(2)  // "Mouse" timer for joystick control
+// RUN_GAME_TIMER_LOOP - Game timer for midend
+// RUN_MOUSE_TIMER_LOOP	- "Mouse" timer for joystick control
+// RUN_SECOND_TIMER_LOOP - Regular 1 per second timer, for non-critical events.
+enum { RUN_GAME_TIMER_LOOP, RUN_MOUSE_TIMER_LOOP, RUN_SECOND_TIMER_LOOP};
 
 // Timer Intervals
 // Generally, game timer interval has to be larger than mouse timer or the game won't
 //  able to draw all the mouse movements properly and in time.
+// DO NOT MAKE THESE TWO NUMBERS THE SAME.  The interval is used to distinguish 
+// between the events in a consolidated timer function.
 #define SDL_GAME_TIMER_INTERVAL  (50)  // Interval in milliseconds for game timer
 #define SDL_MOUSE_TIMER_INTERVAL (25)  // Interval in milliseconds for mouse timer
+
+// Number of seconds that a statusbar message should stay on the screen.
+#define STATUSBAR_TIMEOUT (3)
+
 #define ANIMATION_DELAY          (200) // Interval in milliseconds for the delay
                                        // between frames in the loading animation.
 
@@ -212,6 +234,11 @@
 // Path for music files
 #define MUSIC_PATH "music/"
 
+// The longest internal name of any game to crop all filenames
+// etc. to.  Longest name is "Black Box" or "Rectangles" at the
+// moment.
+#define MAX_GAMENAME_SIZE               10
+
 // Unicode values for special characters
 #define UNICODE_TICK_CHAR   "\342\234\224"
 //                          = bold tick
@@ -229,6 +256,7 @@
 //
 #define UNICODE_STYLUS     "\342\234\215"
 //
+#define UNICODE_NUMERO     "\342\204\226"
 
 // Other Unicode values.
 // (not all supported by DejaVu fonts)
@@ -243,51 +271,6 @@
 // "\342\231\252" = Eighth Note
 // "\342\214\250" = Keyboard
 // "\342\234\215" = writing hand
-
-
-static const char *hourglass[] = {
-  /* width height num_colors chars_per_pixel */
-  "    32    32        3            1",
-  /* colors */
-  "X c #000000",
-  ". c #ffffff",
-  "  c None",
-  /* pixels */
-  ".............                   ",
-  ".XXXXXXXXXXX.                   ",
-  ".X.X.X.X.X.X.                   ",
-  ".XX.X.X.X.XX.                   ",
-  ".X.X.X.X.X.X.                   ",
-  " .X.X.X.X.X.                    ",
-  "  .X.X.X.X.                     ",
-  "   .X.X.X.                      ",
-  "    .X.X.                       ",
-  "     .X.                        ",
-  "    .X.X.                       ",
-  "   .X.X.X.                      ",
-  "  .X.X.X.X.                     ",
-  " .X.X.X.X.X.                    ",
-  ".X.X.X.X.X.X.                   ",
-  ".XX.X.X.X.XX.                   ",
-  ".X.X.X.X.X.X.                   ",
-  ".XXXXXXXXXXX.                   ",
-  ".............                   ",
-  "                                ",
-  "                                ",
-  "                                ",
-  "                                ",
-  "                                ",
-  "                                ",
-  "                                ",
-  "                                ",
-  "                                ",
-  "                                ",
-  "                                ",
-  "                                ",
-  "                                ",
-  "0,0"
-};
-
 
 #ifdef DEBUGGING
 static FILE *debug_fp = NULL;
@@ -398,6 +381,7 @@ struct global_configuration
     uint autosave_on_exit;
     uint always_load_autosave;
     uint play_music;
+    uint screenshots_enabled;
     uint screenshots_include_cursor;
     uint screenshots_include_statusbar;
     uint control_system;
@@ -423,25 +407,26 @@ struct frontend
     uint timer_was_active;		// Whether the timer was enabled before we paused or not.
     struct timeval last_time;		// Last time the midend game timer was run.
     config_item *cfg;                   // The game's configuration options
-    uint ncfg;                           // Number of configuration options
+    uint ncfg;                          // Number of configuration options
     int pw, ph;				// Puzzle size
     int ox, oy;				// Offset of puzzle in drawing area (for centering)
     SDL_Surface *screen;		// Main screen
     SDL_Joystick *joy;			// Joystick
     SDL_TimerID sdl_mouse_timer_id;	// "Mouse" timer
     SDL_TimerID sdl_timer_id;		// Midend game timer
-    uint solveable;			// True if the game is solveable
+    SDL_TimerID sdl_second_timer_id;	// Once per second utility timer
     struct font *fonts;			// A cache of loaded fonts at particular fontsizes
-    uint nfonts;				// Number of cached fonts
-    uint paused;				// True if paused (menu showing)
+    uint nfonts;			// Number of cached fonts
+    uint paused;			// True if paused (menu showing)
     SDL_Rect clipping_rectangle;	// Clipping rectangle in use by the game.
     char *configure_window_title;	// The window title for the configure window
-    struct config_window_option *config_window_options;		
+    struct config_window_option *config_window_options;
 					// The games configuration options, with extra information
 					// used for determining the position on screen.
     dictionary *ini_dict;		// In-memory INI "dictionary"
     char* sanitised_game_name;          // A copy of the game name suitable for use in filenames
     uint first_preset_showing;          // The preset currently at the top of the preset menu.
+    struct timeval last_statusbar_update;		// Last time the status bar was updated.    
 };
 
 struct button_status *bs;
@@ -451,8 +436,7 @@ uint screen_width, screen_height, current_screen;
 int savegame_to_delete=-1;
 int respawn_gp2x_menu=TRUE;
 
-SDL_Cursor *hourglass_cursor;
-SDL_Cursor *arrow_cursor;
+extern char stppc2x_ver[];
 
 struct global_configuration *global_config;
 
@@ -494,7 +478,10 @@ uint music_track_changed=FALSE;
 uint helpfile_showing=FALSE;
 
 enum{UNKNOWN, NOT_GP2X, GP2X_F100, GP2X_F200};
+
+#ifdef OPTION_CHECK_HARDWARE
 int hardware_type=UNKNOWN;
+#endif
 
 uint first_run=TRUE;
 
@@ -573,7 +560,7 @@ void actual_lock_surface(SDL_Surface *surface)
 	    exit(EXIT_FAILURE);
         }
     }
-};
+}
 
 // Unlocks a surface
 void Unlock_SDL_Surface(frontend *fe)
@@ -645,6 +632,9 @@ void cleanup(frontend *fe)
 
     if(fe->cfg != NULL)
         free_cfg(fe->cfg);
+
+    if(SDL_JoystickOpened(0))
+        SDL_JoystickClose(fe->joy);
 };
 
 void cleanup_and_exit(frontend *fe, int return_value)
@@ -656,9 +646,9 @@ void cleanup_and_exit(frontend *fe, int return_value)
     sfree(loading_flag);
     if(loading_screen != NULL)
         SDL_FreeSurface(loading_screen);
-    SDL_FreeCursor(hourglass_cursor);
     cleanup(fe);
     sfree(fe);
+    DestroyMemPool();
 #ifdef BACKGROUND_MUSIC
     Mix_CloseAudio();
 #endif
@@ -680,7 +670,7 @@ void get_random_seed(void **randseed, int *randseedsize)
 #endif
 /*
     // Initialise the random seed using the number of milliseconds
-    // since SDL was initialisation.
+    // since SDL initialisation.
     Uint32 *milliseconds_since_SDL_initialisation = snew(Uint32);
     *milliseconds_since_SDL_initialisation=SDL_GetTicks();
     *randseed = (void *)milliseconds_since_SDL_initialisation;
@@ -883,9 +873,10 @@ void sdl_draw_text(void *handle, int x, int y, int fonttype, int fontsize, int a
     sdl_actual_draw_text(handle, x + fe->ox, y + fe->oy, fonttype, fontsize, align, colour, text);
 }
 
-// Draws coloured text - The games as of SVN 7703 only ever use fonttype=FONT_VARIABLE but this
-// supports all possible combinations.  This is also used to draw text for various internal
-// functions like the pause menu, help file, configuration options etc.
+// Draws coloured text - The games only ever really use fonttype=FONT_VARIABLE (maze3d has one 
+// instance of fixed-width fonts) but this supports all possible combinations.  
+// This is also used to draw text for various internal functions like the pause menu, help file,
+// configuration options etc.
 void sdl_actual_draw_text(void *handle, int x, int y, int fonttype, int fontsize, int align, int colour, char *text)
 {
 #ifdef DEBUG_FUNCTIONS
@@ -962,8 +953,6 @@ void sdl_draw_rect(void *handle, int x, int y, int w, int h, int colour)
     sdl_actual_draw_rect(handle, x + fe->ox, y + fe->oy, w, h, colour);
 }
 
-// Could be buggy due to difference in GTK/SDL_gfx routines - this is the cause of map's 
-// stray lines??
 void sdl_actual_draw_rect(void *handle, int x, int y, int w, int h, int colour)
 {
 #ifdef DEBUG_FUNCTIONS
@@ -1052,7 +1041,8 @@ void sdl_draw_poly(void *handle, int *coords, int npoints, int fillcolour, int o
 /*
 UNUSED
     // This draws the outline of the polygon using calls to the other existing frontend functions.
-    // It seems to function identically to the above but helped during initial debugging.
+    // It seems to function identically to the above but is probably a lot slower.  It helped during 
+    // initial debugging.
     for (i = 0; i < npoints; i++)
     {
 	sdl_draw_line(fe, xpoints[i], ypoints[i], xpoints[(i+1)%npoints], ypoints[(i+1)%npoints],outlinecolour);
@@ -1085,6 +1075,40 @@ void sdl_draw_circle(void *handle, int cx, int cy, int radius, int fillcolour, i
     if( !(cx < 0) && !(cy < 0) && !(cx > (int)screen_width) && !(cy > (int)screen_height))
         circleRGBA(fe->screen, (Sint16) (cx + fe->ox), (Sint16) (cy + fe->oy), (Sint16)radius, fe->sdlcolours[outlinecolour].r, fe->sdlcolours[outlinecolour].g, fe->sdlcolours[outlinecolour].b, 255);
 }
+
+void clear_statusbar(void *handle)
+{
+    frontend *fe = (frontend *)handle;
+    sdl_no_clip(fe);
+
+    // If we've drawn text on the status bar before
+    if(fe->last_status_bar_w || fe->last_status_bar_h)
+    {
+        if((current_screen != GAMELISTMENU) && (current_screen != MUSICCREDITSMENU))
+        {
+            if(fe->paused)
+            {
+                // Blank over the last status bar messages using a black rectangle.
+                sdl_actual_draw_rect(fe, 0, 0, fe->last_status_bar_w, fe->last_status_bar_h, fe->black_colour);
+            }
+            else
+            {
+                // Blank over the last status bar messages using a background-coloured
+                // rectangle.
+                sdl_actual_draw_rect(fe, 0, 0, fe->last_status_bar_w, fe->last_status_bar_h, fe->background_colour);
+            };                
+            sdl_actual_draw_update(fe, 0, 0, fe->last_status_bar_w, fe->last_status_bar_h);
+        };
+    };
+    
+    // Update variables so that we know how much screen to "blank" next time round.
+    fe->last_status_bar_w=0;
+    fe->last_status_bar_h=0;
+ 
+    if(!fe->paused)
+        sdl_unclip(fe);
+};
+
 
 // Routine to handle showing "status bar" messages to the user.
 // These are used by both the midend to signal game information and the SDL interface to 
@@ -1164,8 +1188,6 @@ void sdl_status_bar(void *handle, char *text)
                         // rectangle.
                         sdl_actual_draw_rect(fe, 0, 0, fe->last_status_bar_w, fe->last_status_bar_h, fe->background_colour);
                     };                
-                    // Cause a screen update over the relevant area.
-                    sdl_actual_draw_update(fe, 0, 0, fe->last_status_bar_w, fe->last_status_bar_h);
                 };
             };
 
@@ -1187,6 +1209,8 @@ void sdl_status_bar(void *handle, char *text)
             // Update variables so that we know how much screen to "blank" next time round.
             fe->last_status_bar_w=text_surface->w;
             fe->last_status_bar_h=text_surface->h;
+ 
+            gettimeofday(&fe->last_statusbar_update,NULL);
 
             // Remove the temporary text surface
             SDL_FreeSurface(text_surface);
@@ -1445,6 +1469,28 @@ static void configure_area(int x, int y, void *data)
 #endif
 }
 
+// Called once a second to perform menial tasks.
+Uint32 sdl_second_timer_func(Uint32 interval, void *data)
+{
+    frontend *fe = (frontend *)data;
+    SDL_Event event;
+
+    gettimeofday(&fe->last_time, NULL);
+
+    // Generate a user event and push it to the event queue so that the event does
+    // the work and not the timer (you can't run SDL code inside an SDL timer)
+
+    event.type = SDL_USEREVENT;
+    event.user.code = RUN_SECOND_TIMER_LOOP;
+    event.user.data1 = 0;
+    event.user.data2 = 0;
+            
+    Push_SDL_Event(&event);
+
+    // Specify to run this event again in interval milliseconds.
+    return interval;
+}
+
 // Called regularly whenever the midend enables a timer.
 Uint32 sdl_timer_func(Uint32 interval, void *data)
 {
@@ -1656,7 +1702,7 @@ int read_game_helpfile(frontend *fe)
     char* filename;
     int result;
 
-    filename=snewn(255,char);
+    filename=snewn(MAX_GAMENAME_SIZE + sizeof(MENU_HELPFILES) + 1,char);
     sprintf(filename, MENU_HELPFILES, fe->sanitised_game_name);
     result=show_file_on_screen(fe, filename);
     sfree(filename);
@@ -1680,7 +1726,7 @@ static frontend *new_window(char *arg, int argtype, char **error)
     fe = snew(frontend);
     memset(fe, 0, sizeof(struct frontend));
 
-// Probably redundant now because of the memset.
+    // Probably redundant now because of the memset.
     fe->ini_dict=NULL;
     fe->cfg=NULL;
     fe->config_window_options=NULL;
@@ -1755,21 +1801,37 @@ void draw_menu(frontend *fe, uint menu_index)
             sdl_status_bar(fe,"Paused.");
 
             // Print STPPC2x and the game name at the top of the screen.
-            sdl_actual_draw_text(fe, screen_width / 2, 2*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HCENTRE, fe->white_colour, STPPC2X_VERSION);
+            sdl_actual_draw_text(fe, screen_width / 2, 2*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HCENTRE, fe->white_colour, stppc2x_ver);
             sdl_actual_draw_text(fe, screen_width / 2, 3*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HCENTRE, fe->white_colour, (char *) gamelist[current_game_index]->name);
 
             // Draw a seperating line
             sdl_actual_draw_line(fe, 0, 3*(MENU_FONT_SIZE+2) + (MENU_FONT_SIZE+2)/2, screen_width, 3*(MENU_FONT_SIZE+2) + (MENU_FONT_SIZE+2)/2,fe->white_colour);
 
             // Draw the menu items.
-            sdl_actual_draw_text(fe, 10, 5*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "New Game");
-            sdl_actual_draw_text(fe, 10, 6*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "Restart Current Game");
-            sdl_actual_draw_text(fe, 10, 7*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "Configure Game");
-            sdl_actual_draw_text(fe, 10, 8*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "Save / Load Game");
-            sdl_actual_draw_text(fe, 10, 9*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "Global Settings");
-            sdl_actual_draw_text(fe, 10, 10*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "Help");
-            sdl_actual_draw_text(fe, 10, 11*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "Credits");
-            sdl_actual_draw_text(fe, 10, 12*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "Quit to main menu");
+            sdl_actual_draw_text(fe, 10, 5*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "Return to Game");
+            sdl_actual_draw_text(fe, 10, 6*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "New Game");
+            sdl_actual_draw_text(fe, 10, 7*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "Restart Current Game");
+            sdl_actual_draw_text(fe, 10, 8*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "Configure Game");
+            sdl_actual_draw_text(fe, 10, 9*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "Save / Load Game");
+            sdl_actual_draw_text(fe, 10, 10*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "Global Settings");
+            sdl_actual_draw_text(fe, 10, 11*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "Help");
+            sdl_actual_draw_text(fe, 10, 12*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "Credits");
+            sdl_actual_draw_text(fe, 10, 13*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "Quit to main menu");
+
+            // Draw a seperating line
+            sdl_actual_draw_line(fe, 0, 14*(MENU_FONT_SIZE+2) + (MENU_FONT_SIZE+2)/2, screen_width, 14*(MENU_FONT_SIZE+2) + (MENU_FONT_SIZE+2)/2,fe->white_colour);
+
+            // Draw the SVN version number at the bottom of the screen.
+            char *number_of_games, *version;
+            version=snewn(45,char);
+            sprintf(version, "Based on SVN %s, compiled on", ver);
+
+            number_of_games=snewn(sizeof(__DATE__) + sizeof(__TIME__) + 28,char);
+            sprintf(number_of_games, "%s, %s and containing %u games", __DATE__, __TIME__, gamecount);
+            sdl_actual_draw_text(fe, screen_width / 2, 16*(MENU_FONT_SIZE+2), FONT_VARIABLE, HELP_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HCENTRE, fe->white_colour, version);
+            sdl_actual_draw_text(fe, screen_width / 2, 17*(MENU_FONT_SIZE+2), FONT_VARIABLE, HELP_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HCENTRE, fe->white_colour, number_of_games);
+            sfree(version);
+            sfree(number_of_games);
             break;
 
         case SAVEMENU:
@@ -1882,7 +1944,7 @@ void draw_menu(frontend *fe, uint menu_index)
                         // Kludge - if the option name is "Barrier probablity", it's probably 
                         // expecting decimal numbers instead of integers, so add the relevant 
                         // ".0" to the end of the value.
-                        // This is for "net".
+                        // This is for "net" and "netslide".
                         if(!strcmp(fe->cfg[j].name,"Barrier probability"))
                             sprintf(fe->cfg[j].sval, "%.2f", atof(fe->cfg[j].sval));
 
@@ -1906,10 +1968,7 @@ void draw_menu(frontend *fe, uint menu_index)
                     case C_BOOLEAN:
                         // Print true (unicode tick) or false (unicode cross) depending on 
                         // the current value.
-                        if(fe->cfg[j].ival)
-                            sdl_actual_draw_text(fe, screen_width * 7 / 10, current_y, FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, UNICODE_TICK_CHAR);
-                        else
-                            sdl_actual_draw_text(fe, screen_width * 7 / 10, current_y, FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, UNICODE_CROSS_CHAR);
+                        sdl_actual_draw_text(fe, screen_width * 7 / 10, current_y, FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, fe->cfg[j].ival?UNICODE_TICK_CHAR:UNICODE_CROSS_CHAR);
 
                         // Store y position of this menu item
                         fe->config_window_options[fe->ncfg-1].y=current_y;
@@ -2012,7 +2071,7 @@ void draw_menu(frontend *fe, uint menu_index)
 #endif
                         // Put a tick beside the preset that it matches.
                         sdl_actual_draw_text(fe, screen_width * 9 / 10, current_y, FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, UNICODE_TICK_CHAR);
-                    };                
+                    };
                     current_y+=MENU_FONT_SIZE + 2;
                 };
             };
@@ -2081,7 +2140,7 @@ void draw_menu(frontend *fe, uint menu_index)
             sdl_actual_draw_text(fe, 10, 6*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "Music:");
             sdl_actual_draw_text(fe, 20, 7*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "Play Music");
             sdl_actual_draw_text(fe, 20, 8*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "Select Tracks...");
-            sdl_actual_draw_text(fe, 10, 9*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "Screenshots:");
+            sdl_actual_draw_text(fe, 10, 9*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "Screenshots");
             sdl_actual_draw_text(fe, 20, 10*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "Include cursor");
             sdl_actual_draw_text(fe, 20, 11*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "Include status text");
             sdl_actual_draw_text(fe, 10, 12*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "Auto-save Game on Exit");
@@ -2091,6 +2150,7 @@ void draw_menu(frontend *fe, uint menu_index)
             sdl_actual_draw_text(fe, 20, 16*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "Cursor Keys Emulation");
 
             sdl_actual_draw_text(fe, screen_width * 7 / 10, 7*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, global_config->play_music?UNICODE_TICK_CHAR:UNICODE_CROSS_CHAR);
+            sdl_actual_draw_text(fe, screen_width * 7 / 10, 9*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, global_config->screenshots_enabled?UNICODE_TICK_CHAR:UNICODE_CROSS_CHAR);
             sdl_actual_draw_text(fe, screen_width * 7 / 10, 10*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, global_config->screenshots_include_cursor?UNICODE_TICK_CHAR:UNICODE_CROSS_CHAR);
             sdl_actual_draw_text(fe, screen_width * 7 / 10, 11*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, global_config->screenshots_include_statusbar?UNICODE_TICK_CHAR:UNICODE_CROSS_CHAR);
             sdl_actual_draw_text(fe, screen_width * 7 / 10, 12*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, global_config->autosave_on_exit?UNICODE_TICK_CHAR:UNICODE_CROSS_CHAR);
@@ -2360,39 +2420,18 @@ void Main_SDL_Loop(void *handle)
     bs=snew(struct button_status);
     memset(bs, 0, sizeof(struct button_status));
 
+    max_digit_to_input=-1;
+    min_digit_to_input=0;
     uint digit_to_input=1;
     char digit_to_input_as_string[21];
     char current_save_slot_as_string[2];
     int keyval;
     struct timeval now;
     float elapsed;
+    int debounce_start_button=0;
 
     signed int old_mouse_x;
     signed int old_mouse_y;
-
-    // Initialise the bs structure (there are quicker ways, I know).
-    bs->mouse_left=0;
-    bs->mouse_middle=0;
-    bs->mouse_right=0;
-    bs->joy_upleft=0;
-    bs->joy_upright=0;
-    bs->joy_downleft=0;
-    bs->joy_downright=0;
-    bs->joy_up=0;
-    bs->joy_down=0;
-    bs->joy_left=0;
-    bs->joy_right=0;
-    bs->joy_l=0;
-    bs->joy_r=0;
-    bs->joy_a=0;
-    bs->joy_b=0;
-    bs->joy_x=0;
-    bs->joy_y=0;
-    bs->joy_start=0;
-    bs->joy_select=0;
-    bs->joy_volup=0;
-    bs->joy_voldown=0;
-    bs->joy_stick=0;
 
     // Move the mouse to the center of the puzzle screen.
     mouse_x=fe->ox +(fe->pw / 2);
@@ -2400,7 +2439,6 @@ void Main_SDL_Loop(void *handle)
     SDL_WarpMouse(mouse_x, mouse_y);
 
     // Start off a timer every SDL_MOUSE_TIMER_INTERVAL ms to update the mouse co-ordinates.
-
     fe->sdl_mouse_timer_id=SDL_AddTimer(SDL_MOUSE_TIMER_INTERVAL, sdl_mouse_timer_func, fe);
     if(fe->sdl_mouse_timer_id)
     {
@@ -2413,6 +2451,22 @@ void Main_SDL_Loop(void *handle)
         printf("Error creating mouse timer.\n");
         cleanup_and_exit(fe, EXIT_FAILURE);
     };
+
+    // Start off a timer every 1000 ms
+    fe->sdl_second_timer_id=SDL_AddTimer(1000, sdl_second_timer_func, fe);
+
+    if(fe->sdl_mouse_timer_id)
+    {
+#ifdef DEBUG_MISC
+        printf("Second timer created.\n");
+#endif
+    }
+    else
+    {
+        printf("Error creating second timer.\n");
+        cleanup_and_exit(fe, EXIT_FAILURE);
+    };
+
 
     // Main program loop
     while(TRUE)
@@ -2495,14 +2549,6 @@ void Main_SDL_Loop(void *handle)
                                         SDL_WarpMouse((Uint16) mouse_x, (Uint16) mouse_y);
                                     };
 
-                                    if(current_screen == MUSICMENU)
-                                    {
-                                        if(music_track_changed)
-                                        {
-                                            music_track_changed=FALSE;
-                                            draw_menu(fe,MUSICMENU);
-                                        };
-                                    };
                                 break; // switch( event.user.code) case MOUSE_TIMER_LOOP
 
                             // Game midend timer calls this
@@ -2527,6 +2573,34 @@ void Main_SDL_Loop(void *handle)
                                     fe->last_time = now;
                                 };
 	                        break; // switch( event.user.code ) case RUN_GAME_TIMER_LOOP
+
+                            case RUN_SECOND_TIMER_LOOP:
+#ifdef DEBUG_TIMER
+                                print_time();
+                                printf("Second timer fired.\n");
+#endif
+
+                                // Keep track of the display of the current music track in the Music menu.
+                                if(current_screen == MUSICMENU)
+                                { 
+                                    if(music_track_changed)
+                                    {
+                                        music_track_changed=FALSE;
+                                        draw_menu(fe,MUSICMENU);
+                                    };
+                                };
+                                  
+                                // If it's been 5 seconds since the last statusbar change, clear
+                                // the statusbar.
+                                gettimeofday(&now, NULL);
+                                elapsed = ((now.tv_usec - fe->last_statusbar_update.tv_usec) * 0.000001F + (now.tv_sec - fe->last_statusbar_update.tv_sec));
+
+                                if(elapsed > STATUSBAR_TIMEOUT)
+                                    clear_statusbar(fe);
+                                if(debounce_start_button > 0)
+                                    debounce_start_button--;
+	                        break; // switch( event.user.code ) case RUN_SECOND_TIMER_LOOP
+
                         }; // switch( event.user.code)
                     break; // switch( event.type ) case SDL_USEREVENT
 
@@ -2634,10 +2708,18 @@ void Main_SDL_Loop(void *handle)
                             break;
 
                         case GP2X_BUTTON_UPLEFT:
+                            if((current_screen == INGAME) && (global_config->control_system == CURSOR_KEYS_EMULATION) && !(bs->joy_up) && !(bs->joy_left))
+                            {
+                                process_key(fe, 0, 0, MOD_NUM_KEYPAD | '7');
+                            };
                             bs->joy_upleft=1;
                             break;
 
                         case GP2X_BUTTON_UPRIGHT:
+                            if((current_screen == INGAME) && (global_config->control_system == CURSOR_KEYS_EMULATION) && !(bs->joy_up) && !(bs->joy_right))
+                            {
+                                process_key(fe, 0, 0, MOD_NUM_KEYPAD | '9');
+                            };
                             bs->joy_upright=1;
                             break;
 
@@ -2662,10 +2744,18 @@ void Main_SDL_Loop(void *handle)
                             break;
 
                         case GP2X_BUTTON_DOWNLEFT:
+                            if((current_screen == INGAME) && (global_config->control_system == CURSOR_KEYS_EMULATION) && !(bs->joy_down) && !(bs->joy_left))
+                            {
+                                process_key(fe, 0, 0, MOD_NUM_KEYPAD | '1');
+                            };
                             bs->joy_downleft=1;
                             break;
 
                         case GP2X_BUTTON_DOWNRIGHT:
+                            if((current_screen == INGAME) && (global_config->control_system == CURSOR_KEYS_EMULATION) && !(bs->joy_down) && !(bs->joy_right))
+                            {
+                                process_key(fe, 0, 0, MOD_NUM_KEYPAD | '3');
+                            };
                             bs->joy_downright=1;
                             break;
 
@@ -2767,8 +2857,22 @@ void Main_SDL_Loop(void *handle)
                                     // Convert the current digit to ASCII, then make it look like it 
                                     // was typed in at the keyboard, to allow entering numbers into
                                     // solo, unequal, etc.  (48=ASCII value of the 0 key)
-                                    keyval = MOD_NUM_KEYPAD | (digit_to_input + 48);
-                                    process_key(fe, 0, 0, keyval);
+
+                                    if((digit_to_input >= 0) && (digit_to_input <= max_digit_to_input))
+                                    {
+                                        // If it's a letter from a to z that need inputting...
+                                        if((digit_to_input > 9) && (digit_to_input < 36))
+                                        {
+                                            // 97 = ASCII value of "a"
+                                            keyval = digit_to_input + 97 - 10;
+                                            process_key(fe, 0, 0, keyval);
+                                        }
+                                        else
+                                        {
+                                            keyval = MOD_NUM_KEYPAD | (digit_to_input + 48);                                        
+                                            process_key(fe, 0, 0, keyval);
+                                        };
+                                    };
                                 }
                                 else
                                 {
@@ -2791,10 +2895,7 @@ void Main_SDL_Loop(void *handle)
                                 {
                                     if(global_config->autosave_on_exit)
                                     {
-                                        char *result;
-                                        result=autosave_game(fe);
-                                        sdl_status_bar(fe, result);
-                                        sfree(result);
+                                        sdl_status_bar(fe, autosave_game(fe));
                                     };
                                     // Quit back to the menu
                                     menu_loop(fe);
@@ -2819,11 +2920,22 @@ void Main_SDL_Loop(void *handle)
                                     if(this_game.flags & REQUIRE_NUMPAD)
                                     {
                                         // Cycle the number we would input
-                                        if(digit_to_input == 1)
-                                            digit_to_input = 9;
-                                        else
+                                        if(digit_to_input <= min_digit_to_input)
+                                            digit_to_input = max_digit_to_input;
+                                        else if(digit_to_input <= max_digit_to_input)
                                             digit_to_input -= 1;
-                                        sprintf(digit_to_input_as_string, "Press X to enter a %u", digit_to_input);
+                                        else
+                                            digit_to_input = max_digit_to_input;
+
+                                        if((digit_to_input > 9) && (digit_to_input < 36))
+                                        {
+                                            // 65 = ASCII value of "A"
+                                            sprintf(digit_to_input_as_string, "Press X to enter a \'%c\'", digit_to_input + 65 - 10);
+                                        }
+                                        else
+                                        {
+                                            sprintf(digit_to_input_as_string, "Press X to enter a \'%u\'", digit_to_input);
+                                        };
                                         sdl_status_bar(fe,digit_to_input_as_string);
                                     }
                                     else
@@ -2848,10 +2960,7 @@ void Main_SDL_Loop(void *handle)
                                 {
                                     if(global_config->autosave_on_exit)
                                     {
-                                        char *result;
-                                        result=autosave_game(fe);
-                                        sdl_status_bar(fe, result);
-                                        sfree(result);
+                                        sdl_status_bar(fe, autosave_game(fe));
                                     };
                                     // Quit back to the menu
                                     menu_loop(fe);
@@ -2876,9 +2985,19 @@ void Main_SDL_Loop(void *handle)
                                     {
                                         // Cycle the number we would input
                                         digit_to_input += 1;
-                                        if(digit_to_input > 9)
-                                            digit_to_input = 1;
-                                        sprintf(digit_to_input_as_string, "Press X to enter a %u", digit_to_input);
+
+                                        if((digit_to_input > max_digit_to_input) || (digit_to_input < min_digit_to_input))
+                                            digit_to_input = min_digit_to_input;
+
+                                        if((digit_to_input > 9) && (digit_to_input < 36))
+                                        {
+                                            // 65 = ASCII value of "a"
+                                            sprintf(digit_to_input_as_string, "Press X to enter a \'%c\'", digit_to_input + 65 - 10);
+                                        }
+                                        else
+                                        {
+                                            sprintf(digit_to_input_as_string, "Press X to enter a \'%u\'", digit_to_input);
+                                        };
                                         sdl_status_bar(fe,digit_to_input_as_string);
                                     }
                                     else
@@ -2958,6 +3077,9 @@ void Main_SDL_Loop(void *handle)
                             break;
 
                         case GP2X_BUTTON_START:
+                            if(debounce_start_button==0)
+                            {
+
                             if(current_screen == GAMELISTMENU)
                             {
                                 // If we're still showing the about screen (or have acquired an invalid game index)
@@ -2969,6 +3091,7 @@ void Main_SDL_Loop(void *handle)
                                 }
                                 else
                                 {
+                                    debounce_start_button=1;
                                     // If we're holding down the L or R button
                                     if((bs->joy_l == 1) || (bs->joy_r == 1))
                                     {
@@ -2988,11 +3111,14 @@ void Main_SDL_Loop(void *handle)
                                 fe->paused=!fe->paused;
                                 game_pause(fe);
                             };
+                            };
                             break;
 
                         case GP2X_BUTTON_SELECT:
                             if(current_screen == GAMELISTMENU)
                             {
+                                clear_statusbar(fe);
+                                sdl_status_bar(fe,"Quitting...");
                                 cleanup_and_exit(fe, EXIT_SUCCESS);
                             }
                             else if(current_screen == GAMEMENU)
@@ -3013,6 +3139,7 @@ void Main_SDL_Loop(void *handle)
                             break;
 
                         case GP2X_BUTTON_CLICK:
+                            if(global_config->screenshots_enabled)
                             {
                             char save_filename[20];
                             int i;
@@ -3103,6 +3230,7 @@ void Main_SDL_Loop(void *handle)
                             break;
 
                         case SDLK_q:
+                            clear_statusbar(fe);
                             sdl_status_bar(fe,"Quitting...");
                             cleanup_and_exit(fe, EXIT_SUCCESS);
                             break;
@@ -3335,24 +3463,34 @@ void Main_SDL_Loop(void *handle)
                                 }
                                 else
                                 {
+                                    // If we clicked on the left hand side (list of games)
                                     if(event.button.x < 160)
                                     {
+                                        // If we clicked the up arrow...
                                         if(current_line == 2)
                                             current_game_index--;
+                                        // If we clicked a game...
                                         else if((current_line > 2) && (current_line < 16))
                                             current_game_index = current_game_index + (current_line - 3);
+                                        // If we clicked the down arrow...
                                         else if(current_line == 16)
                                             current_game_index++;
+
+                                        // Make sure the current_game_index stays within bound.
                                         if(current_game_index < 0)
                                             current_game_index = gamecount - 1;
                                         if(current_game_index > (gamecount -1))
                                             current_game_index = 0;
+ 
+                                        // Redraw the menu.
                                         redraw_gamelist_menu(fe);
                                     }
                                     else
                                     {
+                                        // If we clicked near the bottom.
                                         if(event.button.y > 220)
                                         {
+                                            // If we clicked the words "Start game".
                                             if((event.button.x > 160) && (event.button.x < 250))
                                             {
                                                 // If we're holding down the L or R button
@@ -3367,8 +3505,11 @@ void Main_SDL_Loop(void *handle)
                                                     start_game(fe, current_game_index, FALSE);
                                                 };
                                             } 
+                                            // If we clicked the word "Exit".
                                             else if(event.button.x > 250)
                                             {
+                                                clear_statusbar(fe);
+                                                sdl_status_bar(fe,"Quitting...");
                                                 cleanup_and_exit(fe, EXIT_SUCCESS);
                                             };
                                         }; 
@@ -3615,6 +3756,11 @@ void Main_SDL_Loop(void *handle)
                                     draw_menu(fe, MUSICMENU);
                                     break;
 
+                                case 9:
+                                    global_config->screenshots_enabled=1-global_config->screenshots_enabled;
+                                    draw_menu(fe, SETTINGSMENU);
+                                    break;
+
                                 case 10:
                                     global_config->screenshots_include_cursor=1-global_config->screenshots_include_cursor;
                                     draw_menu(fe, SETTINGSMENU);
@@ -3797,6 +3943,12 @@ void Main_SDL_Loop(void *handle)
                             switch(current_line)
                             {
                                 case 5:
+                                    // Return to game menu item
+                                    fe->paused=FALSE;
+                                    game_pause(fe);
+                                    break;
+
+                                case 6:
                                     // Start a new game menu item
  
                                     // Plug the currently selected config on the menu screen back into the game
@@ -3854,7 +4006,7 @@ void Main_SDL_Loop(void *handle)
                                     };
                                     break;
 
-                                case 6:
+                                case 7:
 //INDENTING NEEDED BELOW HERE (4 spaces)
                                 // Restart
 
@@ -3866,31 +4018,28 @@ void Main_SDL_Loop(void *handle)
                                 sdl_status_bar(fe,"Restarting game...");
                                 break;
 
-                            case 7:
+                            case 8:
                                 draw_menu(fe, CONFIGMENU);
                                 break;
-                            case 8:
+                            case 9:
                                 draw_menu(fe, SAVEMENU);
                                 break;
-                            case 9:
+                            case 10:
                                 draw_menu(fe, SETTINGSMENU);
                                 break;
                            
-                            case 10:
+                            case 11:
                                 draw_menu(fe, HELPMENU);
                                 break;
 
-                            case 11:
+                            case 12:
                                 draw_menu(fe, CREDITSMENU);
                                 break;
 
-                            case 12:
+                            case 13:
                                 if(global_config->autosave_on_exit)
                                 {
-                                    char *result;
-                                    result=autosave_game(fe);
-                                    sdl_status_bar(fe, result);
-                                    sfree(result);
+                                    sdl_status_bar(fe, autosave_game(fe));
                                 };
                                 draw_menu(fe, GAMELISTMENU);
                                 break;
@@ -3917,6 +4066,9 @@ void Main_SDL_Loop(void *handle)
                             {
                                 if((x > 200) && (x <240))
                                 {
+                                    // Save the game, redraw the menu (to show the new save game)
+                                    // and THEN show a status bar message of whether it worked
+                                    // or not.
                                     char *result;
                                     savegame_to_delete = -1;
                                     result=save_game(fe,saveslot_number);
@@ -3933,7 +4085,7 @@ void Main_SDL_Loop(void *handle)
                                 else if((x > 300) && (savefile_exists(fe->sanitised_game_name, saveslot_number)))
                                 {
                                     char *message;
-                                    message=snewn(255, char);
+                                    message=snewn(sizeof("Press the delete icon again to delete save slot 0"), char);
                                     if((savegame_to_delete <0) || (savegame_to_delete != saveslot_number))
                                     {
                                         savegame_to_delete = saveslot_number;
@@ -4017,6 +4169,7 @@ void Main_SDL_Loop(void *handle)
                 break; // switch( event.type ) case SDL_MOUSEMOTION
 
             case SDL_QUIT:
+                clear_statusbar(fe);
                 sdl_status_bar(fe,"Quitting...");
                 cleanup_and_exit(fe, EXIT_SUCCESS);
                 break;
@@ -4037,17 +4190,17 @@ char* sanitise_game_name(char *unclean_game_name)
     int i;
 
     // Allocate a new string
-    char* game_name=snewn(255,char);
-    memset(game_name, 0, 255 * sizeof(char));
+    char* game_name=snewn(MAX_GAMENAME_SIZE+1,char);
+    memset(game_name, 0, (MAX_GAMENAME_SIZE+1) * sizeof(char));
 
-    // Put the first 200 characters of the game name into a variable we can change
-    sprintf(game_name, "%.200s", unclean_game_name);
+    // Put the first MAX_GAMENAME_SIZE characters of the game name into a variable we can change
+    sprintf(game_name, "%.*s", MAX_GAMENAME_SIZE, unclean_game_name);
 
     // Sanitise the game name - if it contains spaces, replace them with underscores in 
     // the filename and convert the filename to lowercase (doesn't matter on the GP2X
     // because it uses case-insensitive FAT32, but you never know what might happen and
     // this is better for development).
-    for(i=0;i<255;i++)
+    for(i=0;i<MAX_GAMENAME_SIZE;i++)
     {
         if(isspace(game_name[i]) || (game_name[i]=='\\') || (game_name[i]=='/'))
         {
@@ -4078,8 +4231,8 @@ int load_config_from_INI(frontend *fe)
 
     // Dynamically allocate space for a filename and add .ini to the end of the 
     // sanitised game name to get the filename we will use.
-    filename=snewn(255,char);
-    sprintf(filename, "%s.ini", fe->sanitised_game_name);
+    filename=snewn(MAX_GAMENAME_SIZE + 5,char);
+    sprintf(filename, "%.*s.ini", MAX_GAMENAME_SIZE, fe->sanitised_game_name);
 #ifdef DEBUG_FILE_ACCESS
     printf("Attempting to load game INI file: %s\n",filename);
 #endif
@@ -4138,7 +4291,7 @@ int load_config_from_INI(frontend *fe)
 
                 // Copy the value read into our string (we can't play with the result
                 // directly because it goes into a dictionary structure).
-                strncpy(string_value,iniparser_getstring(fe->ini_dict, keyword_name, "\0"),250);
+                strncpy(string_value,iniparser_getstring(fe->ini_dict, keyword_name, "\n"),250);
 
                 // Populate the configuration value with the read string.
 		fe->cfg[j].sval=string_value;
@@ -4294,6 +4447,19 @@ void load_global_config_from_INI()
             global_config->play_music=TRUE;
     };
 
+    boolean_value=iniparser_getboolean(global_ini_dict, "Configuration:screenshots_enabled",-1);
+    if(boolean_value==-1)
+    {
+        // Do nothing.  The INI key was not found, so use the normal default.
+    }
+    else
+    {
+        if(boolean_value==0)
+            global_config->screenshots_enabled=FALSE;
+        else
+            global_config->screenshots_enabled=TRUE;
+    };
+
     boolean_value=iniparser_getboolean(global_ini_dict, "Configuration:screenshots_include_cursor",-1);
     if(boolean_value==-1)
     {
@@ -4402,6 +4568,7 @@ uint save_global_config_to_INI(uint save_music_config)
         iniparser_setstring(global_ini_dict, "Configuration:autosave", global_config->autosave_on_exit?"T":"F");
         iniparser_setstring(global_ini_dict, "Configuration:always_load_autosave", global_config->always_load_autosave?"T":"F");
         iniparser_setstring(global_ini_dict, "Configuration:play_music", global_config->play_music?"T":"F");
+        iniparser_setstring(global_ini_dict, "Configuration:screenshots_enabled", global_config->screenshots_enabled?"T":"F");
         iniparser_setstring(global_ini_dict, "Configuration:screenshots_include_cursor", global_config->screenshots_include_cursor?"T":"F");
         iniparser_setstring(global_ini_dict, "Configuration:screenshots_include_statusbar", global_config->screenshots_include_statusbar?"T":"F");
         iniparser_setstring(global_ini_dict, "Configuration:control_system", (global_config->control_system==CURSOR_KEYS_EMULATION)?"T":"F");
@@ -4515,9 +4682,9 @@ char *generate_save_filename(char *game_name, uint saveslot_number)
 
     // Dynamically allocate space for a filename and add .ini to the end of the 
     // sanitised game name to get the filename we will use.
-    save_filename=snewn(255,char);
-    memset(save_filename, 0, 255 * sizeof(char));
-    sprintf(save_filename, "%s%u.sav", game_name, saveslot_number);
+    save_filename=snewn(MAX_GAMENAME_SIZE+6,char);
+    memset(save_filename, 0, (MAX_GAMENAME_SIZE+6) * sizeof(char));
+    sprintf(save_filename, "%.*s%u.sav", MAX_GAMENAME_SIZE, game_name, saveslot_number);
     return(save_filename);
 };
 
@@ -4546,7 +4713,7 @@ void load_game(frontend *fe, uint saveslot_number)
     if (!fp)
     {
         // Generate an error message.
-        message_text=snewn(255,char);
+        message_text=snewn(38, char);
         sprintf(message_text, "Could not load game from save slot %u.", saveslot_number);
 
         // Display it to the user       
@@ -4566,7 +4733,7 @@ void load_game(frontend *fe, uint saveslot_number)
     if(err)
     {
         // Generate an error message
-        message_text=snewn(255,char);
+        message_text=snewn(39,char);
         sprintf(message_text, "Could not parse game from save slot %u.", saveslot_number);
  
         // Display it to the user.
@@ -4590,7 +4757,7 @@ void load_game(frontend *fe, uint saveslot_number)
     draw_menu(fe, INGAME);
 
     // Generate a success message and show it to the user.
-    message_text=snewn(255,char);
+    message_text=snewn(30,char);
     sprintf(message_text, "Game loaded from save slot %u.", saveslot_number);
     sdl_status_bar(fe, message_text);
     sfree(message_text);
@@ -4606,11 +4773,10 @@ void load_autosave_game(frontend *fe)
     char *err;
     int x,y;
 
-    char *message_text;
     char *save_filename;
 
-    save_filename=snewn(255,char);
-    sprintf(save_filename, "%s.autosave", fe->sanitised_game_name);
+    save_filename=snewn(MAX_GAMENAME_SIZE+10,char);
+    sprintf(save_filename, "%.*s.autosave", MAX_GAMENAME_SIZE, fe->sanitised_game_name);
 
     printf("Loading autosave game from: %s\n", save_filename);
 
@@ -4620,14 +4786,8 @@ void load_autosave_game(frontend *fe)
 
     // If it didn't open
     if(!fp)
-    {
-        // Generate an error message.
-        message_text=snewn(255,char);
-        strcpy(message_text, "Could not load game from autosave slot.");
-   
-        // Display it to the user       
-        sdl_status_bar(fe, message_text);
-        sfree(message_text);
+    {   
+        sdl_status_bar(fe, "Could not load game from autosave slot.");
         return;
     };
 
@@ -4641,13 +4801,7 @@ void load_autosave_game(frontend *fe)
     // If the midend generated an error while loading the file
     if(err)
     {
-        // Generate an error message
-        message_text=snewn(255,char);
-        strcpy(message_text, "Could not parse autosave game.");
- 
-        // Display it to the user.
-        sdl_status_bar(fe, message_text);
-        sfree(message_text);
+        sdl_status_bar(fe, "Could not parse autosave game.");
         return;
     };
 
@@ -4665,11 +4819,7 @@ void load_autosave_game(frontend *fe)
 
     draw_menu(fe, INGAME);
 
-    // Generate a success message and show it to the user.
-    message_text=snewn(255,char);
-    strcpy(message_text, "Game loaded from autosave slot.");
-    sdl_status_bar(fe, message_text);
-    sfree(message_text);
+    sdl_status_bar(fe, "Game loaded from autosave slot.");
 }
 
 // Callback function used by the midend to save a game into an actual file.
@@ -4688,8 +4838,8 @@ int autosave_file_exists(char *game_name)
 
     char *save_filename;
     uint result;
-    save_filename=snewn(255, char);
-    sprintf(save_filename, "%s.autosave", game_name);
+    save_filename=snewn(MAX_GAMENAME_SIZE+10, char);
+    sprintf(save_filename, "%.*s.autosave", MAX_GAMENAME_SIZE, game_name);
     result=file_exists(save_filename);
     sfree(save_filename);
     return(result);
@@ -4705,26 +4855,23 @@ char *autosave_game(frontend *fe)
     char *message_text;
     FILE *fp;
 
-    save_filename=snewn(255, char);
-    memset(save_filename, 0, 255 * sizeof(char));
-    sprintf(save_filename, "%s.autosave", fe->sanitised_game_name);
+    save_filename=snewn(MAX_GAMENAME_SIZE + 10, char);
+    memset(save_filename, 0, (MAX_GAMENAME_SIZE+10) * sizeof(char));
+    sprintf(save_filename, "%.*s.autosave", MAX_GAMENAME_SIZE, fe->sanitised_game_name);
 
     fp = fopen(save_filename, "w");
     sfree(save_filename);
     if (!fp)
     {
-        message_text=snewn(255,char);
-        strcpy(message_text, "Could not write to autosave file.");
+        message_text="Could not write to autosave file.";
 #ifdef DEBUG_FILE_ACCESS
         printf("Could not write to autosave file.\n");
 #endif
-        sdl_status_bar(fe, message_text);
         return(message_text);
     };
     midend_serialise(fe->me, savefile_write, fp);
     fclose(fp);
-    message_text=snewn(255,char);
-    strcpy(message_text, "Game auto-saved.");
+    message_text="Game auto-saved.";
 #ifdef DEBUG_FILE_ACCESS
     printf("Game auto-saved.\n");
 #endif
@@ -4747,17 +4894,16 @@ char *save_game(frontend *fe, uint saveslot_number)
     sfree(save_filename);
     if (!fp)
     {
-        message_text=snewn(255,char);
+        message_text=snewn(32,char);
         sprintf(message_text, "Could not write to save slot %u.", saveslot_number);
-
-        sdl_status_bar(fe, message_text);
-        return(message_text);
+    }
+    else
+    {
+        midend_serialise(fe->me, savefile_write, fp);
+        fclose(fp);
+        message_text=snewn(27,char);
+        sprintf(message_text, "Game saved to save slot %u.", saveslot_number);
     };
-
-    midend_serialise(fe->me, savefile_write, fp);
-    fclose(fp);
-    message_text=snewn(255,char);
-    sprintf(message_text, "Game saved to save slot %u.", saveslot_number);
     return(message_text);
 }
 
@@ -4773,12 +4919,12 @@ int save_config_to_INI(frontend *fe)
     char *keyword_name;
     FILE *inifile;
     char *ini_filename;
-    char digit_as_string[255];
+    char digit_as_string[32];
 
     // Dynamically allocate space for a filename and add .ini to the end of the 
     // sanitised game name to get the filename we will use.
-    ini_filename=snewn(255,char);
-    sprintf(ini_filename, "%s.ini", fe->sanitised_game_name);
+    ini_filename=snewn(MAX_GAMENAME_SIZE + 5,char);
+    sprintf(ini_filename, "%.*s.ini", MAX_GAMENAME_SIZE, fe->sanitised_game_name);
   
     // Create an INI section, in case one does not already exist.
     // If we don't do this, INIParser tends not to write entries under that
@@ -4888,7 +5034,11 @@ int save_config_to_INI(frontend *fe)
 int get_mouse_type()
 {
 #ifdef TARGET_GP2X
+ #ifdef OPTION_CHECK_HARDWARE
     return(SDL_GP2X_MouseType());
+ #else
+    return(GP2X_MOUSE_STD);    
+ #endif
 #else
     return(GP2X_MOUSE_STD);
 #endif
@@ -4908,8 +5058,6 @@ void start_loading_animation(frontend *fe)
     }
     else
     {
-        show_hourglass_cursor(TRUE);
-
         SDL_Rect blit_rectangle;
         blit_rectangle.w=0;
         blit_rectangle.h=0;
@@ -4960,7 +5108,6 @@ void stop_loading_animation()
 
     if(*loading_flag)
     {
-        show_hourglass_cursor(FALSE);
         *loading_flag=FALSE;
 #ifdef OPTION_USE_THREADS
   #ifdef DEBUG_MISC
@@ -5037,6 +5184,8 @@ int main(int argc, char **argv)
     if(argc > 1)
         respawn_gp2x_menu=FALSE;
 
+    InitMemPool();
+
     // Initialise the loading flag.
     loading_flag = snew(uint);
     *loading_flag=FALSE;
@@ -5052,6 +5201,10 @@ int main(int argc, char **argv)
     SDL_Init_Flags = SDL_INIT_VIDEO|SDL_INIT_JOYSTICK|SDL_INIT_TIMER;
 #ifdef EVENTS_IN_SEPERATE_THREAD
     SDL_Init_Flags |= SDL_INIT_EVENTTHREAD;
+
+    printf("Using threaded events.\n");
+#else
+    printf("Not using threaded events.\n");
 #endif
 
 #ifdef BACKGROUND_MUSIC
@@ -5095,6 +5248,10 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
     };
 
+#if defined(_WIN32) || defined(__CYGWIN__)
+    SDL_WM_SetCaption(stppc2x_ver, stppc2x_ver);
+#endif
+
     screen_width=screen->w;
     screen_height=screen->h;
 
@@ -5107,8 +5264,6 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
     };
     
-//    initialise_hourglass_cursor();
-
 #ifdef FAST_SDL_EVENTS
     if(FE_Init())
     {
@@ -5128,7 +5283,7 @@ int main(int argc, char **argv)
     else
     {
         printf("Initialised SDL TTF library.\n");
-    };
+    };    
 
     // Create a new game
     fe = new_window(NULL, ARG_EITHER, &error);
@@ -5137,6 +5292,8 @@ int main(int argc, char **argv)
         printf("Error initialising frontend: %s\n", error);
         exit(EXIT_FAILURE);
     };
+
+    gettimeofday(&fe->last_statusbar_update,NULL);
 
     // Copy our temporary placeholder for the screen into the frontend structure.
     fe->screen = screen;
@@ -5158,7 +5315,9 @@ int main(int argc, char **argv)
     };
 #endif
 
+#ifdef OPTION_CHECK_HARDWARE
     printf("Detecting hardware...\n");
+#endif
 
     // Check for a joystick
     if(SDL_NumJoysticks()>0)
@@ -5179,10 +5338,14 @@ int main(int argc, char **argv)
     else
     {
         printf("No joysticks were found on this system.  This is not a real GP2X.\n");
+
+#ifdef OPTION_CHECK_HARDWARE
         hardware_type=NOT_GP2X;
+#endif
     };
 
-#ifdef TARGET_GP2X
+#ifdef OPTION_CHECK_HARDWARE
+ #ifdef TARGET_GP2X
     printf("I appear to be running on a real GP2X.\n");
     if( (access("/dev/touchscreen/wm97xx", F_OK)==0) || (get_mouse_type()==GP2X_MOUSE_TOUCHSCREEN))
     {
@@ -5195,17 +5358,20 @@ int main(int argc, char **argv)
         printf("Could not determine hardware type.  Assuming it's an F-100 GP2X.\n");
         hardware_type=GP2X_F100;
     };
-#else
+ #else
     printf("I am not running on a real GP2X.\n");
     hardware_type=NOT_GP2X;
-#endif
+ #endif
 
     printf("Hardware detection complete.\n");
+#endif
+
 
     global_config=snew(struct global_configuration);
     global_config->autosave_on_exit=FALSE;
     global_config->always_load_autosave=FALSE;
     global_config->play_music=FALSE;
+    global_config->screenshots_enabled=FALSE;
     global_config->screenshots_include_cursor=FALSE;
     global_config->screenshots_include_statusbar=FALSE;
     global_config->control_system=FALSE;
@@ -5345,7 +5511,7 @@ char *get_game_preview_data(frontend *fe, int game_index)
                 str_buf[i]='#';
         };
 
-        if((comma_position == 0))
+        if(comma_position == 0)
         {
             // Wasn't a valid data line
         }
@@ -5353,7 +5519,7 @@ char *get_game_preview_data(frontend *fe, int game_index)
         {
             // If the first portion of the string (before the comma) matches the game
             // name that we are looking for.
-            if(!strncmp(str_buf, (char *)gamelist[game_index]->htmlhelp_topic,comma_position-1))
+            if(!strncmp(str_buf, (char *)gamelist[game_index]->htmlhelp_topic,max(sizeof((char *)gamelist[game_index]->htmlhelp_topic)-1,comma_position-1)))
             {
                 // Return the portion of the string after the comma
                 // WARNING: Potential buffer overflow?
@@ -5404,7 +5570,6 @@ void redraw_gamelist_menu(frontend *fe)
     uint i,j;
 
     SDL_BlitSurface(menu_screen,NULL,screen,NULL);
-    sdl_end_draw(fe);
 
     current_y=3*(MENU_FONT_SIZE + 2);
 
@@ -5412,14 +5577,18 @@ void redraw_gamelist_menu(frontend *fe)
     if(fe->sdlcolours != NULL)
         sfree(fe->sdlcolours);
     fe->sdlcolours = snewn(fe->ncolours, SDL_Color);
+ 
+    // Background colour corresponding to 0.75
     fe->sdlcolours[0].r = 191;
     fe->sdlcolours[0].g = 191;
     fe->sdlcolours[0].b = 191;
 
+    // White
     fe->sdlcolours[1].r = 255;
     fe->sdlcolours[1].g = 255;
     fe->sdlcolours[1].b = 255;
 
+    // Black
     fe->sdlcolours[2].r = 0;
     fe->sdlcolours[2].g = 0;
     fe->sdlcolours[2].b = 0;
@@ -5431,9 +5600,9 @@ void redraw_gamelist_menu(frontend *fe)
     if(first_run)
     {
         char *number_of_games;
-        number_of_games=snewn(255,char);
+        number_of_games=snewn(32,char);
         sprintf(number_of_games, "%u Games", gamecount);
-        sdl_actual_draw_text(fe, 240, 190, FONT_FIXED, HELP_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HCENTRE, fe->black_colour, STPPC2X_VERSION);
+        sdl_actual_draw_text(fe, 240, 190, FONT_FIXED, HELP_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HCENTRE, fe->black_colour, stppc2x_ver);
         sdl_actual_draw_text(fe, 240, 190 + HELP_FONT_SIZE + 2, FONT_FIXED, HELP_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HCENTRE, fe->black_colour, ver);
         sdl_actual_draw_text(fe, 240, 190 + 2*(HELP_FONT_SIZE + 2), FONT_FIXED, HELP_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HCENTRE, fe->black_colour, number_of_games);
         sfree(number_of_games);
@@ -5457,6 +5626,11 @@ void redraw_gamelist_menu(frontend *fe)
     else
     {
         sdl_actual_draw_text(fe, 80, 2*MENU_FONT_SIZE+2, FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HCENTRE, fe->black_colour, UNICODE_UP_ARROW);
+        sdl_actual_draw_text(fe, 100, 2*MENU_FONT_SIZE+2, FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "?");
+        sdl_actual_draw_text(fe, 115, 2*MENU_FONT_SIZE+2, FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, UNICODE_NUMERO);
+#ifdef OPTION_SHOW_IF_MOUSE_NEEDED
+        sdl_actual_draw_text(fe, 135, 2*MENU_FONT_SIZE+2, FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, UNICODE_KEYBOARD);
+#endif
 
         // Search through the list of games in the combined executable and look for a match.
         // Start from the selected game so that we give the impression of the menu scrolling.
@@ -5479,7 +5653,7 @@ void redraw_gamelist_menu(frontend *fe)
                     data_current_y=180;
                     sdl_actual_draw_text(fe, 240, data_current_y, FONT_FIXED, HELP_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HCENTRE, fe->black_colour, "(no description)");
                     data_current_y+=HELP_FONT_SIZE+2;
-                    sdl_actual_draw_text(fe, 240, data_current_y, FONT_FIXED, HELP_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HCENTRE, fe->black_colour, STPPC2X_VERSION);
+                    sdl_actual_draw_text(fe, 240, data_current_y, FONT_FIXED, HELP_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HCENTRE, fe->black_colour, stppc2x_ver);
                     data_current_y+=HELP_FONT_SIZE+2;
                     sdl_actual_draw_text(fe, 240, data_current_y, FONT_FIXED, HELP_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HCENTRE, fe->black_colour, ver);
                 }
@@ -5504,13 +5678,23 @@ void redraw_gamelist_menu(frontend *fe)
                 text_colour=fe->black_colour;
             };
             if(current_y < (MENU_FONT_SIZE+2)*16)
+            {
                 sdl_actual_draw_text(fe, 10, current_y, FONT_FIXED, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, text_colour, (char *)gamelist[i]->name);
+#ifdef OPTION_SHOW_IF_MOUSE_NEEDED
+                if(!(gamelist[i]->flags & REQUIRE_MOUSE_INPUT))
+                    sdl_actual_draw_text(fe, 140, current_y, FONT_FIXED, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, text_colour, UNICODE_TICK_CHAR);
+#endif
+                if(gamelist[i]->flags & REQUIRE_NUMPAD)
+                    sdl_actual_draw_text(fe, 120, current_y, FONT_FIXED, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, text_colour, UNICODE_TICK_CHAR);
+                if(gamelist[i]->can_solve)
+                    sdl_actual_draw_text(fe, 100, current_y, FONT_FIXED, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, text_colour, UNICODE_TICK_CHAR);
+            }
             current_y+=(MENU_FONT_SIZE+2);
         };
 
         sdl_actual_draw_text(fe, 80, (MENU_FONT_SIZE+2)*16, FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HCENTRE, fe->black_colour, UNICODE_DOWN_ARROW);
 
-        preview_filename=snewn(255,char);
+        preview_filename=snewn(MAX_GAMENAME_SIZE+sizeof(MENU_PREVIEW_IMAGES)+1,char);
         sanitised_game_name=sanitise_game_name((char *) gamelist[current_game_index]->htmlhelp_topic);
         sprintf(preview_filename, MENU_PREVIEW_IMAGES, sanitised_game_name);
         sfree(sanitised_game_name);
@@ -5527,15 +5711,24 @@ void redraw_gamelist_menu(frontend *fe)
             blit_rectangle.x=164;
             blit_rectangle.y=8;
 
+            if(preview_window->w < 150)
+                blit_rectangle.x += (150 - preview_window->w) / 2;
+
+            if(preview_window->h < 150)
+                blit_rectangle.y += (150 - preview_window->h) / 2;
+
             SDL_BlitSurface(preview_window, NULL, screen, &blit_rectangle);
             SDL_FreeSurface(preview_window);
         }
         else
         {
             // 164 = preview offset x
-            // 8 = preview_offset_y
+            // 8 = preview offset y
             // 150 = preview png width/height
+            // 239 = 164 + (150 / 2)
             sdl_actual_draw_rect(fe, 164, 8, 150, 150, fe->background_colour);
+            sdl_actual_draw_text(fe, 239, 8 + 5*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HCENTRE, fe->black_colour, "No preview");
+            sdl_actual_draw_text(fe, 239, 8 + 6*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HCENTRE, fe->black_colour, "image available");
         };
         sfree(preview_filename);
     };
@@ -5605,11 +5798,10 @@ void start_game(frontend *fe, int game_index, uint skip_config)
 
     fe->me = midend_new(fe, &this_game, &sdl_drawing, fe);
 
-    // Cache whether this game is solveable
-    fe->solveable=this_game.can_solve;
-
     // Get the colours that the midend thinks it needs.
     colours = midend_colours(fe->me, &ncolours);
+
+    gettimeofday(&fe->last_statusbar_update,NULL);
 
     fe->ncolours = ncolours;
 #ifdef DEBUG_PALETTE
@@ -5771,9 +5963,6 @@ void start_game(frontend *fe, int game_index, uint skip_config)
     // Force the game to redraw itself.
     midend_force_redraw(fe->me);
 
-    // Update the user in case the next bit takes a long time.
-    sdl_status_bar(fe,"Loaded.");
-
     draw_menu(fe, INGAME);
 
     // Turn on the cursor.
@@ -5800,8 +5989,8 @@ void delete_ini_file(frontend *fe, int game_index)
         // Dynamically allocate space for a filename and add .ini to 
         // the end of the sanitised game name to get the filename 
         // we will use.
-        filename=snewn(255,char);
-        sprintf(filename, "%s.ini", fe->sanitised_game_name);
+        filename=snewn(MAX_GAMENAME_SIZE + 5,char);
+        sprintf(filename, "%.*s.ini", MAX_GAMENAME_SIZE, fe->sanitised_game_name);
   
         // Check the file exists by opening the file, readonly
         FILE *fp = fopen(filename, "r");
@@ -5835,13 +6024,15 @@ void delete_savegame(frontend *fe, uint saveslot_number)
     {
         char *filename;
 
+        if(fe->sanitised_game_name)
+            sfree(fe->sanitised_game_name);
+
         // Double-check that we have the sanitised game name loaded.
         fe->sanitised_game_name=sanitise_game_name((char *) gamelist[current_game_index]->htmlhelp_topic);
 
         // Dynamically allocate space for a filename and add .ini to 
         // the end of the sanitised game name to get the filename 
         // we will use.
-        filename=snewn(255,char);
         filename=generate_save_filename(fe->sanitised_game_name, saveslot_number);
   
 #ifdef DEBUG_FILE_ACCESS
@@ -5875,14 +6066,14 @@ void delete_autosave_game(frontend *fe)
 
     char *save_filename;
 
-    save_filename=snewn(255, char);
+    save_filename=snewn(MAX_GAMENAME_SIZE + 10, char);
 
     // Double-check that we have the sanitised game name loaded.
     fe->sanitised_game_name=sanitise_game_name((char *) gamelist[current_game_index]->htmlhelp_topic);
 
     if(autosave_file_exists(fe->sanitised_game_name))
     {
-        sprintf(save_filename, "%s.autosave", fe->sanitised_game_name);
+        sprintf(save_filename, "%.*s.autosave", MAX_GAMENAME_SIZE, fe->sanitised_game_name);
 #ifdef DEBUG_FILE_ACCESS
         printf("DELETING %s!!\n", save_filename);
 #endif
@@ -6062,6 +6253,7 @@ void stop_background_music()
     };
 };
 
+/*
 void play_sound()
 {
 #ifdef DEBUG_FUNCTIONS
@@ -6087,6 +6279,7 @@ void play_sound()
         Mix_FreeChunk(sound); 
     };
 };
+*/
 
 void background_music_callback()
 {
@@ -6205,75 +6398,6 @@ char *get_music_filename(uint track_number)
     }
 };
 
-void initialise_hourglass_cursor()
-{
-#ifdef DEBUG_FUNCTIONS
-    printf("initialise_hourglass_cursor()\n");
-#endif
-
-    // Blatantly nicked from the SDL documentation
-    // (which says it come from the mailing list).
-
-    // Converts an XPM-formatted image to a SDL cursor.
-
-    int i, row, col;
-    Uint8 data[4*32];
-    Uint8 mask[4*32];
-    int hot_x, hot_y;
-
-    arrow_cursor=SDL_GetCursor();
-
-    i = -1;
-    for ( row=0; row<32; ++row )
-    {
-        for ( col=0; col<32; ++col )
-        {
-            if (col % 8)
-            {
-                data[i] <<= 1;
-                mask[i] <<= 1;
-            }
-            else
-            {
-                ++i;
-                data[i] = mask[i] = 0;
-            };
-            switch (hourglass[4+row][col])
-            {
-                case 'X':
-                    data[i] |= 0x01;
-                    mask[i] |= 0x01;
-                    break;
-                case '.':
-                    mask[i] |= 0x01;
-                    break;
-                case ' ':
-                    break;
-            };
-        };
-    };
-    sscanf(hourglass[4+row], "%d,%d", &hot_x, &hot_y);
-    hourglass_cursor=SDL_CreateCursor(data, mask, 32, 32, hot_x, hot_y);
-};
-
-void show_hourglass_cursor(uint toggle)
-{
-#ifdef DEBUG_FUNCTIONS
-    printf("show_hourglass_cursor()\n");
-#endif
-/*
-    // Doesn't work on GP2X for some reason.
-    if(toggle == TRUE)
-    {
-        SDL_SetCursor(hourglass_cursor);        
-    }
-    else
-    {
-        SDL_SetCursor(arrow_cursor);    
-    };
-*/
-};
-
 void print_game_as_text(frontend *fe)
 {
 #ifdef DEBUG_FUNCTIONS
@@ -6288,6 +6412,10 @@ void print_game_as_text(frontend *fe)
 
 void show_keyboard_icon(frontend *fe)
 {
+#ifdef DEBUG_FUNCTIONS
+    printf("show_keyboard_icon()\n");
+#endif
+
     if((current_screen == GAMELISTMENU) || (current_screen == INGAME))
         return;
     if(global_config->control_system == CURSOR_KEYS_EMULATION)
@@ -6296,7 +6424,19 @@ void show_keyboard_icon(frontend *fe)
     }
     else
     {
+#ifdef OPTION_CHECK_HARDWARE
         if(hardware_type == GP2X_F200)
-            sdl_actual_draw_text(fe, screen_width, KEYBOARD_ICON_FONT_SIZE, FONT_VARIABLE, KEYBOARD_ICON_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HRIGHT, fe->white_colour, UNICODE_STYLUS);
+#endif 
+        sdl_actual_draw_text(fe, screen_width, KEYBOARD_ICON_FONT_SIZE, FONT_VARIABLE, KEYBOARD_ICON_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HRIGHT, fe->white_colour, UNICODE_STYLUS);
     };
 };
+
+// Called if the game thinks it has been completed.
+// Not called from Black Box, Loopy, Maze 3D, Slide, Sokoban
+void game_completed()
+{
+#ifdef DEBUG_FUNCTIONS
+    printf("game_completed()\n");
+#endif
+  // printf("Game completed!\n");
+}

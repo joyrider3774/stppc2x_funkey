@@ -1,0 +1,17 @@
+Bridges
+=======
+
+Connect all the islands with a network of bridges.  Each
+island shows the total number of connected bridges.
+An island can have multiple bridges joining up, down, 
+left or right, but bridges may not cross.
+
+All the islands have to join together and have the 
+right number of bridges.
+
+Move the joystick while holding A to build a bridge.
+Move the joystick while holding B to place a "no-bridge" 
+marker.
+
+Press A or B on an island to "lock" it.
+Press A or B on an island again to "unlock it".

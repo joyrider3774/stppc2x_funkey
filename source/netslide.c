@@ -182,7 +182,7 @@ static int game_fetch_preset(int i, char **name, game_params **params)
     ret->width = netslide_presets[i].x;
     ret->height = netslide_presets[i].y;
     ret->wrapping = netslide_presets[i].wrap;
-    ret->barrier_probability = netslide_presets[i].bprob;
+    ret->barrier_probability = (float)netslide_presets[i].bprob;
     ret->movetarget = 0;
 
     sprintf(str, "%dx%d%s", ret->width, ret->height, netslide_presets[i].desc);
@@ -221,7 +221,7 @@ static void decode_params(game_params *ret, char const *string)
         if ( (ret->wrapping = (*p == 'w')) != 0 )
             p++;
         if (*p == 'b') {
-            ret->barrier_probability = atof(++p);
+            ret->barrier_probability = (float)atof(++p);
             while (*p && (isdigit((unsigned char)*p) || *p == '.')) p++;
         }
         if (*p == 'm') {
@@ -979,8 +979,8 @@ struct game_ui {
 static game_ui *new_ui(game_state *state)
 {
     game_ui *ui = snew(game_ui);
-    ui->cur_x = state->width / 2;
-    ui->cur_y = state->height / 2;
+    ui->cur_x = 0;
+    ui->cur_y = -1;
     ui->cur_visible = FALSE;
 
     return ui;
@@ -1045,6 +1045,7 @@ static void slide_col(game_state *state, int dir, int col)
 static void game_changed_state(game_ui *ui, game_state *oldstate,
                                game_state *newstate)
 {
+    if (newstate->completed && ! newstate->used_solve && oldstate && ! oldstate->completed) game_completed();
 }
 
 struct game_drawstate {
@@ -1052,6 +1053,7 @@ struct game_drawstate {
     int width, height;
     int tilesize;
     unsigned char *visible;
+    int cur_x, cur_y;
 };
 
 static char *interpret_move(game_state *state, game_ui *ui,
@@ -1063,11 +1065,37 @@ static char *interpret_move(game_state *state, game_ui *ui,
 
     button &= ~MOD_MASK;
 
-    if (button != LEFT_BUTTON && button != RIGHT_BUTTON)
-        return NULL;
+    if (IS_CURSOR_MOVE(button)) {
+        int cpos, diff = 0;
+        cpos = c2pos(state->width, state->height, ui->cur_x, ui->cur_y);
+        diff = c2diff(state->width, state->height, ui->cur_x, ui->cur_y, button);
 
-    cx = (x - (BORDER + WINDOW_OFFSET + TILE_BORDER) + 2*TILE_SIZE) / TILE_SIZE - 2;
-    cy = (y - (BORDER + WINDOW_OFFSET + TILE_BORDER) + 2*TILE_SIZE) / TILE_SIZE - 2;
+        if (diff != 0) {
+            do { /* we might have to do this more than once to skip missing arrows */
+                cpos += diff;
+                pos2c(state->width, state->height, cpos, &ui->cur_x, &ui->cur_y);
+            } while (ui->cur_x == state->cx || ui->cur_y == state->cy);
+        }
+
+        ui->cur_visible = 1;
+        return "";
+    }
+
+    if (button == LEFT_BUTTON || button == RIGHT_BUTTON) {
+        cx = (x - (BORDER + WINDOW_OFFSET + TILE_BORDER) + 2*TILE_SIZE) / TILE_SIZE - 2;
+        cy = (y - (BORDER + WINDOW_OFFSET + TILE_BORDER) + 2*TILE_SIZE) / TILE_SIZE - 2;
+        ui->cur_visible = 0;
+    } else if (IS_CURSOR_SELECT(button)) {
+        if (ui->cur_visible) {
+            cx = ui->cur_x;
+            cy = ui->cur_y;
+        } else {
+            /* 'click' when cursor is invisible just makes cursor visible. */
+            ui->cur_visible = 1;
+            return "";
+        }
+    } else
+        return NULL;
 
     if (cy >= 0 && cy < state->height && cy != state->cy)
     {
@@ -1187,6 +1215,7 @@ static game_drawstate *game_new_drawstate(drawing *dr, game_state *state)
     ds->visible = snewn(state->width * state->height, unsigned char);
     ds->tilesize = 0;                  /* not decided yet */
     memset(ds->visible, 0xFF, state->width * state->height);
+    ds->cur_x = ds->cur_y = -1;
 
     return ds;
 }
@@ -1351,8 +1380,8 @@ static void draw_barrier(drawing *dr, game_drawstate *ds,
 static void draw_tile(drawing *dr, game_drawstate *ds, game_state *state,
                       int x, int y, int tile, float xshift, float yshift)
 {
-    int bx = BORDER + WINDOW_OFFSET + TILE_SIZE * x + (xshift * TILE_SIZE);
-    int by = BORDER + WINDOW_OFFSET + TILE_SIZE * y + (yshift * TILE_SIZE);
+    int bx = BORDER + WINDOW_OFFSET + TILE_SIZE * x + (int)(xshift * TILE_SIZE);
+    int by = BORDER + WINDOW_OFFSET + TILE_SIZE * y + (int)(yshift * TILE_SIZE);
     float cx, cy, ex, ey;
     int dir, col;
 
@@ -1509,7 +1538,7 @@ static void draw_tile_barriers(drawing *dr, game_drawstate *ds,
 }
 
 static void draw_arrow(drawing *dr, game_drawstate *ds,
-                       int x, int y, int xdx, int xdy)
+                       int x, int y, int xdx, int xdy, int cur)
 {
     int coords[14];
     int ydy = -xdx, ydx = xdy;
@@ -1529,7 +1558,29 @@ static void draw_arrow(drawing *dr, game_drawstate *ds,
     POINT(5, 3 * TILE_SIZE / 8, TILE_SIZE / 2);   /* left concave */
     POINT(6,     TILE_SIZE / 4, TILE_SIZE / 2);   /* left corner */
 
-    draw_polygon(dr, coords, 7, COL_LOWLIGHT, COL_TEXT);
+    draw_polygon(dr, coords, 7, cur ? COL_POWERED : COL_LOWLIGHT, COL_TEXT);
+}
+
+static void draw_arrow_for_cursor(drawing *dr, game_drawstate *ds,
+                                  int cur_x, int cur_y, int cur)
+{
+    if (cur_x == -1 && cur_y == -1)
+        return; /* 'no cursur here */
+    else if (cur_x == -1) /* LH column. */
+        draw_arrow(dr, ds, 0, cur_y+1, 0, -1, cur);
+    else if (cur_x == ds->width) /* RH column */
+        draw_arrow(dr, ds, ds->width, cur_y, 0, +1, cur);
+    else if (cur_y == -1) /* Top row */
+        draw_arrow(dr, ds, cur_x, 0, +1, 0, cur);
+    else if (cur_y == ds->height) /* Bottom row */
+        draw_arrow(dr, ds, cur_x+1, ds->height, -1, 0, cur);
+    else
+        assert(!"Invalid cursor position");
+
+    draw_update(dr,
+                cur_x * TILE_SIZE + BORDER + WINDOW_OFFSET,
+                cur_y * TILE_SIZE + BORDER + WINDOW_OFFSET,
+                TILE_SIZE, TILE_SIZE);
 }
 
 static void game_redraw(drawing *dr, game_drawstate *ds, game_state *oldstate,
@@ -1539,6 +1590,7 @@ static void game_redraw(drawing *dr, game_drawstate *ds, game_state *oldstate,
     unsigned char *active;
     float xshift = 0.0;
     float yshift = 0.0;
+    int cur_x = -1, cur_y = -1;
 
     /*
      * Clear the screen and draw the exterior barrier lines if this
@@ -1595,14 +1647,25 @@ static void game_redraw(drawing *dr, game_drawstate *ds, game_state *oldstate,
          */
         for (x = 0; x < ds->width; x++) {
             if (x == state->cx) continue;
-            draw_arrow(dr, ds, x, 0, +1, 0);
-            draw_arrow(dr, ds, x+1, ds->height, -1, 0);
+            draw_arrow(dr, ds, x, 0, +1, 0, 0);
+            draw_arrow(dr, ds, x+1, ds->height, -1, 0, 0);
         }
         for (y = 0; y < ds->height; y++) {
             if (y == state->cy) continue;
-            draw_arrow(dr, ds, ds->width, y, 0, +1);
-            draw_arrow(dr, ds, 0, y+1, 0, -1);
+            draw_arrow(dr, ds, ds->width, y, 0, +1, 0);
+            draw_arrow(dr, ds, 0, y+1, 0, -1, 0);
         }
+    }
+    if (ui->cur_visible) {
+        cur_x = ui->cur_x; cur_y = ui->cur_y;
+    }
+    if (cur_x != ds->cur_x || cur_y != ds->cur_y) {
+        /* Cursor has changed; redraw two (prev and curr) arrows. */
+        assert(cur_x != state->cx && cur_y != state->cy);
+
+        draw_arrow_for_cursor(dr, ds, cur_x, cur_y, 1);
+        draw_arrow_for_cursor(dr, ds, ds->cur_x, ds->cur_y, 0);
+        ds->cur_x = cur_x; ds->cur_y = cur_y;
     }
 
     /* Check if this is an undo.  If so, we will need to run any animation
@@ -1622,9 +1685,9 @@ static void game_redraw(drawing *dr, game_drawstate *ds, game_state *oldstate,
          * state->last_move_pos, in direction
          * state->last_move_dir
          */
-        xshift = state->last_move_row == -1 ? 0.0 :
+        xshift = state->last_move_row == -1 ? 0.0F :
                 (1 - t / ANIM_TIME) * state->last_move_dir;
-        yshift = state->last_move_col == -1 ? 0.0 :
+        yshift = state->last_move_col == -1 ? 0.0F :
                 (1 - t / ANIM_TIME) * state->last_move_dir;
     }
     
@@ -1678,8 +1741,8 @@ static void game_redraw(drawing *dr, game_drawstate *ds, game_state *oldstate,
                 index(state, ds->visible, x, y) == 0xFF ||
                 (x == state->last_move_col || y == state->last_move_row))
             {
-                float xs = (y == state->last_move_row ? xshift : 0.0);
-                float ys = (x == state->last_move_col ? yshift : 0.0);
+                float xs = (y == state->last_move_row ? xshift : (float)0.0);
+                float ys = (x == state->last_move_col ? yshift : (float)0.0);
 
                 draw_tile(dr, ds, state, x, y, c, xs, ys);
                 if (xs < 0 && x == 0)
@@ -1772,14 +1835,6 @@ static int game_timing_state(game_state *state, game_ui *ui)
     return FALSE;
 }
 
-static void game_print_size(game_params *params, float *x, float *y)
-{
-}
-
-static void game_print(drawing *dr, game_state *state, int tilesize)
-{
-}
-
 #ifdef COMBINED
 #define thegame netslide
 #endif
@@ -1815,7 +1870,7 @@ const struct game thegame = {
     game_redraw,
     game_anim_length,
     game_flash_length,
-    FALSE, FALSE, game_print_size, game_print,
+    FALSE, FALSE, NULL, NULL,
     TRUE,			       /* wants_statusbar */
     FALSE, game_timing_state,
     0,				       /* flags */

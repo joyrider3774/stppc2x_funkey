@@ -1,0 +1,18 @@
+Netslide
+========
+
+Slide each row in order to complete the network.
+
+Every blue "node" should be joined to the network 
+and "powered" with electricity which comes from the 
+central square.
+
+Red barriers prevent electricity from flowing 
+through them.
+
+Similar to net, but this time you have to slide 
+the squares like a Rubik's Cube and not rotate them.
+
+A-click the arrows to slide a row or column.
+B-click the arrows to slide a row or column the other 
+way.
