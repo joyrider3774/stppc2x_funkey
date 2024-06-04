@@ -30,7 +30,8 @@ Connect all the islands with a network of bridges.  Each island has a number, wh
 is the number of bridges that it connects to.  Each bridge may be single or multiple.
 All the islands have to join together and have the right number of bridges.
 
-Move the joystick while holding button A to build a bridge.
+Move the joystick while holding button A to build a bridge.  Press A on an island to
+"lock" it.  Press A+Y on an island to "unlock it" (can be a little tricky).
 
 Cube
 ====
@@ -132,6 +133,8 @@ Drag and drop the colours so that the map is filled and no two "countries" next 
 each other have the same colour.  It's always possible with just the four colours.
 
 Move the joystick while pressing A to drag a colour from one country to another.
+Move the joystick while pressing B to drag a "pencilled" colour from one country to another.
+The guess colours help you try out colours without committing to them.
 
 Mines
 =====

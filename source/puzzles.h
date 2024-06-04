@@ -7,6 +7,7 @@
 
 #include <stdio.h>  /* for FILE */
 #include <stdlib.h> /* for size_t */
+#include <limits.h> /* for UINT_MAX */
 
 #ifndef TRUE
 #define TRUE 1
@@ -109,14 +110,12 @@ typedef struct psdata psdata;
 #define FONT_VARIABLE 1
 
 /* For printing colours */
-#define HATCH_SOLID 0
-#define HATCH_CLEAR 1
-#define HATCH_SLASH 2
-#define HATCH_BACKSLASH 3
-#define HATCH_HORIZ 4
-#define HATCH_VERT 5
-#define HATCH_PLUS 6
-#define HATCH_X 7
+#define HATCH_SLASH     1
+#define HATCH_BACKSLASH 2
+#define HATCH_HORIZ     3
+#define HATCH_VERT      4
+#define HATCH_PLUS      5
+#define HATCH_X         6
 
 /*
  * Structure used to pass configuration data between frontend and
@@ -204,11 +203,15 @@ void print_begin_puzzle(drawing *dr, float xm, float xc,
 void print_end_puzzle(drawing *dr);
 void print_end_page(drawing *dr, int number);
 void print_end_doc(drawing *dr);
-void print_get_colour(drawing *dr, int colour, int *hatch,
-		      float *r, float *g, float *b);
+void print_get_colour(drawing *dr, int colour, int printing_in_colour,
+		      int *hatch, float *r, float *g, float *b);
 int print_mono_colour(drawing *dr, int grey); /* 0==black, 1==white */
-int print_grey_colour(drawing *dr, int hatch, float grey);
-int print_rgb_colour(drawing *dr, int hatch, float r, float g, float b);
+int print_grey_colour(drawing *dr, float grey);
+int print_hatched_colour(drawing *dr, int hatch);
+int print_rgb_mono_colour(drawing *dr, float r, float g, float b, int mono);
+int print_rgb_grey_colour(drawing *dr, float r, float g, float b, float grey);
+int print_rgb_hatched_colour(drawing *dr, float r, float g, float b,
+			     int hatch);
 void print_line_width(drawing *dr, int width);
 
 /*
@@ -331,7 +334,14 @@ void random_free(random_state *state);
 char *random_state_encode(random_state *state);
 random_state *random_state_decode(char *input);
 /* random.c also exports SHA, which occasionally comes in useful. */
+#if __STDC_VERSION__ >= 199901L
+#include <stdint.h>
+typedef uint32_t uint32;
+#elif UINT_MAX >= 4294967295L
+typedef unsigned int uint32;
+#else
 typedef unsigned long uint32;
+#endif
 typedef struct {
     uint32 h[5];
     unsigned char block[64];
@@ -372,6 +382,12 @@ combi_ctx *new_combi(int r, int n);
 void reset_combi(combi_ctx *combi);
 combi_ctx *next_combi(combi_ctx *combi); /* returns NULL for end */
 void free_combi(combi_ctx *combi);
+
+/*
+ * divvy.c
+ */
+/* divides w*h rectangle into pieces of size k. Returns w*h dsf. */
+int *divvy_rectangle(int w, int h, int k, random_state *rs);
 
 /*
  * Data structure containing the function calls and data specific

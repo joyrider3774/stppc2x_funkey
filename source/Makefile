@@ -1,3 +1,13 @@
+# Makefile for GP2X cross-compilation using the Open2x toolchain and libraries
+#
+# This Makefile statically compiles all the games into a single executable per game and then
+# strips them.  This way, they don't need particular SDL libraries loaded on the GP2X.
+# It can also compile the against Paeryn's hardware-accelerated SDL libraries by replacing
+# libSDL.a with Paeryn's one.
+#
+# I've used the default Open2x directories.  I've also removed some of the object files
+# such as those used for external solver programs etc.
+
 CROSS_COMPILE = /opt/open2x/gcc-4.1.1-glibc-2.3.6/bin/arm-open2x-linux-
 SDL_BASE = /opt/open2x/gcc-4.1.1-glibc-2.3.6/bin/arm-open2x-linux-
 LDFLAGS = -static -L/opt/open2x/gcc-4.1.1-glibc-2.3.6/lib/ -L/opt/open2x/gcc-4.1.1-glibc-2.3.6/lib/gcc/arm-open2x-linux/4.1.1/ -L/opt/open2x/gcc-4.1.1-glibc-2.3.6/arm-open2x-linux/lib/ -lSDL -lSDL_ttf -lSDL -lSDL_gfx -lfreetype -lm -lgcc -lpthread -lc
@@ -7,7 +17,8 @@ CXX = $(CROSS_COMPILE)gcc
 LD=$(CROSS_COMPILE)ld
 STRIP = $(CROSS_COMPILE)strip
 
-CXXFLAGS = -I /opt/open2x/gcc-4.1.1-glibc-2.3.6/include/ -DTARGET_GP2X -O2 -Wall
+CXXFLAGS = -I /opt/open2x/gcc-4.1.1-glibc-2.3.6/include/ -DTARGET_GP2X -O2 -Wall -Werror 
+#CXXFLAGS = -I /opt/open2x/gcc-4.1.1-glibc-2.3.6/include/ -DTARGET_GP2X -O2 -Wall -Werror
 LIBS = -L"/opt/open2x/gcc-4.1.1-glibc-2.3.6/lib" -lSDL -lSDL_gfx --start-group -lSDL_ttf -lfreetype -lSDL --end-group -lSDL_image -ljpeg -lpng12 -lz --start-group -lSDL_mixer -lvorbisidec -lmikmod -lsmpeg -lmad -lSDL --end-group -lgcc -lm -lc -lpthread -ldl
 
 ALL_TARGETS = $(TARGET)
@@ -108,8 +119,8 @@ slant.gpe: drawing.o dsf.o sdl.o malloc.o midend.o misc.o printing.o ps.o random
 	$(CXX) -o $@ drawing.o dsf.o sdl.o malloc.o midend.o misc.o printing.o ps.o random.o slant.o version.o $(LDFLAGS)
 	$(STRIP) $@
 
-solo.gpe: drawing.o sdl.o malloc.o midend.o misc.o printing.o ps.o random.o solo.o version.o
-	$(CXX) -o $@ drawing.o sdl.o malloc.o midend.o misc.o printing.o ps.o random.o solo.o version.o $(LDFLAGS)
+solo.gpe: divvy.o drawing.o dsf.o malloc.o midend.o misc.o printing.o ps.o random.o sdl.o solo.o version.o
+	$(CXX) -o $@ divvy.o drawing.o dsf.o malloc.o midend.o misc.o printing.o ps.o random.o sdl.o solo.o version.o $(LDFLAGS)
 	$(STRIP) $@
 
 tents.gpe: drawing.o sdl.o malloc.o maxflow.o midend.o misc.o printing.o ps.o random.o tents.o version.o
@@ -141,6 +152,9 @@ combi.o: ./combi.c ./puzzles.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 cube.o: ./cube.c ./puzzles.h
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+divvy.o: ./divvy.c ./puzzles.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 dominosa.o: ./dominosa.c ./puzzles.h

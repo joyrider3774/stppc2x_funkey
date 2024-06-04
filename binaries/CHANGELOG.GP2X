@@ -1,4 +1,81 @@
-2008-04-01:
+2008-04-09 - BETA 2:
+ - Slightly improved status-bar drawing to stop stray pixels when a "descender" character
+   is printed.
+ - Abstracted font filename constants so they can be changed easily
+ - Coloured the whole background on startup instead of just the puzzle background.
+	I may revert this, I'm not sure yet.
+ - Removed a few more unused variables.
+ - Improved locking a bit more and re-tried hardware surfaces.
+	Still not worth the effort as the midend doesn't really "know" about double-buffering
+	and to teach it removes almost all of the benefits.  And with plain HW surfaces, you
+	get tearing.
+ - Narrowed down mines behaviour to ARM peculiarities.
+	ARM's signedness and endianness are different and this causes problems with the only
+	game to use signed/unsigned char's (specifically comparison to negative integers) and 
+	bit-shifting.  So it looks like this is outside the scope of this port until the 
+	upstream files are fixed.  I've sent an email to the author for help with this problem.
+
+2008-04-08:
+ - Abstracted some constants (screen height, width, colour depth, statusbar font size etc.) so 
+   that they can be changed easily without having to hunt through code.
+ - Added code and a new font to support monospaced fonts.
+	Nothing uses it yet but this is for completeness in case anyone adds new games to the
+	puzzle collection that requires monospaced fonts.
+ - Fixed a slight bug which could see information from a free()'d surface used.
+	Although a "victimless" bug so far, it was possible that a temporary surface for text 
+	would be free()'d and then the size of that surface used to calculate how much screen
+	to "blank" next time (often ending up by blanking nothing at all).  Re-ordered the code 
+	to stop it doing that (strange that nothing complained, though).
+ - Re-jigged mouse cursors again
+	Hopefully put a stop to the F-200 touchscreen / USB mouse weirdness.  Also, I changed 
+	some timings back now that I've stopped timing-related mouse problems.  Smoother
+	animation may or may not result. :-)
+ - Moved the initial mouse cursor to the centre of the puzzle instead of the top-left corner.
+ - Documented some more code and the Makefile a little.
+ - Added font alignment.
+	Only seems to be used for tents and only produces a slight shift to the bottom row
+	of text.  But, again, for the sake of completeness, it's done.
+
+2008-04-07:
+ - Fixed map's and inertia's drag-drop display problem.
+	I'm a pillock.  Having your source and destination the wrong way round means
+	that any amount of checking of your parameter values is useless if you don't 
+	check the ORDER of arguments as well.  I still say that the functions use
+	a "backwards" nomenclature for "blitter save/load" but once I switched them
+	around, it all started working properly without any other hassles.
+ - Fixed pegs and sped up all games by putting screen updates in the right places.
+	I'm still a pillock.  Although it still draws lots of primitives, we *now* don't 
+	update on every one of them, just the final "drawing".  So instead of many 
+	intra-frame updates, we get one end-of-frame update.  The documentation wasn't 
+	at all clear on this but I should have debugged it properly earlier.
+        Also, implemented proper "partial updates" instead of full updates all the time.
+ - Implemented re-use of loaded fonts.
+	Increases speed of text games at a cost of memory.  I didn't do this before for
+	debugging reasons and because it worked without it but for the sake of completeness
+	it now keeps copies of fonts in multiple sizes in RAM in case it re-uses them rather
+	than constantly load/destroy/load/destroy fonts as the sizes in use changes.
+	It still doesn't distinguish "types" of fonts (monospaced etc.) but that's only a 
+	minor addition.
+ - Better descriptive text for errors/startup.
+	You won't see them unless you are using Sterm / Telnet to run the games but when
+	something goes wrong, you're more likely to get a useful error message.
+ - Removed a few bits of unused / unnecessary SDL code.
+	e.g. initialising audio, overzealous locking, freeing of surfaces that get freed
+	anyway,...
+ - Tested code with proper hardware accelerated surfaces.
+	Little to no performance difference but strange problems related to dragging in
+        untangle, for example, which gives "jittery" cursors when using page-flipping.  
+	Reverted until cause can be found (not a high priority given the small advantage).
+ - More error checking and bailing out with a nicer error on certain failures.
+	e.g. fonts not being present, blits failing, etc.
+ - Looking again at mines quickly but it's still weird.  
+ - Made sure that the cursor doesn't linger after the game has quit.
+ - Updated to SVN 7977.
+	Nothing new, except for some hidden new style of solo that you can't play yet.
+	Just for the sake of making sure that upstream changes don't break anything from a
+	development point of view.
+
+2008-04-01 - BETA 1:
 
  - added routine to solve puzzles with Vol+ & Vol-
  - added display of currently selected digit in status bar and the statusbar itself
@@ -8,12 +85,11 @@
  - re-worked all the mouse code so now it works much more smoothly
  - improved most used path of event loop and changed timer settings - less CPU, same display
  - documented almost all the SDL code necessary
- - added some text to update the user on the program's progress (loading, solving etc.)
+ - added some text to update the user on the programs progress (loading etc.)
  - fixed a memory-not-initialised problem causing stray, random key-presses.
  - found the speed problem in pegs:
-        It's inside the game code itself.  There is MASSIVE primitives redrawing while 
-	moves take place.  Commenting out just the blits for cursor makes no difference
-	and so someone would have to tear apart the game-drawing code to make it playable.
-	I say the fault lies with the individual game code itself and needs patching upstream.
- - added file icon
- - created some quickstart documentation and other documentation files
+        Inside game code itself.  
+        MASSIVE primitives redrawing while moves take place.
+	Commenting out just the blits for cursor makes no difference
+	Would have to tear apart the game-drawing code to make it playable
+	I say the fault lies with the individual game code itself and needs patching upstream

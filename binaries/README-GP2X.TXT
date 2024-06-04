@@ -85,7 +85,7 @@ available (with source code) here:
 
  http://www.chiark.greenend.org.uk/~sgtatham/puzzles/
 
-This GP2X port is primarily based on SVN version r7703 from:
+This GP2X port is primarily based on SVN version r7977 from:
 
  http://svn.tartarus.org/puzzles/
  svn://svn.tartarus.org/puzzles/

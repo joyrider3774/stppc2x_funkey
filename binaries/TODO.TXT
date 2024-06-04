@@ -1,37 +1,31 @@
 TODO:
-  Fix drag-drop display problems in several games
-  Fix "mines" so it works on GP2X
-  Add hardware SDL / window zoom
+  Add hardware window zoom (Paeryn's library)
   Add parameter passing (difficulty, size etc.)
   Add save/load game (already in place, just need code to write to file)
-  
   Fix off-by-one errors in drawing code
   Create SDL menu for all the games?
 
 Test results:
 
   Blackbox - OK
-  Bridges - OK.  Strange dragging "feel".  Right-click problems when trying to unlock islands?
+  Bridges - OK
   Cube - OK
   Dominosa - OK
   Fifteen - OK
   Filling - OK
   Flip - OK
   Galaxies - OK
-  Guess - Drag-drop display artifacts left behind.
-  Inertia - Animation display artifacts left behind.
+  Guess - OK
+  Inertia - OK
   Light Up - OK
-  Loopy - OK.  No solver, though?
-  Map - Drag-drop display artifacts left behind.  Odd stray lines.
-  Mines - GP2X - Weird crash on line 599 with assert, shows mines at start.  Memory?
+  Loopy - OK.
+  Map - Odd stray lines.
+  Mines - GP2X - Weird crash on line 599 with assert, shows mines at start.  Endianness/Signedness?
         - PC - No crash, no mines, doesn't terminate properly on lose/win?
   Net - OK
   Netslide - OK
   Pattern - OK.  Font a little too small, because of default size of game.
-  Pegs - Very slow drag-drop.  Caused by heavy primitives drawing at all times during a drag.
-         Doesn't appear fixable from SDL code - it's just too much work for the poor GP2X to 
-         draw like that all the time while dragging.  Upstream game needs some optimisation.
-         A pity because that's the only game that displays the drag-drop properly!
+  Pegs - OK
   Rectangles - OK
   Same Game - OK
   Sixteen - OK

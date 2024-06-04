@@ -24,13 +24,13 @@
 
 This is a collection of small one-player puzzle games.
 
-\copyright This manual is copyright 2004-2007 Simon Tatham. All rights
+\copyright This manual is copyright 2004-2008 Simon Tatham. All rights
 reserved. You may distribute this documentation under the MIT licence.
 See \k{licence} for the licence text in full.
 
 \cfg{html-local-head}{<meta name="AppleTitle" content="Puzzles Help">}
 
-\versionid $Id: puzzles.but 7336 2007-02-25 23:30:14Z simon $
+\versionid $Id: puzzles.but 7974 2008-04-07 15:56:42Z simon $
 
 \C{intro} Introduction
 
@@ -929,6 +929,12 @@ grid on the \q{Type} menu: the number of columns, and the number of
 rows, into which the main grid is divided. (The size of a block is
 the inverse of this: for example, if you select 2 columns and 3 rows,
 each actual block will have 3 columns and 2 rows.)
+
+You can introduce an optional extra constraint on the puzzles,
+requiring that the two main diagonals of the grid also contain one
+of every digit. (This is sometimes known as \q{Sudoku-X} in
+newspapers.) In this mode, the squares on the two main diagonals
+will be shaded slightly so that you know it's enabled.
 
 You can also configure the type of symmetry shown in the generated
 puzzles. More symmetry makes the puzzles look prettier but may also
@@ -2233,9 +2239,11 @@ Filling was contributed to this collection by Jonas K\u00F6{oe}lker.
 \H{filling-controls} \I{controls, for Filling}Filling controls
 
 To play Filling, simply click the mouse in any empty square and then
-type a digit on the keyboard to fill that square.  If you make a
-mistake, click the mouse in the incorrect square and press 0, Space,
-Backspace or Enter to clear it again (or use the Undo feature).
+type a digit on the keyboard to fill that square. By dragging the
+mouse, you can select multiple squares to fill with a single keypress.
+If you make a mistake, click the mouse in the incorrect square and
+press 0, Space, Backspace or Enter to clear it again (or use the Undo
+feature).
 
 (All the actions described in \k{common-actions} are also available.)
 
@@ -2248,7 +2256,7 @@ grid, through the \q{Type} menu.
 
 \A{licence} \I{MIT licence}\ii{Licence}
 
-This software is \i{copyright} 2004-2007 Simon Tatham.
+This software is \i{copyright} 2004-2008 Simon Tatham.
 
 Portions copyright Richard Boulton, James Harvey, Mike Pinna and
 Jonas K\u00F6{oe}lker.

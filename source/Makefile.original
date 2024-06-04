@@ -196,9 +196,9 @@ slantsolver: dsf.o malloc.o misc.o nullfe.o random.o slant2.o
 	$(CC) $(ULDFLAGS) -o $@ dsf.o malloc.o misc.o nullfe.o random.o \
 		slant2.o 
 
-solo: drawing.o gtk.o malloc.o midend.o misc.o printing.o ps.o random.o \
+solo: divvy.o dsf.o drawing.o gtk.o malloc.o midend.o misc.o printing.o ps.o random.o \
 		solo.o solo-icon.o version.o
-	$(CC) $(XLDFLAGS) -o $@ drawing.o gtk.o malloc.o midend.o misc.o \
+	$(CC) $(XLDFLAGS) -o $@ divvy.o dsf.o drawing.o gtk.o malloc.o midend.o misc.o \
 		printing.o ps.o random.o solo.o solo-icon.o version.o 
 
 solosolver: malloc.o misc.o nullfe.o random.o solo2.o
@@ -250,6 +250,8 @@ combi.o: ./combi.c ./puzzles.h
 cube.o: ./cube.c ./puzzles.h
 	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
 cube-icon.o: icons/cube-icon.c
+	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
+divvy.o: ./divvy.c ./puzzles.h
 	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
 dominosa.o: ./dominosa.c ./puzzles.h
 	$(CC) $(COMPAT) $(FWHACK) $(CFLAGS) $(XFLAGS) -c $< -o $@
