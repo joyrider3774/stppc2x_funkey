@@ -1,0 +1,4 @@
+#!/bin/sh
+./games/flip
+cd /usr/gp2x
+exec /usr/gp2x/gp2xmenu

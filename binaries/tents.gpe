@@ -1,0 +1,4 @@
+#!/bin/sh
+./games/tents
+cd /usr/gp2x
+exec /usr/gp2x/gp2xmenu

@@ -1,0 +1,256 @@
+This file gives you a quick rundown of all the games and how to play them, along 
+with some very basic controls to get you started playing.  PUZZLES.TXT has much
+more information on gameplay, extra controls etc.
+
+The joystick/D-pad works like a mouse with A, Y, B as left-,middle- and right-click.
+Press Start for a new game
+Press Select to restart a game
+Press L+R together to quit
+Press Vol+/Vol- together to have the computer solve the puzzle (if possible)
+
+For games which need you to enter numbers:
+Press L and R to cycle through the possible numbers
+Press X to enter the number (you may have to A-click the cell first).
+
+Blackbox
+========
+
+Find the hidden balls in the box by bouncing laser beams off them.  There are some
+very complicated rules about when it bounces which you may be able to work out for
+yourself by looking at the computer solution.
+
+A-Click the outer edges to fire a laser from that square.
+A-Click the inner squares to enter where you think the hidden balls are
+A-Click the green circle to see if your guess is correct.
+
+Bridges
+=======
+
+Connect all the islands with a network of bridges.  Each island has a number, which 
+is the number of bridges that it connects to.  Each bridge may be single or multiple.
+All the islands have to join together and have the right number of bridges.
+
+Move the joystick while holding button A to build a bridge.
+
+Cube
+====
+
+Pick up all the blue squares by rolling the cube over them.
+
+A-click on a square to roll the cube onto it.
+
+Dominosa
+========
+
+Find the position of the full set of dominoes, i.e. mark out the 0-0, 0-1, 0-2, 0-3,
+...,6-4,6-5,6-6 tiles within the grid.
+
+A-click between two numbers to put a domino over them.
+
+Fifteen
+=======
+
+This is like one of those sliding-tile puzzles.  Slide the tiles using the empty 
+space until they are in order, top-to-bottom, left-to-right, 1-4, 5-8, 9-12, 13-15
+and then the space.
+
+A-click on a number next to the space to slide it into the space.
+
+Filling
+=======
+
+Mark out the whole grid so that each square has a number and is within a group of
+the same number, such that the group has the same amount of tiles as its number.
+
+E.g.:
+
+3231  <-- see how the 3's are in groups of three 3's, 2's are in groups of two 2's
+3233      and 1's are in groups of one 1's so that the entire grid is filled.
+3122
+
+Use L and R to select a number, A-click to select a square and then X to enter the 
+number in the square.
+
+Flip
+====
+
+Flip groups of squares to light them all up at once.  Each click flips the square 
+you click, plus the ones directly above, below, to the right and left.
+
+A-click to flip a square.
+
+Galaxies
+========
+
+Divide the grid into regions that can be symmetrically rotated 180 degrees around 
+their central dot.
+
+A-click on the line between squares to draw a line and box off the regions you want.
+
+Guess
+=====
+
+Guess the secret four-colour code.  Enter your guesses by dragging the colours on 
+the left into the grid, using the top-line for your first guess.  The results appear 
+on the right once you have entered your colours - black dots mean correct colour 
+in the correct position, white dots mean correct colour but incorrect position.
+
+Hold A and move the joystick to drag the colours to the positions.
+
+Inertia
+=======
+
+You are the green circle.  You have to collect all the diamonds without hitting
+the black circular mines.  Some squares are solid.  Other squares are "stop" 
+spaces.  When you move in a direction, you will "slide" until you hit a wall, 
+"stop"-space or bomb!
+
+A-click on a square next to the circle to slide in that direction.  You can slide
+diagonally.
+
+Light Up
+========
+
+You have to place lightbulbs in squares to light up every free space without 
+breaking the rules.  A number in a square means that it is adjacent to only that
+number of lightbulbs (diagonals don't count).  No lightbulb can "light" another
+lightbulb by being in the same row or column.
+
+A-click to place a lightbulb.
+
+Loopy
+=====
+Draw a single unbroken loop along the dots within the grid.  The squares that contain
+numbers have to have that many of their edges as part of the loop.
+
+A-click between two dots to draw a line between them.
+
+Map
+===
+
+Drag and drop the colours so that the map is filled and no two "countries" next to
+each other have the same colour.  It's always possible with just the four colours.
+
+Move the joystick while pressing A to drag a colour from one country to another.
+
+Mines
+=====
+
+Minesweeper!  Clear all the squares except the mines.  A number in a square indicates
+how many of its eight neighbours are mines.
+
+A-click to reveal a square.
+
+Net
+===
+
+Rotate each square to complete the network.  Each square should be joined to the 
+network and "powered" with electricity which comes from the central square.
+
+A-click to rotate a square clockwise, B-click to rotate anti-clockwise.
+
+Netslide
+========
+
+Similar to net, but this time you have to slide the squares like a Rubik's Cube and
+not rotate them.
+
+A-click the arrows to slide a row or column.
+
+Pattern
+=======
+
+Also known as nonograms or "paint by numbers".  Fill in the randomly-generated picture
+by using the clues.  The numbers indicate the lengths of runs of black squares in the
+row or column they are in.  E.g. 2 3 indicates that there is a run of two black before
+a run of three black somewhere in that column.
+
+A-click to mark a square black.  B-click to mark it white.
+
+Pegs
+====
+
+Also known as solitaire (not the card game!).  Jump pegs over one another (removing
+the "jumped" peg as in draughts/checkers) until only one remains.
+
+Hold A and move the joystick to drag a peg
+
+Rect
+====
+
+Divide the grid into rectangles with areas equal to their numbers.  So a 4 would be
+inside a 2x2 or a 4x1 rectangle.
+
+A-click on the lines between squares to build up the edges of the rectangles.
+
+Same Game
+=========
+
+Clear the grid of all squares.  You can only click a square if two or more 
+same-coloured squares are touching each other.  They will then disappear and 
+the rest of the squares will "fall".
+
+A-click to remove a group of square.
+
+Sixteen
+=======
+
+The same as fifteen but this time you have to slide rows/columns as if they were a 
+Rubik's Cube to get the numbers into numerical order.
+
+A-click the arrows to slide a row/column.
+
+Slant
+=====
+
+Draw a diagonal line in every box so that the numbered boxes have that number of 
+diagonal lines touching their circles.  
+
+Zero's have to be diamonds:     Four's have to be crosses:
+
+/ \                                     \ /
+ 0                                       4
+\ /                                     / \
+
+A-click a square to change it between a blank and the two types of diagonal line.
+
+Solo
+====
+
+Also known as Sudoku.  Enter a number into every square so that each line, column 
+and 3x3 box on the grid contains the numbers 1-9 without any repetitions.
+
+Use L and R to pick a number, then A-click on a square and press X to enter the 
+number.
+
+Tents
+=====
+
+Place a tent next to each tree so that there are the same number of tents as trees, 
+no two tents are adjacent and the number of tents in each row/column matches the 
+numbers on the sides of the grid.
+
+A-click to insert a tent into a square.
+
+Twiddle
+=======
+
+A bit like Fifteen.  Rotate the tiles to form 1-3, 4-6, 7-9 in order on the grid.
+
+A-click on an intersection to rotate the tiles around it.
+
+Unequal
+=======
+
+Complete the "latin square" so that each row/column has the numbers 1-4 in it and
+the "greater than" symbols hold true (e.g. 4 > 2 but not 1 > 2).
+
+Use L and R to select the number to enter.  A-click to select a box and press X
+to actually enter the number.
+
+Untangle
+========
+
+Drag the points out so that none of the lines cross any other.
+
+Hold A and move the joystick to drag a point.

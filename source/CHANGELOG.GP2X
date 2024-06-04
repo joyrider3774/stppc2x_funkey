@@ -1,0 +1,19 @@
+2008-04-01:
+
+ - added routine to solve puzzles with Vol+ & Vol-
+ - added display of currently selected digit in status bar and the statusbar itself
+ - modified and improved font use, re-use and sizing of blit areas
+ - improved definiton of mouse and blitting clipping areas
+ - updated to latest SVN version (only a gameplay change to "filling" to allow dragging multiple tiles)
+ - re-worked all the mouse code so now it works much more smoothly
+ - improved most used path of event loop and changed timer settings - less CPU, same display
+ - documented almost all the SDL code necessary
+ - added some text to update the user on the program's progress (loading, solving etc.)
+ - fixed a memory-not-initialised problem causing stray, random key-presses.
+ - found the speed problem in pegs:
+        It's inside the game code itself.  There is MASSIVE primitives redrawing while 
+	moves take place.  Commenting out just the blits for cursor makes no difference
+	and so someone would have to tear apart the game-drawing code to make it playable.
+	I say the fault lies with the individual game code itself and needs patching upstream.
+ - added file icon
+ - created some quickstart documentation and other documentation files

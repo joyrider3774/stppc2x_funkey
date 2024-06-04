@@ -1,0 +1,26 @@
+Based on SVN r7703
+
+Built with Open2x toolchain (arm-open2x-linux-apps-gcc-4.1.1-glibc-2.3.6_i686_linux) and 
+Open2x pre-compiled libraries (open2x-libpack-20071903-gcc-4.1.1-glibc-2.3.6).  I replaced
+libSDL.a with Paeryn's hardware SDL from http://paeryn.myby.co.uk/, the 21Mb version dated 
+23/11/07, but they work just fine with the standard Open2x libraries.
+
+Makefile (and its backup Makefile.GP2X) are GP2X-only makefiles.  Use them with a standard
+install of the Open2x toolchain described above and you can just type "make" to build all
+the GP2X versions.
+
+I couldn't be bothered to have the Makefile automatically generated from Recipe, sorry.
+The original GTK Makefile can be found at Makefile.original.  I'd advise not to run 
+mkfiles.pl because you'll wipe out the GP2X Makefile with one for the machine you're 
+developing on.
+
+All games built from the Makefile are statically linked with all the necessary libraries and 
+stripped automatically.
+
+The code for the SDL version is actually all contained in sdl.c and Makefile - all other files 
+are unmodified.  The GP2X Makefile doesn't do the version-magic that the original did, ignores 
+all icons and doesn't build some object files that I never used, like some of the solvers etc.
+
+Developer documentation for the puzzle collection can be found here:
+
+ http://www.chiark.greenend.org.uk/~sgtatham/puzzles/devel/
