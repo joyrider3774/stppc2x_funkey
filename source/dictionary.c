@@ -122,7 +122,7 @@ dictionary * dictionary_new(int size)
         memset(d->key, 0, size * sizeof(char*));
 
 	d->hash = (unsigned int *)scalloc(size, sizeof(unsigned));
-        memset(d->hash, 0, size * sizeof(char*));
+        memset(d->hash, 0, size * sizeof(unsigned));
 
 	return d ;
 }
