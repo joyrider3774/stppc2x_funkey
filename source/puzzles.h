@@ -523,8 +523,8 @@ extern const int gamecount;
 extern const game thegame;
 #endif
 
-int max_digit_to_input;
-int min_digit_to_input;
+extern int max_digit_to_input;
+extern int min_digit_to_input;
 void game_completed();
 
 #endif /* PUZZLES_PUZZLES_H */

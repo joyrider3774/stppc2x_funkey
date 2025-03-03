@@ -696,6 +696,7 @@ static char *validate_params(game_params *params, int full)
     return NULL;
 }
 
+/*
 char* itoa(int val, int base)
 {
 	static char buf[32] = {0};	
@@ -704,6 +705,7 @@ char* itoa(int val, int base)
 		buf[i] = "0123456789abcdef"[val % base];
 	return &buf[i+1];	
 }
+*/
 
 static char *new_game_desc(game_params *params, random_state *rs, char **aux, int interactive)
 {

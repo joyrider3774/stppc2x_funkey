@@ -63,6 +63,10 @@
     #define EVENTS_IN_SEPERATE_THREAD    // Spawn a seperate thread to handle events
 #endif
 
+#ifndef uint
+typedef unsigned int uint;
+#endif
+
 // Standard C includes
 // ===================
 #include <stdio.h>
@@ -85,8 +89,9 @@
 
 // SDL library includes
 // ====================
+#include <SDL/SDL_stdinc.h>
 #include <SDL/SDL.h>
-#include <SDL/SDL_gp2x.h>
+//#include <SDL/SDL_gp2x.h>
 #include <SDL/SDL_gfxPrimitives.h>
 #include <SDL/SDL_rotozoom.h>
 #include <SDL/SDL_ttf.h>
@@ -2235,7 +2240,9 @@ void game_quit()
     SDL_ShowCursor(SDL_DISABLE);
 
     // Flush all files to disk (just in case).
+#ifndef WIN32    
     sync();
+#endif
 
     // We *could* also run the menu again, but it's preferable for this program to just
     // terminate.  This way, GMenu2x etc. users don't get thrown back into the GP2X menu
@@ -2641,7 +2648,7 @@ void Main_SDL_Loop(void *handle)
 
                         case GP2X_BUTTON_A:
                             bs->joy_a=0;
-                            // Simulate releasing left mouse button
+                            //ï¿½Simulate releasing left mouse button
                             if(current_screen != GAMELISTMENU)
                                 emulate_event(SDL_MOUSEBUTTONUP, mouse_x, mouse_y, SDL_BUTTON_LEFT);
                             break;
@@ -3205,27 +3212,27 @@ void Main_SDL_Loop(void *handle)
                     switch(event.key.keysym.sym)
                     {
                         case SDLK_z:
-                            // Simulate pressing the Select key
+                            //ï¿½Simulate pressing the Select key
                             emulate_event(SDL_JOYBUTTONDOWN, 0, 0, GP2X_BUTTON_SELECT);
                             break;
 
                         case SDLK_y:
-                            // Simulate pressing the Y key
+                            //ï¿½Simulate pressing the Y key
                             emulate_event(SDL_JOYBUTTONDOWN, 0, 0, GP2X_BUTTON_Y);
                             break;
 
                         case SDLK_u:
-                            // Simulate pressing the Vol- key
+                            //ï¿½Simulate pressing the Vol- key
                             emulate_event(SDL_JOYBUTTONDOWN, 0, 0, GP2X_BUTTON_VOLDOWN);
                             break;
 
                         case SDLK_i:
-                            // Simulate pressing the Vol+ key
+                            //ï¿½Simulate pressing the Vol+ key
                             emulate_event(SDL_JOYBUTTONDOWN, 0, 0, GP2X_BUTTON_VOLUP);
                             break;
 
                         case SDLK_p:
-                            // Simulate pressing the Start key
+                            //ï¿½Simulate pressing the Start key
                             emulate_event(SDL_JOYBUTTONDOWN, 0, 0, GP2X_BUTTON_START);
                             break;
 
@@ -3236,12 +3243,12 @@ void Main_SDL_Loop(void *handle)
                             break;
 
                         case SDLK_e:
-                            // Simulate pressing stick-click
+                            //ï¿½Simulate pressing stick-click
                             emulate_event(SDL_JOYBUTTONDOWN, 0, 0, GP2X_BUTTON_CLICK);
                             break;
 
                         case SDLK_s:
-                            // Simulate pressing the Vol+ and Vol- keys
+                            //ï¿½Simulate pressing the Vol+ and Vol- keys
                             emulate_event(SDL_JOYBUTTONDOWN, 0, 0, GP2X_BUTTON_VOLUP);
                             emulate_event(SDL_JOYBUTTONDOWN, 0, 0, GP2X_BUTTON_VOLDOWN);
                             emulate_event(SDL_JOYBUTTONUP, 0, 0, GP2X_BUTTON_VOLUP);
@@ -3249,47 +3256,47 @@ void Main_SDL_Loop(void *handle)
                             break;
 
                         case SDLK_l:
-                            // Simulate pressing the L key
+                            //ï¿½Simulate pressing the L key
                             emulate_event(SDL_JOYBUTTONDOWN, 0, 0, GP2X_BUTTON_L);
                             break;
 
                         case SDLK_a:
-                            // Simulate pressing the A key
+                            //ï¿½Simulate pressing the A key
                             emulate_event(SDL_JOYBUTTONDOWN, 0, 0, GP2X_BUTTON_A);
                             break;
 
                         case SDLK_b:
-                            // Simulate pressing the B key
+                            //ï¿½Simulate pressing the B key
                             emulate_event(SDL_JOYBUTTONDOWN, 0, 0, GP2X_BUTTON_B);
                             break;
 
                         case SDLK_x:
-                            // Simulate pressing the X key
+                            //ï¿½Simulate pressing the X key
                             emulate_event(SDL_JOYBUTTONDOWN, 0, 0, GP2X_BUTTON_X);
                             break;
 
                         case SDLK_r:
-                            // Simulate pressing the R key
+                            //ï¿½Simulate pressing the R key
                             emulate_event(SDL_JOYBUTTONDOWN, 0, 0, GP2X_BUTTON_R);
                             break;
 
                         case SDLK_UP:
-                            // Simulate pressing Up
+                            //ï¿½Simulate pressing Up
                             emulate_event(SDL_JOYBUTTONDOWN, 0, 0, GP2X_BUTTON_UP);
                             break;
 
                         case SDLK_DOWN:
-                            // Simulate pressing Down
+                            //ï¿½Simulate pressing Down
                             emulate_event(SDL_JOYBUTTONDOWN, 0, 0, GP2X_BUTTON_DOWN);
                             break;
 
                         case SDLK_LEFT:
-                            // Simulate pressing Left
+                            //ï¿½Simulate pressing Left
                             emulate_event(SDL_JOYBUTTONDOWN, 0, 0, GP2X_BUTTON_LEFT);
                             break;
 
                         case SDLK_RIGHT:
-                            // Simulate pressing Right
+                            //ï¿½Simulate pressing Right
                             emulate_event(SDL_JOYBUTTONDOWN, 0, 0, GP2X_BUTTON_RIGHT);
                            break;
 
@@ -3302,7 +3309,7 @@ void Main_SDL_Loop(void *handle)
                     switch(event.key.keysym.sym)
                     {
                         case SDLK_z:
-                            // Simulate pressing the Select key
+                            //ï¿½Simulate pressing the Select key
                             emulate_event(SDL_JOYBUTTONUP, 0, 0, GP2X_BUTTON_SELECT);
                             break;
 
@@ -3311,12 +3318,12 @@ void Main_SDL_Loop(void *handle)
                             break;
 
                         case SDLK_u:
-                            // Simulate releasing the Vol- key
+                            //ï¿½Simulate releasing the Vol- key
                             emulate_event(SDL_JOYBUTTONUP, 0, 0, GP2X_BUTTON_VOLDOWN);
                             break;
 
                         case SDLK_i:
-                            // Simulate releasing the Vol+ key
+                            //ï¿½Simulate releasing the Vol+ key
                             emulate_event(SDL_JOYBUTTONUP, 0, 0, GP2X_BUTTON_VOLUP);
                             break;
 
@@ -5040,7 +5047,7 @@ int get_mouse_type()
     return(GP2X_MOUSE_STD);    
  #endif
 #else
-    return(GP2X_MOUSE_STD);
+    return(0);
 #endif
 }
 

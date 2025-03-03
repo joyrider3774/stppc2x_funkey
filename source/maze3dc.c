@@ -1709,7 +1709,7 @@ void maze_save(MAZE *maze, FILE *fp)
 
 #define ml_if(a, f, t) ((a) < (f) || a > (t))
 
-int ml_ifdir(d)
+int ml_ifdir(int d)
 {
 	if(d < 0 || d > 128) return -1;
 	if(mve[d] < 0) return -1;
