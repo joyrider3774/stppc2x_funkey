@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 env:
-  GAME_NAME: Blockdude
+  GAME_NAME: Stppc2x
   GAME_SYS: funkey-s
 
 name: Build funkey-s
@@ -33,9 +33,8 @@ jobs:
           GAME_SYS: ${{env.GAME_SYS}}
         run: |
           mkdir -p opk
-          cp  blockdude opk/blockdude
-          cp -r ./blockdudefs opk/blockdudefs
-          cp $GAME_NAME.$GAME_SYS.desktop opk/$GAME_NAME.$GAME_SYS.desktop
+          cp stppc2x opk/stppc2x
+          cp -r ./binaries-funkey/. opk/
 
           mksquashfs ./opk $GAME_NAME.opk -all-root -noappend -no-exports -no-xattrs
                
