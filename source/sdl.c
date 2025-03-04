@@ -192,7 +192,7 @@ enum { RUN_GAME_TIMER_LOOP, RUN_MOUSE_TIMER_LOOP, RUN_SECOND_TIMER_LOOP};
 #define DEFAULT_MENU_FONT_SIZE      (12)
 
 // Font size of the help text
-#define DEFAULT_HELP_FONT_SIZE      (10)
+#define DEFAULT_HELP_FONT_SIZE      (8)
 
 // Maximum pixels of movement per mouse timer tick movement.
 #define MAX_MOUSE_ACCELERATION      (30)
