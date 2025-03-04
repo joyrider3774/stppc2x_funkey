@@ -1,0 +1,8 @@
+Well all to say about this is, that it's a plain recompilation of Ledow's
+GP2X version using the openwiz toolchain. All thanks, donations and whatever
+should directly go to him as i didn't have to do anything but change a few lines
+in the default Makefile and the sdl.c file.
+
+More information, original sources and additional music downloads can be found
+on Ledows site: http://www.ledow.org.uk/gp2x/v1.1/
+

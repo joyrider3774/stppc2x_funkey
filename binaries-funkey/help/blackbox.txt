@@ -1,0 +1,19 @@
+Blackbox
+========
+
+Find the hidden balls in the box by bouncing laser beams 
+off them.  A beam travels in a straight line from the 
+outer edge.  If it encounters a ball head-on, it is 
+absorbed (indicated by an "H").  
+
+If a beam encounters a ball in front and to the left, it 
+will then turn 90 degrees to the right and vice versa.  
+
+If a beam ends up leaving the grid at the same point it 
+entered (or is "deflected" before it enters the grid), 
+an "R" is shown.
+
+A-Click the outer edges to fire a laser.
+A-Click the inner squares to mark the balls.
+A-Click the green circle to check your guess.
+B-Click to mark sqaures, rows or columns empty.

@@ -1,0 +1,11 @@
+Solo (a.k.a. Sudoku)
+====
+
+Enter a number into every square so that each line, column
+and marked box on the grid contains the every number without
+any repetitions.
+
+Use L and R to choose a number.
+A-click on a square and press X to enter the number.
+B-click on a square and press X to enter some provisional
+numbers in that square.

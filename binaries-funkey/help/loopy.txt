@@ -1,0 +1,20 @@
+Loopy
+=====
+
+Your aim is to draw a single unbroken loop of black
+lines along the grid.  It does not have to touch 
+every region.
+
+The regions that contain numbers have that many of 
+their edges as part of the loop.  Some of these 
+regions will be inside the loop, and some will be
+outside.
+
+The options will let you use non-square regions
+such as honeycombs and kite-shapes.
+
+A-click on a yellow line to draw a line.
+A-click again to make it yellow.
+B-click on a line to remove it entirely.
+B-click again to make it yellow.
+

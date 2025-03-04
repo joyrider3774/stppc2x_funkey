@@ -1,0 +1,16 @@
+Unequal
+=======
+
+Complete the "latin square" so that no row or
+column has a repeating number in it, and the 
+"greater than" symbols hold true 
+(e.g. 4 > 2 but not 1 > 2).
+
+The default game uses the numbers 1-4 but the
+options allow you to change the size.
+
+Use L and R to select the number to enter.  
+A-click to select a box and press X to actually 
+enter the number.
+B-click to select a box and press X to enter
+some provisional numbers.

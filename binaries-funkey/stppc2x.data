@@ -1,0 +1,31 @@
+blackbox,Find the hidden balls in#the box by bouncing#laser beams off them.
+bridges,Connect all the islands#with a network of#bridges.
+cube,Pick up all the blue#tiles by rolling the#shape over them.
+dominosa,Find the position of the#full set of dominoes.
+fifteen,Slide the tiles using#the empty space until#they are in order.
+filling,Group squares such#that each group has the#numbered amount of tiles.
+flip,Flip groups of squares#to light them all up at#once.
+galaxies,Divide the grid into#symmetrical regions#centered on each point.
+guess,Guess the secret#colour code.
+inertia,Collect all the blue#diamonds without#hitting the black#mines.
+lightup,Place lightbulbs to#light up every free#space.
+loopy,Draw an unbroken#loop on the edges#of the grid.
+map,Colour the map to#have adjacent countries#in different colours.
+maze3d,Navigate the 3D maze#to find the exit.
+mines,Clear all the squares#except the mines.
+mosco,Fill the grid with#arrows to fit the clues.
+net,Power each square#with electricity from#the central node.
+netslide,Slide the rows and#columns to power each#square.
+pattern,Fill in the randomly#generated picture#by using the clues.
+pegs,Jump pegs over one#another until only one#remains.
+rectangles,Divide the grid into#rectangles with areas#equal to their numbers.
+samegame,Clear the grid of all#squares.
+sixteen,Slide the rows and#columns until the#numbers are in order.
+slant,Put a diagonal line in#each square to complete#the grid without loops.
+slide,Slide the blocks#to get the highlighted#one in the gate.
+sokoban,Push the brown crates#onto the target squares.
+solo,Also known as Sudoku.
+tents,Place a tent next#to each tree following#the rules.
+twiddle,Rotate the tiles until#they are in order.
+unequal,Complete the square#so that the symbols#hold true.
+untangle,Drag the points out#to untangle the lines.
