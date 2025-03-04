@@ -1,0 +1,46 @@
+# Controls when the workflow will run
+on:
+  # Allows you to run this workflow manually target the Actions tab
+  workflow_dispatch:
+
+env:
+  GAME_NAME: Blockdude
+  GAME_SYS: funkey-s
+
+name: Build funkey-s
+jobs:
+  build:
+    runs-on: ubuntu-latest    
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v3
+          
+      - name: setup funkey SDK
+        run: |
+          wget https://github.com/DrUm78/FunKey-OS/releases/download/FunKey-OS-DrUm78/FunKey-sdk-2.3.0.tar.gz
+          tar -xzvf ./FunKey-sdk-2.3.0.tar.gz
+          cd FunKey-sdk-2.3.0
+          ./relocate-sdk.sh
+       
+      - name: Build Game
+        run: |
+          export TMPPREFIX=FunKey-sdk-2.3.0/arm-funkey-linux-musleabihf/sysroot/usr
+          make "TARGET=funkey" "CC=FunKey-sdk-2.3.0/bin/arm-linux-gcc" "PREFIX=$TMPPREFIX"
+      
+      - name: package opk
+        env:
+          GAME_NAME: ${{env.GAME_NAME}}
+          GAME_SYS: ${{env.GAME_SYS}}
+        run: |
+          mkdir -p opk
+          cp  blockdude opk/blockdude
+          cp -r ./blockdudefs opk/blockdudefs
+          cp $GAME_NAME.$GAME_SYS.desktop opk/$GAME_NAME.$GAME_SYS.desktop
+
+          mksquashfs ./opk $GAME_NAME.opk -all-root -noappend -no-exports -no-xattrs
+               
+      - name: Store build
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{env.GAME_NAME}}_${{env.GAME_SYS}}
+          path: ${{env.GAME_NAME}}.opk

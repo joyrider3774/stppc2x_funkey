@@ -1,0 +1,87 @@
+# Controls when the workflow will run
+on:
+  # Allows you to run this workflow manually target the Actions tab
+  workflow_dispatch:
+
+name: Build Windows
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - { sys: mingw64, env: x86_64, name: stppc2x, filesys: binaries-funkey }
+          - { sys: mingw32, env: i686,   name: stppc2x, filesys: binaries-funkey }
+    runs-on: windows-latest    
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Setup Msys
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{matrix.sys}}
+          install: >-
+            base-devel
+            mingw-w64-${{matrix.env}}-gcc
+            mingw-w64-${{matrix.env}}-SDL             
+            mingw-w64-${{matrix.env}}-SDL_ttf
+            mingw-w64-${{matrix.env}}-SDL_image
+            mingw-w64-${{matrix.env}}-SDL_mixer
+            mingw-w64-${{matrix.env}}-SDL_gfx
+            mingw-w64-${{matrix.env}}-make
+            mingw-w64-${{matrix.env}}-harfbuzz
+            mingw-w64-${{matrix.env}}-freetype
+            mingw-w64-${{matrix.env}}-libwebp
+            mingw-w64-${{matrix.env}}-libtiff
+            mingw-w64-${{matrix.env}}-libmikmod
+
+      - name: Build Game
+        shell: msys2 {0}
+        run: |
+          make "EXE=\"${{matrix.name}}.exe\"" "PREFIX=/${{matrix.sys}}" "CFLAGS=-I/${{matrix.sys}}/include -I/${{matrix.sys}}/include/SDL -D_GNU_SOURCE=1 -Dmain=SDL_main" "LDFLAGS=-mwindows -L/${{matrix.sys}}/lib -lmingw32 -lSDLmain -lSDL -lSDL_image -lSDL_ttf -lSDL_mixer -lSDL_gfx -lm"
+
+      - name: Copy Game And Assets
+        shell: msys2 {0}
+        run: |
+          mkdir ./Release
+          mkdir "./Release/${{matrix.name}}"
+          cp -R "./${{matrix.filesys}}/." "./Release/${{matrix.name}}/"
+          cp "${{matrix.name}}.exe" "./Release/${{matrix.name}}/"
+
+      - name: Copy dll libraries
+        shell: msys2 {0}
+        run: |
+          cp /${{matrix.sys}}/bin/libbrotli*.dll "./Release/${{matrix.name}}/"
+          cp /${{matrix.sys}}/bin/libbz*.dll "./Release/${{matrix.name}}/"
+          cp /${{matrix.sys}}/bin/libdeflate*.dll "./Release/${{matrix.name}}/"
+          cp /${{matrix.sys}}/bin/libfreetype*.dll "./Release/${{matrix.name}}/"
+          cp /${{matrix.sys}}/bin/libgcc*.dll "./Release/${{matrix.name}}/"
+          cp /${{matrix.sys}}/bin/libglib*.dll "./Release/${{matrix.name}}/"
+          cp /${{matrix.sys}}/bin/libgraphite*.dll "./Release/${{matrix.name}}/"
+          cp /${{matrix.sys}}/bin/libharfbuzz*.dll "./Release/${{matrix.name}}/"
+          cp /${{matrix.sys}}/bin/libiconv*.dll "./Release/${{matrix.name}}/"
+          cp /${{matrix.sys}}/bin/libintl*.dll "./Release/${{matrix.name}}/"
+          cp /${{matrix.sys}}/bin/libjbig*.dll "./Release/${{matrix.name}}/"
+          cp /${{matrix.sys}}/bin/libjpeg*.dll "./Release/${{matrix.name}}/"
+          cp /${{matrix.sys}}/bin/libLerc*.dll "./Release/${{matrix.name}}/"
+          cp /${{matrix.sys}}/bin/liblzma*.dll "./Release/${{matrix.name}}/"
+          cp /${{matrix.sys}}/bin/libogg*.dll "./Release/${{matrix.name}}/"
+          cp /${{matrix.sys}}/bin/libpcre*.dll "./Release/${{matrix.name}}/"
+          cp /${{matrix.sys}}/bin/libpng*.dll "./Release/${{matrix.name}}/"
+          cp /${{matrix.sys}}/bin/libstdc*.dll "./Release/${{matrix.name}}/"
+          cp /${{matrix.sys}}/bin/libtiff*.dll "./Release/${{matrix.name}}/"
+          cp /${{matrix.sys}}/bin/libwebp*.dll "./Release/${{matrix.name}}/"
+          cp /${{matrix.sys}}/bin/libzstd*.dll "./Release/${{matrix.name}}/"
+          cp /${{matrix.sys}}/bin/zlib*.dll "./Release/${{matrix.name}}/"
+          cp /${{matrix.sys}}/bin/libSDL*.dll "./Release/${{matrix.name}}/"
+          cp /${{matrix.sys}}/bin/SDL*.dll "./Release/${{matrix.name}}/"
+          cp /${{matrix.sys}}/bin/libwinpthread*.dll "./Release/${{matrix.name}}/"
+          cp /${{matrix.sys}}/bin/libmikmod*.dll "./Release/${{matrix.name}}/"
+          cp /${{matrix.sys}}/bin/libmad*.dll "./Release/${{matrix.name}}/"
+          cp /${{matrix.sys}}/bin/libsharpyuv*.dll "./Release/${{matrix.name}}/"
+
+      - name: Store build
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{matrix.name}} ${{ matrix.env }}
+          path: ./Release/
