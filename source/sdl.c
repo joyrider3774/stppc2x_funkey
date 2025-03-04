@@ -59,6 +59,7 @@
 
 #if defined(_WIN32) || defined(__CYGWIN__)
     // Windows-ish thing detected.  Probably doesn't support pthreads.  Disabling event threads.
+#include <windows.h>
 #else
     #define EVENTS_IN_SEPERATE_THREAD    // Spawn a seperate thread to handle events
 #endif
@@ -234,7 +235,7 @@ enum { RUN_GAME_TIMER_LOOP, RUN_MOUSE_TIMER_LOOP, RUN_SECOND_TIMER_LOOP};
 #define MENU_CREDITS_FILENAME "credits.txt"
 
 // Filename of a saved screenshot
-#define SCREENSHOT_FILENAME "screenshots/screenshot%04u.bmp"
+#define SCREENSHOT_FILENAME "%s/screenshot%04u.bmp"
 
 // Path for music files
 #define MUSIC_PATH "music/"
@@ -1857,11 +1858,11 @@ void draw_menu(frontend *fe, uint menu_index)
                 memset(saveslot_string, 0, 11 * sizeof(char));
                 sprintf(saveslot_string, "Saveslot %u", j);
                 sdl_actual_draw_text(fe, 10, (5+j)*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, saveslot_string);
-                sdl_actual_draw_text(fe, (screen_width==SCREEN_WIDTH_LARGE)?400:200, (5+j)*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "Save");
+                sdl_actual_draw_text(fe, (screen_width==SCREEN_WIDTH_LARGE)?400:120, (5+j)*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "Save");
                 if(savefile_exists(fe->sanitised_game_name, j))
                 {
-                    sdl_actual_draw_text(fe, (screen_width==SCREEN_WIDTH_LARGE)?500:250, (5+j)*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "Load");
-                    sdl_actual_draw_text(fe, (screen_width==SCREEN_WIDTH_LARGE)?600:300, (5+j)*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, UNICODE_SKULL_CROSSBONES);
+                    sdl_actual_draw_text(fe, (screen_width==SCREEN_WIDTH_LARGE)?500:170, (5+j)*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "Load");
+                    sdl_actual_draw_text(fe, (screen_width==SCREEN_WIDTH_LARGE)?600:220, (5+j)*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, UNICODE_SKULL_CROSSBONES);
                 };
                 sfree(saveslot_string);
             };
@@ -1875,8 +1876,8 @@ void draw_menu(frontend *fe, uint menu_index)
 
             if(autosave_file_exists(fe->sanitised_game_name))
             {
-                sdl_actual_draw_text(fe, (screen_width==SCREEN_WIDTH_LARGE)?500:250, 15*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "Load");
-                sdl_actual_draw_text(fe, (screen_width==SCREEN_WIDTH_LARGE)?600:300, 15*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, UNICODE_SKULL_CROSSBONES);
+                sdl_actual_draw_text(fe, (screen_width==SCREEN_WIDTH_LARGE)?500:170, 15*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "Load");
+                sdl_actual_draw_text(fe, (screen_width==SCREEN_WIDTH_LARGE)?600:220, 15*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, UNICODE_SKULL_CROSSBONES);
             };
             break;
 
@@ -2185,6 +2186,19 @@ void draw_menu(frontend *fe, uint menu_index)
                 char *track_name=get_music_filename(i+1);
                 if(track_name != NULL)
                 {
+                    //limit filename
+                    int maxTrackNameLength = strlen(track_name) -4;
+                    track_name[maxTrackNameLength] = '\0';
+                    maxTrackNameLength = strlen(track_name);
+                    if(maxTrackNameLength > 30)
+                        maxTrackNameLength = 30;
+                    if(strlen(track_name) > maxTrackNameLength)
+                    {
+                        track_name[maxTrackNameLength-3] = '.';
+                        track_name[maxTrackNameLength-2] = '.';
+                        track_name[maxTrackNameLength-1] = '.';
+                        track_name[maxTrackNameLength] = '\0';
+                    }
                     sdl_actual_draw_text(fe, 10, (7+i)*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, track_name);
                     sfree(track_name);
                     if((i+1) == current_music_track)
@@ -3152,7 +3166,9 @@ void Main_SDL_Loop(void *handle)
                             int i;
                             for(i=0;i<10000;i++)
                             {
-                                sprintf(save_filename, SCREENSHOT_FILENAME,i);
+                                char *writeable_folder = generate_writeable_folder();
+                                sprintf(save_filename, SCREENSHOT_FILENAME,writeable_folder, i);
+                                sfree(writeable_folder);
                                 if(file_exists(save_filename) == FALSE)
                                     break;
                             };
@@ -4071,7 +4087,7 @@ void Main_SDL_Loop(void *handle)
                             int saveslot_number = current_line -5;
                             if(saveslot_number < 10)
                             {
-                                if((x > 200) && (x <240))
+                                if((x > 120) && (x <160))
                                 {
                                     // Save the game, redraw the menu (to show the new save game)
                                     // and THEN show a status bar message of whether it worked
@@ -4083,13 +4099,13 @@ void Main_SDL_Loop(void *handle)
                                     sdl_status_bar(fe, result);
                                     sfree(result);
                                 }
-                                else if((x > 250) && (x < 290))
+                                else if((x > 170) && (x < 210))
                                 {
                                     savegame_to_delete = -1;
                                     if(savefile_exists(fe->sanitised_game_name, saveslot_number))
                                         load_game(fe, saveslot_number);
                                 }
-                                else if((x > 300) && (savefile_exists(fe->sanitised_game_name, saveslot_number)))
+                                else if((x > 220) && (savefile_exists(fe->sanitised_game_name, saveslot_number)))
                                 {
                                     char *message;
                                     message=snewn(sizeof("Press the delete icon again to delete save slot 0"), char);
@@ -4114,12 +4130,12 @@ void Main_SDL_Loop(void *handle)
                         }
                         else if(current_line == 15)
                         {
-                            if((event.button.x > 250) && (event.button.x < 290))
+                            if((event.button.x > 170) && (event.button.x < 210))
                             {
                                 if(autosave_file_exists(fe->sanitised_game_name))
                                     load_autosave_game(fe);
                             }
-                            else if((event.button.x > 300) && (autosave_file_exists(fe->sanitised_game_name)))
+                            else if((event.button.x > 220) && (autosave_file_exists(fe->sanitised_game_name)))
                             {
                                 delete_autosave_game(fe);
                                 draw_menu(fe, SAVEMENU);
@@ -4228,7 +4244,6 @@ int load_config_from_INI(frontend *fe)
     printf("load_config_from_INI()\n");
 #endif
 
-    char *filename;
     char *result;
     char *keyword_name;
     char *string_value;
@@ -4238,8 +4253,11 @@ int load_config_from_INI(frontend *fe)
 
     // Dynamically allocate space for a filename and add .ini to the end of the 
     // sanitised game name to get the filename we will use.
-    filename=snewn(MAX_GAMENAME_SIZE + 5,char);
-    sprintf(filename, "%.*s.ini", MAX_GAMENAME_SIZE, fe->sanitised_game_name);
+    char *writeable_folder = generate_writeable_folder();
+    char *filename = snewn(_MAX_PATH + 1, char);
+    memset(filename, 0, (_MAX_PATH + 1) * sizeof(char));
+    sprintf(filename, "%s/%s.ini", writeable_folder, fe->sanitised_game_name);
+    sfree(writeable_folder);
 #ifdef DEBUG_FILE_ACCESS
     printf("Attempting to load game INI file: %s\n",filename);
 #endif
@@ -4390,18 +4408,24 @@ void load_global_config_from_INI()
     dictionary *global_ini_dict;
     int i;
 
+    char *writeable_folder = generate_writeable_folder();
+    char *filename = snewn(_MAX_PATH + 1, char);
+    memset(filename, 0, (_MAX_PATH + 1) * sizeof(char));
+    sprintf(filename, "%s/%s", writeable_folder, GLOBAL_CONFIG_FILENAME);
+    sfree(writeable_folder);
 #ifdef DEBUG_FILE_ACCESS
-    printf("Attempting to load global INI file: %s\n",GLOBAL_CONFIG_FILENAME);
+    printf("Attempting to load global INI file: %s\n",filename);
 #endif
 
+
     // Load the INI file into an in-memory structure.
-    global_ini_dict=iniparser_load(GLOBAL_CONFIG_FILENAME);
+    global_ini_dict=iniparser_load(filename);
 
     // If we didn't succeed
     if(global_ini_dict==NULL)
     {
 #ifdef DEBUG_FILE_ACCESS
-        printf("Cannot parse INI file: %s\nReverting to global defaults.\n", GLOBAL_CONFIG_FILENAME);
+        printf("Cannot parse INI file: %s\nReverting to global defaults.\n", filename);
 #endif
         // Allocate an empty INI structure, just to make the thing work.
         global_ini_dict=dictionary_new(0);
@@ -4409,12 +4433,12 @@ void load_global_config_from_INI()
     else
     {
 #ifdef DEBUG_FILE_ACCESS
-        printf("INI file successfully parsed: %s\n", GLOBAL_CONFIG_FILENAME);
+        printf("INI file successfully parsed: %s\n", filename);
 #else
-        printf("Global configuration loaded from %s\n", GLOBAL_CONFIG_FILENAME);
+        printf("Global configuration loaded from %s\n", filename);
 #endif
     };
-
+    sfree(filename);
     boolean_value=iniparser_getboolean(global_ini_dict, "Configuration:autosave",-1);
     if(boolean_value==-1)
     {
@@ -4547,19 +4571,23 @@ uint save_global_config_to_INI(uint save_music_config)
     FILE *inifile;
     dictionary *global_ini_dict;
     int i;
-
+    char *writeable_folder = generate_writeable_folder();
+    char *filename = snewn(_MAX_PATH + 1, char);
+    memset(filename, 0, (_MAX_PATH + 1) * sizeof(char));
+    sprintf(filename, "%s/%s", writeable_folder, GLOBAL_CONFIG_FILENAME);
+    sfree(writeable_folder);
 #ifdef DEBUG_FILE_ACCESS
-    printf("Attempting to save global INI file: %s\n",GLOBAL_CONFIG_FILENAME);
+    printf("Attempting to save global INI file: %s\n",filename);
 #endif
 
     // Load the INI file into an in-memory structure.
-    global_ini_dict=iniparser_load(GLOBAL_CONFIG_FILENAME);
+    global_ini_dict=iniparser_load(filename);
 
     // If we didn't succeed
     if(global_ini_dict==NULL)
     {
 #ifdef DEBUG_FILE_ACCESS
-        printf("Cannot parse INI file: %s\n", GLOBAL_CONFIG_FILENAME);
+        printf("Cannot parse INI file: %s\n", filename);
 #endif
         // Allocate an empty INI structure, just to make the thing work.
         global_ini_dict=dictionary_new(0);
@@ -4597,16 +4625,16 @@ uint save_global_config_to_INI(uint save_music_config)
     };
 
 #ifdef DEBUG_FILE_ACCESS
-    printf("INI: Attempting to open %s for writing.\n", GLOBAL_CONFIG_FILENAME);
+    printf("INI: Attempting to open %s for writing.\n", filename);
 #endif
-    // Open the INI file for writing.
-    inifile = fopen(GLOBAL_CONFIG_FILENAME, "w");
     
+    // Open the INI file for writing.
+    inifile = fopen(filename, "w");
     // If we succeeded
     if(inifile)
     {
 #ifdef DEBUG_FILE_ACCESS
-        printf("INI: %s opened successfully for writing.\n", GLOBAL_CONFIG_FILENAME);
+        printf("INI: %s opened successfully for writing.\n", filename);
 #endif
         // Write the in-memory INI "dictionary" to disk as an INI file.
         iniparser_dump_ini(global_ini_dict,inifile);
@@ -4617,18 +4645,21 @@ uint save_global_config_to_INI(uint save_music_config)
         // Close the file
         fclose(inifile);
 #ifdef DEBUG_FILE_ACCESS
-        printf("INI: %s written to disk.\n", GLOBAL_CONFIG_FILENAME);
+        printf("INI: %s written to disk.\n", filename);
 #endif
+        sfree(filename);
         return(TRUE);
     }
     else
     {
 #ifdef DEBUG_FILE_ACCESS
-        printf("INI: Error opening %s for writing.\n", GLOBAL_CONFIG_FILENAME);
+        printf("INI: Error opening %s for writing.\n", filename);
 #endif
+        sfree(filename);
         return(FALSE);
     };
     iniparser_freedict(global_ini_dict);
+    sfree(filename);
 };
 
 
@@ -4679,6 +4710,21 @@ uint savefile_exists(char *game_name, uint saveslot_number)
     return(result);
 };
 
+char *generate_writeable_folder()
+{
+    char *writable_folder;
+ 
+    writable_folder=snewn(_MAX_PATH +1,char);
+    memset(writable_folder, 0, (_MAX_PATH) * sizeof(char));
+    sprintf(writable_folder, "%s/.stppc2x", getenv("HOME") == NULL ? ".": getenv("HOME"));
+#ifdef WIN32
+    mkdir(writable_folder);
+#else
+    mkdir(writable_folder,S_IRWXO|S_IRWXU|S_IRWXG);
+#endif
+    return(writable_folder);
+}
+
 char *generate_save_filename(char *game_name, uint saveslot_number)
 {
 #ifdef DEBUG_FUNCTIONS
@@ -4686,12 +4732,14 @@ char *generate_save_filename(char *game_name, uint saveslot_number)
 #endif
 
     char *save_filename;
+    char *writable_folder = generate_writeable_folder();
 
     // Dynamically allocate space for a filename and add .ini to the end of the 
     // sanitised game name to get the filename we will use.
-    save_filename=snewn(MAX_GAMENAME_SIZE+6,char);
-    memset(save_filename, 0, (MAX_GAMENAME_SIZE+6) * sizeof(char));
-    sprintf(save_filename, "%.*s%u.sav", MAX_GAMENAME_SIZE, game_name, saveslot_number);
+    save_filename=snewn(_MAX_PATH + 1 + MAX_GAMENAME_SIZE+6,char);
+    memset(save_filename, 0, (_MAX_PATH + 1 + MAX_GAMENAME_SIZE+6) * sizeof(char));
+    sprintf(save_filename, "%.*s/%.*s%u.sav", _MAX_PATH, writable_folder, MAX_GAMENAME_SIZE, game_name, saveslot_number);
+    sfree(writable_folder);
     return(save_filename);
 };
 
@@ -4780,11 +4828,13 @@ void load_autosave_game(frontend *fe)
     char *err;
     int x,y;
 
+    char *writeable_folder = generate_writeable_folder();
     char *save_filename;
 
-    save_filename=snewn(MAX_GAMENAME_SIZE+10,char);
-    sprintf(save_filename, "%.*s.autosave", MAX_GAMENAME_SIZE, fe->sanitised_game_name);
-
+    save_filename=snewn(_MAX_PATH + 1 + MAX_GAMENAME_SIZE+10,char);
+    memset(save_filename, 0, (_MAX_PATH + 1 + MAX_GAMENAME_SIZE+10) * sizeof(char));
+    sprintf(save_filename, "%.*s/%.*s.autosave",_MAX_PATH, writeable_folder, MAX_GAMENAME_SIZE, fe->sanitised_game_name);
+    sfree(writeable_folder);
     printf("Loading autosave game from: %s\n", save_filename);
 
     // Open the file, readonly
@@ -4842,11 +4892,13 @@ int autosave_file_exists(char *game_name)
 #ifdef DEBUG_FUNCTIONS
     printf("autosave_file_exists()\n");
 #endif
-
+    char *writeable_folder = generate_writeable_folder();
     char *save_filename;
     uint result;
-    save_filename=snewn(MAX_GAMENAME_SIZE+10, char);
-    sprintf(save_filename, "%.*s.autosave", MAX_GAMENAME_SIZE, game_name);
+    save_filename=snewn(_MAX_PATH + 1 + MAX_GAMENAME_SIZE+10,char);
+    memset(save_filename, 0, (_MAX_PATH + 1 + MAX_GAMENAME_SIZE+10) * sizeof(char));
+    sprintf(save_filename, "%.*s/%.*s.autosave",_MAX_PATH, writeable_folder, MAX_GAMENAME_SIZE, game_name);
+    sfree(writeable_folder);
     result=file_exists(save_filename);
     sfree(save_filename);
     return(result);
@@ -4858,14 +4910,16 @@ char *autosave_game(frontend *fe)
     printf("autosave_game()\n");
 #endif
 
+    char *writeable_folder = generate_writeable_folder();
     char *save_filename;
     char *message_text;
     FILE *fp;
-
-    save_filename=snewn(MAX_GAMENAME_SIZE + 10, char);
-    memset(save_filename, 0, (MAX_GAMENAME_SIZE+10) * sizeof(char));
-    sprintf(save_filename, "%.*s.autosave", MAX_GAMENAME_SIZE, fe->sanitised_game_name);
-
+    
+    save_filename=snewn(_MAX_PATH + 1 + MAX_GAMENAME_SIZE+10,char);
+    memset(save_filename, 0, (_MAX_PATH + 1 + MAX_GAMENAME_SIZE+10) * sizeof(char));
+    sprintf(save_filename, "%.*s/%.*s.autosave",_MAX_PATH, writeable_folder, MAX_GAMENAME_SIZE, fe->sanitised_game_name);
+    sfree(writeable_folder);
+    printf("Saving autosave game to: %s\n", save_filename);
     fp = fopen(save_filename, "w");
     sfree(save_filename);
     if (!fp)
@@ -4930,9 +4984,11 @@ int save_config_to_INI(frontend *fe)
 
     // Dynamically allocate space for a filename and add .ini to the end of the 
     // sanitised game name to get the filename we will use.
-    ini_filename=snewn(MAX_GAMENAME_SIZE + 5,char);
-    sprintf(ini_filename, "%.*s.ini", MAX_GAMENAME_SIZE, fe->sanitised_game_name);
-  
+    char *writeable_folder = generate_writeable_folder();
+    ini_filename=snewn(_MAX_PATH + 1 + MAX_GAMENAME_SIZE+5,char);
+    memset(ini_filename, 0, (_MAX_PATH + 1 + MAX_GAMENAME_SIZE+5) * sizeof(char));
+    sprintf(ini_filename, "%.*s/%.*s.ini",_MAX_PATH, writeable_folder, MAX_GAMENAME_SIZE, fe->sanitised_game_name);
+    sfree(writeable_folder);
     // Create an INI section, in case one does not already exist.
     // If we don't do this, INIParser tends not to write entries under that
     // section at all.
@@ -5182,7 +5238,13 @@ int main(int argc, char **argv)
 #ifdef DEBUG_FUNCTIONS
     printf("main()\n");
 #endif
-
+#if WIN32
+    if(AttachConsole((DWORD)-1))
+    {
+        freopen("CON", "w", stderr);
+        freopen("CON", "w", stdout);
+    }
+#endif
     frontend *fe;
     Uint32 SDL_Init_Flags;
     char *error;
@@ -6073,15 +6135,18 @@ void delete_autosave_game(frontend *fe)
 
     char *save_filename;
 
-    save_filename=snewn(MAX_GAMENAME_SIZE + 10, char);
+
+    save_filename=snewn(_MAX_PATH + 1 + MAX_GAMENAME_SIZE+10,char);
 
     // Double-check that we have the sanitised game name loaded.
     fe->sanitised_game_name=sanitise_game_name((char *) gamelist[current_game_index]->htmlhelp_topic);
 
     if(autosave_file_exists(fe->sanitised_game_name))
     {
-        sprintf(save_filename, "%.*s.autosave", MAX_GAMENAME_SIZE, fe->sanitised_game_name);
-#ifdef DEBUG_FILE_ACCESS
+        char *writeable_folder = generate_writeable_folder();
+        memset(save_filename, 0, (_MAX_PATH + 1 + MAX_GAMENAME_SIZE+10) * sizeof(char));
+        sprintf(save_filename, "%.*s/%.*s.autosave",_MAX_PATH, writeable_folder, MAX_GAMENAME_SIZE, fe->sanitised_game_name);
+        sfree(writeable_folder);#ifdef DEBUG_FILE_ACCESS
         printf("DELETING %s!!\n", save_filename);
 #endif
         if(remove(save_filename) == 0)

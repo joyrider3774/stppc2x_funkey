@@ -64,6 +64,7 @@ void start_game(frontend *fe, int game_index, uint skip_config);
 void change_clockspeed(frontend *fe, uint new_clock_speed);
 uint savefile_exists(char *game_name, uint saveslot_number);
 char *generate_save_filename(char *game_name, uint saveslot_number);
+char *generate_writeable_folder();
 void process_key(frontend *fe, int x, int y, int button);
 void delete_ini_file(frontend *fe, int game_index);
 void start_background_music();
