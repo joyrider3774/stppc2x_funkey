@@ -16,7 +16,7 @@
 
 #define PREFFERED_TILE_SIZE 450
 #define ANIM_TIME 0.1
-#define INSTRUCTION_TEXT_SIZE 13
+#define INSTRUCTION_TEXT_SIZE 7
 
 void mazedraw_rect(drawing *dr, double sz, int ax, int ay, int bx, int by, int col);
 void mazedraw_triangle(drawing *dr, double sz, int p1x, int p1y,  int p2x, int p2y, int p3x,int p3y, int col);
@@ -1070,21 +1070,21 @@ static void game_redraw(drawing *dr, game_drawstate *ds, game_state *oldstate,
     draw_line(dr, scale(450), scale(135), scale(600), scale(135), COL_LINE);
 
     sprintf(buf, "%d", (int)view.moves);
-    draw_text(dr, scale(460), scale(165), FONT_VARIABLE, 15, ALIGN_HLEFT | ALIGN_VNORMAL, COL_LINE, "Moves:");
+    draw_text(dr, scale(460), scale(165), FONT_VARIABLE, 7, ALIGN_HLEFT | ALIGN_VNORMAL, COL_LINE, "Moves:");
     word_rect(dr, sz, 515, 145, 75, 20, COL_WHITE, buf);
 
     sprintf(buf, "%d", (int)view.rotations);
-    draw_text(dr, scale(460), scale(195), FONT_VARIABLE, 15, ALIGN_HLEFT | ALIGN_VNORMAL, COL_LINE, "Turns:");
+    draw_text(dr, scale(460), scale(195), FONT_VARIABLE, 7, ALIGN_HLEFT | ALIGN_VNORMAL, COL_LINE, "Turns:");
     word_rect(dr, sz, 515, 175, 75, 20, COL_WHITE, buf);
 
     sprintf(buf, "%d", (int)view.marks);
-    draw_text(dr, scale(460), scale(225), FONT_VARIABLE, 15, ALIGN_HLEFT | ALIGN_VNORMAL, COL_LINE, "Marks:");
+    draw_text(dr, scale(460), scale(225), FONT_VARIABLE, 7, ALIGN_HLEFT | ALIGN_VNORMAL, COL_LINE, "Marks:");
     word_rect(dr, sz, 515, 205, 75, 20, COL_WHITE, buf);
 
     draw_line(dr, scale(450), scale(235), scale(600), scale(235), COL_LINE);
 
     snprintf(buf, 30, "Size - %d x %d x %d", view.size_x, view.size_y, view.size_z);
-    draw_text(dr, scale(525), scale(260), FONT_VARIABLE, 15, ALIGN_HCENTRE | ALIGN_VNORMAL, COL_LINE, buf);
+    draw_text(dr, scale(525), scale(260), FONT_VARIABLE, 7, ALIGN_HCENTRE | ALIGN_VNORMAL, COL_LINE, buf);
 /*
  * A direction pointer or coordinates
  */
@@ -1094,17 +1094,17 @@ static void game_redraw(drawing *dr, game_drawstate *ds, game_state *oldstate,
     case DISPLAY_DIRDIST:
    
     	sprintf(buf, "%d", (int)view.howfar);
-    	draw_text(dr, scale(460), scale(290), FONT_VARIABLE, 15, ALIGN_HLEFT | ALIGN_VNORMAL, COL_LINE, "Distance:");
+    	draw_text(dr, scale(460), scale(290), FONT_VARIABLE, 7, ALIGN_HLEFT | ALIGN_VNORMAL, COL_LINE, "Distance:");
     	word_rect(dr, sz, 535, 270, 55, 20, COL_WHITE, buf);
 	
 
-    	draw_text(dr, scale(460), scale(320), FONT_VARIABLE, 15, ALIGN_HLEFT | ALIGN_VNORMAL, COL_LINE, "Direction:");
+    	draw_text(dr, scale(460), scale(320), FONT_VARIABLE, 7, ALIGN_HLEFT | ALIGN_VNORMAL, COL_LINE, "Direction:");
     	word_rect(dr, sz, 535, 300, 55, 20, COL_WHITE, view.direction);
 
 	break;
     case DISPLAY_COORD:
     	sprintf(buf, "%d-%d-%d", view.x, view.y, view.z);
-    	draw_text(dr, scale(525), scale(290), FONT_VARIABLE, 15, ALIGN_HCENTRE | ALIGN_VNORMAL, COL_LINE, "Current location");
+    	draw_text(dr, scale(525), scale(290), FONT_VARIABLE, 7, ALIGN_HCENTRE | ALIGN_VNORMAL, COL_LINE, "Current location");
     	word_rect(dr, sz, 460, 295, 130, 20, COL_WHITE, buf);
 	break;
     }
