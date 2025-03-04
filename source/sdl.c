@@ -168,7 +168,7 @@ enum { RUN_GAME_TIMER_LOOP, RUN_MOUSE_TIMER_LOOP, RUN_SECOND_TIMER_LOOP};
                                        // between frames in the loading animation.
 
 // Actual screen size and colour depth.
-#define SCREEN_WIDTH_SMALL	(320)
+#define SCREEN_WIDTH_SMALL	(240)
 #define SCREEN_HEIGHT_SMALL	(240)
 
 #define SCREEN_WIDTH_LARGE	(640)
@@ -5609,9 +5609,9 @@ void redraw_gamelist_menu(frontend *fe)
         char *number_of_games;
         number_of_games=snewn(32,char);
         sprintf(number_of_games, "%u Games", gamecount);
-        sdl_actual_draw_text(fe, 240, 190, FONT_FIXED, HELP_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HCENTRE, fe->black_colour, stppc2x_ver);
-        sdl_actual_draw_text(fe, 240, 190 + HELP_FONT_SIZE + 2, FONT_FIXED, HELP_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HCENTRE, fe->black_colour, ver);
-        sdl_actual_draw_text(fe, 240, 190 + 2*(HELP_FONT_SIZE + 2), FONT_FIXED, HELP_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HCENTRE, fe->black_colour, number_of_games);
+        sdl_actual_draw_text(fe, 240-80, 190, FONT_FIXED, HELP_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HCENTRE, fe->black_colour, stppc2x_ver);
+        sdl_actual_draw_text(fe, 240-80, 190 + HELP_FONT_SIZE + 2, FONT_FIXED, HELP_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HCENTRE, fe->black_colour, ver);
+        sdl_actual_draw_text(fe, 240-80, 190 + 2*(HELP_FONT_SIZE + 2), FONT_FIXED, HELP_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HCENTRE, fe->black_colour, number_of_games);
         sfree(number_of_games);
 
         preview_window=IMG_Load(MENU_ABOUT_IMAGE);
@@ -5643,9 +5643,9 @@ void redraw_gamelist_menu(frontend *fe)
         // Start from the selected game so that we give the impression of the menu scrolling.
         for(i=current_game_index, j=0;j<15;i=((i+1) % gamecount), j++)
         {
-            if((i == (gamecount-1)) && (j<14))
+            if((i == (gamecount-1)) && (j<13))
             {
-                sdl_actual_draw_line(fe, 10, current_y, 100, current_y, fe->black_colour);
+                sdl_actual_draw_line(fe, 10, current_y, 70, current_y, fe->black_colour);
             };
 
             if((int) i == current_game_index)
@@ -5658,11 +5658,11 @@ void redraw_gamelist_menu(frontend *fe)
                 if((game_data == NULL) || (strlen(game_data) == 0))
                 {
                     data_current_y=180;
-                    sdl_actual_draw_text(fe, 240, data_current_y, FONT_FIXED, HELP_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HCENTRE, fe->black_colour, "(no description)");
+                    sdl_actual_draw_text(fe, 240-80, data_current_y, FONT_FIXED, HELP_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HCENTRE, fe->black_colour, "(no description)");
                     data_current_y+=HELP_FONT_SIZE+2;
-                    sdl_actual_draw_text(fe, 240, data_current_y, FONT_FIXED, HELP_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HCENTRE, fe->black_colour, stppc2x_ver);
+                    sdl_actual_draw_text(fe, 240-80, data_current_y, FONT_FIXED, HELP_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HCENTRE, fe->black_colour, stppc2x_ver);
                     data_current_y+=HELP_FONT_SIZE+2;
-                    sdl_actual_draw_text(fe, 240, data_current_y, FONT_FIXED, HELP_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HCENTRE, fe->black_colour, ver);
+                    sdl_actual_draw_text(fe, 240-80, data_current_y, FONT_FIXED, HELP_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HCENTRE, fe->black_colour, ver);
                 }
                 else
                 {
@@ -5670,7 +5670,7 @@ void redraw_gamelist_menu(frontend *fe)
                     token_pointer=strtok(game_data, "#");
                     while(token_pointer != NULL)
                     {
-                        sdl_actual_draw_text(fe, 240, data_current_y, FONT_FIXED, HELP_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HCENTRE, fe->black_colour, token_pointer);
+                        sdl_actual_draw_text(fe, 240-80, data_current_y, FONT_FIXED, HELP_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HCENTRE, fe->black_colour, token_pointer);
 #ifdef DEBUG_FILE_ACCESS
                         printf("Datafile token: %s\n", token_pointer);
 #endif
@@ -5691,10 +5691,10 @@ void redraw_gamelist_menu(frontend *fe)
                 if(!(gamelist[i]->flags & REQUIRE_MOUSE_INPUT))
                     sdl_actual_draw_text(fe, 140, current_y, FONT_FIXED, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, text_colour, UNICODE_TICK_CHAR);
 #endif
-                if(gamelist[i]->flags & REQUIRE_NUMPAD)
-                    sdl_actual_draw_text(fe, 120, current_y, FONT_FIXED, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, text_colour, UNICODE_TICK_CHAR);
-                if(gamelist[i]->can_solve)
-                    sdl_actual_draw_text(fe, 100, current_y, FONT_FIXED, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, text_colour, UNICODE_TICK_CHAR);
+//                if(gamelist[i]->flags & REQUIRE_NUMPAD)
+//                    sdl_actual_draw_text(fe, 120, current_y, FONT_FIXED, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, text_colour, UNICODE_TICK_CHAR);
+//                if(gamelist[i]->can_solve)
+//                    sdl_actual_draw_text(fe, 100, current_y, FONT_FIXED, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, text_colour, UNICODE_TICK_CHAR);
             }
             current_y+=(MENU_FONT_SIZE+2);
         };
@@ -5715,7 +5715,7 @@ void redraw_gamelist_menu(frontend *fe)
         {
             blit_rectangle.w=0;
             blit_rectangle.h=0;
-            blit_rectangle.x=164;
+            blit_rectangle.x=164-80;
             blit_rectangle.y=8;
 
             if(preview_window->w < 150)
@@ -5733,9 +5733,9 @@ void redraw_gamelist_menu(frontend *fe)
             // 8 = preview offset y
             // 150 = preview png width/height
             // 239 = 164 + (150 / 2)
-            sdl_actual_draw_rect(fe, 164, 8, 150, 150, fe->background_colour);
-            sdl_actual_draw_text(fe, 239, 8 + 5*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HCENTRE, fe->black_colour, "No preview");
-            sdl_actual_draw_text(fe, 239, 8 + 6*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HCENTRE, fe->black_colour, "image available");
+            sdl_actual_draw_rect(fe, 164-80, 8, 150, 150, fe->background_colour);
+            sdl_actual_draw_text(fe, 239-80, 8 + 5*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HCENTRE, fe->black_colour, "No preview");
+            sdl_actual_draw_text(fe, 239-80, 8 + 6*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HCENTRE, fe->black_colour, "image available");
         };
         sfree(preview_filename);
     };
