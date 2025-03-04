@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Stppc2x
+Comment=Simon Tathams Puzzle Collection
+Terminal=false
+Type=Application
+Exec=stppc2x
+Icon=stppc2x
+Categories=games
