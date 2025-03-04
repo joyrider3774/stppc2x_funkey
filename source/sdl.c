@@ -5526,7 +5526,7 @@ char *get_game_preview_data(frontend *fe, int game_index)
         {
             // If the first portion of the string (before the comma) matches the game
             // name that we are looking for.
-            if(!strncmp(str_buf, (char *)gamelist[game_index]->htmlhelp_topic,max(sizeof((char *)gamelist[game_index]->htmlhelp_topic)-1,comma_position-1)))
+            if(!strncmp(str_buf, (char *)gamelist[game_index]->htmlhelp_topic,min(sizeof((char *)gamelist[game_index]->htmlhelp_topic)-1,comma_position-1)))
             {
                 // Return the portion of the string after the comma
                 // WARNING: Potential buffer overflow?
