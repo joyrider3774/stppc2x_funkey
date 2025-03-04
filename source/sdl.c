@@ -15,7 +15,7 @@
 // #define DEBUG_MISC          // Config options, etc.
 // #define DEBUG_FUNCTIONS     // Function calls
 
-//#define SCALELARGESCREEN
+#define SCALELARGESCREEN
 #define BACKGROUND_MUSIC
 
 // Define this to implement kludges for certain game-specific options
@@ -61,7 +61,7 @@
     // Windows-ish thing detected.  Probably doesn't support pthreads.  Disabling event threads.
 #include <windows.h>
 #else
-    #define EVENTS_IN_SEPERATE_THREAD    // Spawn a seperate thread to handle events
+   // #define EVENTS_IN_SEPERATE_THREAD    // Spawn a seperate thread to handle events
 #endif
 
 #ifndef uint
@@ -70,6 +70,8 @@ typedef unsigned int uint;
 
 // Standard C includes
 // ===================
+#include <sys/stat.h>
+#include <limits.h>
 #include <stdio.h>
 #include <assert.h>
 #include <stdlib.h>
@@ -172,8 +174,8 @@ enum { RUN_GAME_TIMER_LOOP, RUN_MOUSE_TIMER_LOOP, RUN_SECOND_TIMER_LOOP};
 #define SCREEN_WIDTH_SMALL	(240)
 #define SCREEN_HEIGHT_SMALL	(240)
 
-#define SCREEN_WIDTH_LARGE	(640)
-#define SCREEN_HEIGHT_LARGE	(480)
+#define SCREEN_WIDTH_LARGE	(240)
+#define SCREEN_HEIGHT_LARGE	(240)
 
 #define SCREEN_DEPTH	(16)
 
@@ -181,7 +183,7 @@ enum { RUN_GAME_TIMER_LOOP, RUN_MOUSE_TIMER_LOOP, RUN_SECOND_TIMER_LOOP};
 // (Actually in "points" but at 72dpi it makes no difference)
 
 // Font size of the statusbar font
-#define DEFAULT_STATUSBAR_FONT_SIZE  (8)
+#define DEFAULT_STATUSBAR_FONT_SIZE  (10)
 
 // Font size of the keyboard icon
 #define DEFAULT_KEYBOARD_ICON_FONT_SIZE  (17)
@@ -1408,7 +1410,7 @@ void sdl_end_draw(void *handle)
         blit_rectangle.h=0;
         blit_rectangle.x=0;
         blit_rectangle.y=0;
-        SDL_Surface *zoomed_surface=zoomSurface(screen, 0.5, 0.5, SMOOTHING_ON);
+        SDL_Surface *zoomed_surface=zoomSurface(screen, 1.0, 1.0, SMOOTHING_ON);
         SDL_BlitSurface(zoomed_surface, NULL, real_screen, &blit_rectangle);
         SDL_FreeSurface(zoomed_surface);
         SDL_Flip(real_screen);
@@ -1858,11 +1860,11 @@ void draw_menu(frontend *fe, uint menu_index)
                 memset(saveslot_string, 0, 11 * sizeof(char));
                 sprintf(saveslot_string, "Saveslot %u", j);
                 sdl_actual_draw_text(fe, 10, (5+j)*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, saveslot_string);
-                sdl_actual_draw_text(fe, (screen_width==SCREEN_WIDTH_LARGE)?400:120, (5+j)*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "Save");
+                sdl_actual_draw_text(fe, (screen_width==SCREEN_WIDTH_LARGE)?120:120, (5+j)*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "Save");
                 if(savefile_exists(fe->sanitised_game_name, j))
                 {
-                    sdl_actual_draw_text(fe, (screen_width==SCREEN_WIDTH_LARGE)?500:170, (5+j)*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "Load");
-                    sdl_actual_draw_text(fe, (screen_width==SCREEN_WIDTH_LARGE)?600:220, (5+j)*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, UNICODE_SKULL_CROSSBONES);
+                    sdl_actual_draw_text(fe, (screen_width==SCREEN_WIDTH_LARGE)?170:170, (5+j)*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "Load");
+                    sdl_actual_draw_text(fe, (screen_width==SCREEN_WIDTH_LARGE)?220:220, (5+j)*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, UNICODE_SKULL_CROSSBONES);
                 };
                 sfree(saveslot_string);
             };
@@ -1870,14 +1872,14 @@ void draw_menu(frontend *fe, uint menu_index)
             sdl_actual_draw_text(fe, 10, 15*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "Autosave");
             if(!global_config->autosave_on_exit)
             {
-               sdl_actual_draw_line(fe, 10, 14*(MENU_FONT_SIZE+2), (screen_width==SCREEN_WIDTH_LARGE)?140:70, 15*(MENU_FONT_SIZE+2),fe->white_colour);
-               sdl_actual_draw_line(fe, 10, 15*(MENU_FONT_SIZE+2), (screen_width==SCREEN_WIDTH_LARGE)?140:70, 14*(MENU_FONT_SIZE+2),fe->white_colour);
+               sdl_actual_draw_line(fe, 10, 14*(MENU_FONT_SIZE+2), (screen_width==SCREEN_WIDTH_LARGE)?70:70, 15*(MENU_FONT_SIZE+2),fe->white_colour);
+               sdl_actual_draw_line(fe, 10, 15*(MENU_FONT_SIZE+2), (screen_width==SCREEN_WIDTH_LARGE)?70:70, 14*(MENU_FONT_SIZE+2),fe->white_colour);
             };
 
             if(autosave_file_exists(fe->sanitised_game_name))
             {
-                sdl_actual_draw_text(fe, (screen_width==SCREEN_WIDTH_LARGE)?500:170, 15*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "Load");
-                sdl_actual_draw_text(fe, (screen_width==SCREEN_WIDTH_LARGE)?600:220, 15*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, UNICODE_SKULL_CROSSBONES);
+                sdl_actual_draw_text(fe, (screen_width==SCREEN_WIDTH_LARGE)?170:170, 15*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "Load");
+                sdl_actual_draw_text(fe, (screen_width==SCREEN_WIDTH_LARGE)?220:220, 15*(MENU_FONT_SIZE+2), FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, UNICODE_SKULL_CROSSBONES);
             };
             break;
 
@@ -2110,7 +2112,7 @@ void draw_menu(frontend *fe, uint menu_index)
                 blit_rectangle.h=0;
                 if(screen_width == SCREEN_WIDTH_LARGE)
                 {
-                    SDL_Surface *zoomed_surface=zoomSurface(credits_window, 2, 2, SMOOTHING_ON);
+                    SDL_Surface *zoomed_surface=zoomSurface(credits_window, 1, 1, SMOOTHING_ON);
                     blit_rectangle.x=(screen_width - zoomed_surface->w) / 2;
                     blit_rectangle.y=(screen_height - zoomed_surface->h) / 2;
                     SDL_BlitSurface(zoomed_surface, NULL, screen, &blit_rectangle);
@@ -2296,10 +2298,10 @@ uint contain_mouse(frontend *fe)
 #ifdef SCALELARGESCREEN
         if(screen_width == SCREEN_WIDTH_LARGE)
         {
-            if(mouse_x*2 > (int) (screen_width - 1))
-                mouse_x = (screen_width - 1) / 2;
-            if(mouse_y*2 > (int) (screen_height - 1))
-                mouse_y = (screen_height - 1) / 2;
+            if(mouse_x > (int) (screen_width - 1))
+                mouse_x = (screen_width - 1) ;
+            if(mouse_y > (int) (screen_height - 1))
+                mouse_y = (screen_height - 1);
         }
         else
         {
@@ -2318,15 +2320,15 @@ uint contain_mouse(frontend *fe)
 #ifdef SCALELARGESCREEN
         if(screen_width == SCREEN_WIDTH_LARGE)
         {
-            if(mouse_x*2 < (signed int) (fe->ox))
-                mouse_x = fe->ox / 2;
+            if(mouse_x < (signed int) (fe->ox))
+                mouse_x = fe->ox;
             if(mouse_y < (fe->oy))
-                mouse_y = fe->oy / 2;
+                mouse_y = fe->oy;
 
-            if(mouse_x *2 > (fe->pw + fe->ox - 1))
-                mouse_x = (fe->pw + fe->ox - 1) / 2;
-            if(mouse_y *2 > (fe->ph + fe->oy - 1))
-                mouse_y = (fe->ph + fe->oy - 1) / 2;
+            if(mouse_x  > (fe->pw + fe->ox - 1))
+                mouse_x = (fe->pw + fe->ox - 1);
+            if(mouse_y  > (fe->ph + fe->oy - 1))
+                mouse_y = (fe->ph + fe->oy - 1);
         }
         else
         {
@@ -3227,7 +3229,7 @@ void Main_SDL_Loop(void *handle)
                 case SDL_KEYDOWN:
                     switch(event.key.keysym.sym)
                     {
-                        case SDLK_z:
+                        case SDLK_k:
                             //�Simulate pressing the Select key
                             emulate_event(SDL_JOYBUTTONDOWN, 0, 0, GP2X_BUTTON_SELECT);
                             break;
@@ -3237,17 +3239,19 @@ void Main_SDL_Loop(void *handle)
                             emulate_event(SDL_JOYBUTTONDOWN, 0, 0, GP2X_BUTTON_Y);
                             break;
 
-                        case SDLK_u:
+                        case SDLK_v: //fn + l
+                        case SDLK_PAGEDOWN:
                             //�Simulate pressing the Vol- key
                             emulate_event(SDL_JOYBUTTONDOWN, 0, 0, GP2X_BUTTON_VOLDOWN);
                             break;
 
-                        case SDLK_i:
+                        case SDLK_o: //fn + r
+                        case SDLK_PAGEUP:
                             //�Simulate pressing the Vol+ key
                             emulate_event(SDL_JOYBUTTONDOWN, 0, 0, GP2X_BUTTON_VOLUP);
                             break;
 
-                        case SDLK_p:
+                        case SDLK_s:
                             //�Simulate pressing the Start key
                             emulate_event(SDL_JOYBUTTONDOWN, 0, 0, GP2X_BUTTON_START);
                             break;
@@ -3263,7 +3267,7 @@ void Main_SDL_Loop(void *handle)
                             emulate_event(SDL_JOYBUTTONDOWN, 0, 0, GP2X_BUTTON_CLICK);
                             break;
 
-                        case SDLK_s:
+                        case SDLK_f:
                             //�Simulate pressing the Vol+ and Vol- keys
                             emulate_event(SDL_JOYBUTTONDOWN, 0, 0, GP2X_BUTTON_VOLUP);
                             emulate_event(SDL_JOYBUTTONDOWN, 0, 0, GP2X_BUTTON_VOLDOWN);
@@ -3271,7 +3275,7 @@ void Main_SDL_Loop(void *handle)
                             emulate_event(SDL_JOYBUTTONUP, 0, 0, GP2X_BUTTON_VOLDOWN);
                             break;
 
-                        case SDLK_l:
+                        case SDLK_m:
                             //�Simulate pressing the L key
                             emulate_event(SDL_JOYBUTTONDOWN, 0, 0, GP2X_BUTTON_L);
                             break;
@@ -3291,26 +3295,30 @@ void Main_SDL_Loop(void *handle)
                             emulate_event(SDL_JOYBUTTONDOWN, 0, 0, GP2X_BUTTON_X);
                             break;
 
-                        case SDLK_r:
+                        case SDLK_n:
                             //�Simulate pressing the R key
                             emulate_event(SDL_JOYBUTTONDOWN, 0, 0, GP2X_BUTTON_R);
                             break;
-
+                        
+                        case SDLK_u:
                         case SDLK_UP:
                             //�Simulate pressing Up
                             emulate_event(SDL_JOYBUTTONDOWN, 0, 0, GP2X_BUTTON_UP);
                             break;
-
+                        
+                        case SDLK_d:
                         case SDLK_DOWN:
                             //�Simulate pressing Down
                             emulate_event(SDL_JOYBUTTONDOWN, 0, 0, GP2X_BUTTON_DOWN);
                             break;
-
+                        
+                        case SDLK_l:
                         case SDLK_LEFT:
                             //�Simulate pressing Left
                             emulate_event(SDL_JOYBUTTONDOWN, 0, 0, GP2X_BUTTON_LEFT);
                             break;
 
+                        case SDLK_r:
                         case SDLK_RIGHT:
                             //�Simulate pressing Right
                             emulate_event(SDL_JOYBUTTONDOWN, 0, 0, GP2X_BUTTON_RIGHT);
@@ -3324,26 +3332,28 @@ void Main_SDL_Loop(void *handle)
                 case SDL_KEYUP:
                     switch(event.key.keysym.sym)
                     {
-                        case SDLK_z:
+                        case SDLK_k:
                             //�Simulate pressing the Select key
                             emulate_event(SDL_JOYBUTTONUP, 0, 0, GP2X_BUTTON_SELECT);
                             break;
 
-                        case SDLK_p:
+                        case SDLK_s:
                             emulate_event(SDL_JOYBUTTONUP, 0, 0, GP2X_BUTTON_START);
                             break;
 
-                        case SDLK_u:
+                        case SDLK_v: //fn + l
+                        case SDLK_PAGEDOWN:
                             //�Simulate releasing the Vol- key
                             emulate_event(SDL_JOYBUTTONUP, 0, 0, GP2X_BUTTON_VOLDOWN);
                             break;
 
-                        case SDLK_i:
+                        case SDLK_o: //fn + r
+                        case SDLK_PAGEUP:
                             //�Simulate releasing the Vol+ key
                             emulate_event(SDL_JOYBUTTONUP, 0, 0, GP2X_BUTTON_VOLUP);
                             break;
 
-                        case SDLK_l:
+                        case SDLK_m:
                             emulate_event(SDL_JOYBUTTONUP, 0, 0, GP2X_BUTTON_L);
                             break;
 
@@ -3363,22 +3373,26 @@ void Main_SDL_Loop(void *handle)
                             emulate_event(SDL_JOYBUTTONUP, 0, 0, GP2X_BUTTON_X);
                             break;
 
-                        case SDLK_r:
+                        case SDLK_n:
                             emulate_event(SDL_JOYBUTTONUP, 0, 0, GP2X_BUTTON_R);
                             break;
 
+                        case SDLK_u:
                         case SDLK_UP:
                             emulate_event(SDL_JOYBUTTONUP, 0, 0, GP2X_BUTTON_UP);
                             break;
 
+                        case SDLK_d:
                         case SDLK_DOWN:
                             emulate_event(SDL_JOYBUTTONUP, 0, 0, GP2X_BUTTON_DOWN);
                             break;
 
+                        case SDLK_l:
                         case SDLK_LEFT:
                             emulate_event(SDL_JOYBUTTONUP, 0, 0, GP2X_BUTTON_LEFT);
                             break;
 
+                        case SDLK_r:
                         case SDLK_RIGHT:
                             emulate_event(SDL_JOYBUTTONUP, 0, 0, GP2X_BUTTON_RIGHT);
                             break;
@@ -3435,8 +3449,8 @@ void Main_SDL_Loop(void *handle)
 #ifdef SCALELARGESCREEN
   if(screen_width == SCREEN_WIDTH_LARGE)
   {
-    event.motion.x=event.motion.x * 2;
-    event.motion.y=event.motion.y * 2;
+    event.motion.x=event.motion.x ;
+    event.motion.y=event.motion.y ;
   };
 #endif
                         current_line=(event.button.y / (MENU_FONT_SIZE+2)+1);
@@ -3514,7 +3528,7 @@ void Main_SDL_Loop(void *handle)
                                         if(event.button.y > 220)
                                         {
                                             // If we clicked the words "Start game".
-                                            if((event.button.x > 160) && (event.button.x < 250))
+                                            if((event.button.x > 160-80) && (event.button.x < 250-80))
                                             {
                                                 // If we're holding down the L or R button
                                                 if((bs->joy_l == 1) || (bs->joy_r == 1))
@@ -3529,7 +3543,7 @@ void Main_SDL_Loop(void *handle)
                                                 };
                                             } 
                                             // If we clicked the word "Exit".
-                                            else if(event.button.x > 250)
+                                            else if(event.button.x > 250-80)
                                             {
                                                 clear_statusbar(fe);
                                                 sdl_status_bar(fe,"Quitting...");
@@ -4077,7 +4091,7 @@ void Main_SDL_Loop(void *handle)
                     case SAVEMENU:
                         x = event.button.x;
                         if(screen_width==SCREEN_WIDTH_LARGE)
-                            x = event.button.x / 2;
+                            x = event.button.x / 1;
                         if(current_line == 3)
                         {
                             draw_menu(fe, GAMEMENU);
@@ -4254,8 +4268,8 @@ int load_config_from_INI(frontend *fe)
     // Dynamically allocate space for a filename and add .ini to the end of the 
     // sanitised game name to get the filename we will use.
     char *writeable_folder = generate_writeable_folder();
-    char *filename = snewn(_MAX_PATH + 1, char);
-    memset(filename, 0, (_MAX_PATH + 1) * sizeof(char));
+    char *filename = snewn(PATH_MAX + 1, char);
+    memset(filename, 0, (PATH_MAX + 1) * sizeof(char));
     sprintf(filename, "%s/%s.ini", writeable_folder, fe->sanitised_game_name);
     sfree(writeable_folder);
 #ifdef DEBUG_FILE_ACCESS
@@ -4409,8 +4423,8 @@ void load_global_config_from_INI()
     int i;
 
     char *writeable_folder = generate_writeable_folder();
-    char *filename = snewn(_MAX_PATH + 1, char);
-    memset(filename, 0, (_MAX_PATH + 1) * sizeof(char));
+    char *filename = snewn(PATH_MAX + 1, char);
+    memset(filename, 0, (PATH_MAX + 1) * sizeof(char));
     sprintf(filename, "%s/%s", writeable_folder, GLOBAL_CONFIG_FILENAME);
     sfree(writeable_folder);
 #ifdef DEBUG_FILE_ACCESS
@@ -4572,8 +4586,8 @@ uint save_global_config_to_INI(uint save_music_config)
     dictionary *global_ini_dict;
     int i;
     char *writeable_folder = generate_writeable_folder();
-    char *filename = snewn(_MAX_PATH + 1, char);
-    memset(filename, 0, (_MAX_PATH + 1) * sizeof(char));
+    char *filename = snewn(PATH_MAX + 1, char);
+    memset(filename, 0, (PATH_MAX + 1) * sizeof(char));
     sprintf(filename, "%s/%s", writeable_folder, GLOBAL_CONFIG_FILENAME);
     sfree(writeable_folder);
 #ifdef DEBUG_FILE_ACCESS
@@ -4714,8 +4728,8 @@ char *generate_writeable_folder()
 {
     char *writable_folder;
  
-    writable_folder=snewn(_MAX_PATH +1,char);
-    memset(writable_folder, 0, (_MAX_PATH) * sizeof(char));
+    writable_folder=snewn(PATH_MAX +1,char);
+    memset(writable_folder, 0, (PATH_MAX) * sizeof(char));
     sprintf(writable_folder, "%s/.stppc2x", getenv("HOME") == NULL ? ".": getenv("HOME"));
 #ifdef WIN32
     mkdir(writable_folder);
@@ -4736,9 +4750,9 @@ char *generate_save_filename(char *game_name, uint saveslot_number)
 
     // Dynamically allocate space for a filename and add .ini to the end of the 
     // sanitised game name to get the filename we will use.
-    save_filename=snewn(_MAX_PATH + 1 + MAX_GAMENAME_SIZE+6,char);
-    memset(save_filename, 0, (_MAX_PATH + 1 + MAX_GAMENAME_SIZE+6) * sizeof(char));
-    sprintf(save_filename, "%.*s/%.*s%u.sav", _MAX_PATH, writable_folder, MAX_GAMENAME_SIZE, game_name, saveslot_number);
+    save_filename=snewn(PATH_MAX + 1 + MAX_GAMENAME_SIZE+6,char);
+    memset(save_filename, 0, (PATH_MAX + 1 + MAX_GAMENAME_SIZE+6) * sizeof(char));
+    sprintf(save_filename, "%.*s/%.*s%u.sav", PATH_MAX, writable_folder, MAX_GAMENAME_SIZE, game_name, saveslot_number);
     sfree(writable_folder);
     return(save_filename);
 };
@@ -4831,9 +4845,9 @@ void load_autosave_game(frontend *fe)
     char *writeable_folder = generate_writeable_folder();
     char *save_filename;
 
-    save_filename=snewn(_MAX_PATH + 1 + MAX_GAMENAME_SIZE+10,char);
-    memset(save_filename, 0, (_MAX_PATH + 1 + MAX_GAMENAME_SIZE+10) * sizeof(char));
-    sprintf(save_filename, "%.*s/%.*s.autosave",_MAX_PATH, writeable_folder, MAX_GAMENAME_SIZE, fe->sanitised_game_name);
+    save_filename=snewn(PATH_MAX + 1 + MAX_GAMENAME_SIZE+10,char);
+    memset(save_filename, 0, (PATH_MAX + 1 + MAX_GAMENAME_SIZE+10) * sizeof(char));
+    sprintf(save_filename, "%.*s/%.*s.autosave",PATH_MAX, writeable_folder, MAX_GAMENAME_SIZE, fe->sanitised_game_name);
     sfree(writeable_folder);
     printf("Loading autosave game from: %s\n", save_filename);
 
@@ -4895,9 +4909,9 @@ int autosave_file_exists(char *game_name)
     char *writeable_folder = generate_writeable_folder();
     char *save_filename;
     uint result;
-    save_filename=snewn(_MAX_PATH + 1 + MAX_GAMENAME_SIZE+10,char);
-    memset(save_filename, 0, (_MAX_PATH + 1 + MAX_GAMENAME_SIZE+10) * sizeof(char));
-    sprintf(save_filename, "%.*s/%.*s.autosave",_MAX_PATH, writeable_folder, MAX_GAMENAME_SIZE, game_name);
+    save_filename=snewn(PATH_MAX + 1 + MAX_GAMENAME_SIZE+10,char);
+    memset(save_filename, 0, (PATH_MAX + 1 + MAX_GAMENAME_SIZE+10) * sizeof(char));
+    sprintf(save_filename, "%.*s/%.*s.autosave",PATH_MAX, writeable_folder, MAX_GAMENAME_SIZE, game_name);
     sfree(writeable_folder);
     result=file_exists(save_filename);
     sfree(save_filename);
@@ -4915,9 +4929,9 @@ char *autosave_game(frontend *fe)
     char *message_text;
     FILE *fp;
     
-    save_filename=snewn(_MAX_PATH + 1 + MAX_GAMENAME_SIZE+10,char);
-    memset(save_filename, 0, (_MAX_PATH + 1 + MAX_GAMENAME_SIZE+10) * sizeof(char));
-    sprintf(save_filename, "%.*s/%.*s.autosave",_MAX_PATH, writeable_folder, MAX_GAMENAME_SIZE, fe->sanitised_game_name);
+    save_filename=snewn(PATH_MAX + 1 + MAX_GAMENAME_SIZE+10,char);
+    memset(save_filename, 0, (PATH_MAX + 1 + MAX_GAMENAME_SIZE+10) * sizeof(char));
+    sprintf(save_filename, "%.*s/%.*s.autosave",PATH_MAX, writeable_folder, MAX_GAMENAME_SIZE, fe->sanitised_game_name);
     sfree(writeable_folder);
     printf("Saving autosave game to: %s\n", save_filename);
     fp = fopen(save_filename, "w");
@@ -4985,9 +4999,9 @@ int save_config_to_INI(frontend *fe)
     // Dynamically allocate space for a filename and add .ini to the end of the 
     // sanitised game name to get the filename we will use.
     char *writeable_folder = generate_writeable_folder();
-    ini_filename=snewn(_MAX_PATH + 1 + MAX_GAMENAME_SIZE+5,char);
-    memset(ini_filename, 0, (_MAX_PATH + 1 + MAX_GAMENAME_SIZE+5) * sizeof(char));
-    sprintf(ini_filename, "%.*s/%.*s.ini",_MAX_PATH, writeable_folder, MAX_GAMENAME_SIZE, fe->sanitised_game_name);
+    ini_filename=snewn(PATH_MAX + 1 + MAX_GAMENAME_SIZE+5,char);
+    memset(ini_filename, 0, (PATH_MAX + 1 + MAX_GAMENAME_SIZE+5) * sizeof(char));
+    sprintf(ini_filename, "%.*s/%.*s.ini",PATH_MAX, writeable_folder, MAX_GAMENAME_SIZE, fe->sanitised_game_name);
     sfree(writeable_folder);
     // Create an INI section, in case one does not already exist.
     // If we don't do this, INIParser tends not to write entries under that
@@ -5126,9 +5140,9 @@ void start_loading_animation(frontend *fe)
         blit_rectangle.h=0;
         if(screen_width == SCREEN_WIDTH_LARGE)
         {
-            SDL_Surface *zoomed_surface=zoomSurface(loading_screen, 2, 2, SMOOTHING_ON);
-            blit_rectangle.x=(screen_width - zoomed_surface->w) / 2;
-            blit_rectangle.y=(screen_height - zoomed_surface->h) / 2;
+            SDL_Surface *zoomed_surface=zoomSurface(loading_screen, 1, 1, SMOOTHING_ON);
+            blit_rectangle.x=(screen_width - zoomed_surface->w);
+            blit_rectangle.y=(screen_height - zoomed_surface->h);
             actual_unlock_surface(screen);
             SDL_BlitSurface(zoomed_surface, NULL, screen, &blit_rectangle);
             actual_lock_surface(screen);
@@ -5856,10 +5870,10 @@ void start_game(frontend *fe, int game_index, uint skip_config)
             exit(EXIT_FAILURE);
         };
 
-        STATUSBAR_FONT_SIZE = 2 * DEFAULT_STATUSBAR_FONT_SIZE;
-        MENU_FONT_SIZE = 2 * DEFAULT_MENU_FONT_SIZE;
-        HELP_FONT_SIZE = 2 * DEFAULT_HELP_FONT_SIZE;
-        KEYBOARD_ICON_FONT_SIZE = 2 * DEFAULT_KEYBOARD_ICON_FONT_SIZE;
+        STATUSBAR_FONT_SIZE = DEFAULT_STATUSBAR_FONT_SIZE;
+        MENU_FONT_SIZE = DEFAULT_MENU_FONT_SIZE;
+        HELP_FONT_SIZE = DEFAULT_HELP_FONT_SIZE;
+        KEYBOARD_ICON_FONT_SIZE =  DEFAULT_KEYBOARD_ICON_FONT_SIZE;
     };
     printf("Initialising '%s'.\n", this_game.name);
 
@@ -6136,7 +6150,7 @@ void delete_autosave_game(frontend *fe)
     char *save_filename;
 
 
-    save_filename=snewn(_MAX_PATH + 1 + MAX_GAMENAME_SIZE+10,char);
+    save_filename=snewn(PATH_MAX + 1 + MAX_GAMENAME_SIZE+10,char);
 
     // Double-check that we have the sanitised game name loaded.
     fe->sanitised_game_name=sanitise_game_name((char *) gamelist[current_game_index]->htmlhelp_topic);
@@ -6144,9 +6158,10 @@ void delete_autosave_game(frontend *fe)
     if(autosave_file_exists(fe->sanitised_game_name))
     {
         char *writeable_folder = generate_writeable_folder();
-        memset(save_filename, 0, (_MAX_PATH + 1 + MAX_GAMENAME_SIZE+10) * sizeof(char));
-        sprintf(save_filename, "%.*s/%.*s.autosave",_MAX_PATH, writeable_folder, MAX_GAMENAME_SIZE, fe->sanitised_game_name);
-        sfree(writeable_folder);#ifdef DEBUG_FILE_ACCESS
+        memset(save_filename, 0, (PATH_MAX + 1 + MAX_GAMENAME_SIZE+10) * sizeof(char));
+        sprintf(save_filename, "%.*s/%.*s.autosave",PATH_MAX, writeable_folder, MAX_GAMENAME_SIZE, fe->sanitised_game_name);
+        sfree(writeable_folder);
+#ifdef DEBUG_FILE_ACCESS
         printf("DELETING %s!!\n", save_filename);
 #endif
         if(remove(save_filename) == 0)
