@@ -1,9 +1,11 @@
-# stppc2x funkey version
+# stppc2x Funkey / RG Nano version
+
 Simon Tatham's Portable Puzzle Collection SDL / GP2X version,
 Based on sources from ledov https://github.com/ledow/stppc2x and ported by joyrider3774
+
 Original developpers page is still available at https://www.chiark.greenend.org.uk/~sgtatham/puzzles/
 
-## funkey changes
+## Funkey / RG Nano Changes
 
 - Adjusted graphics and code from 320x240 to funkey's 240x240 screen
 - Changed key / button layout for funkey
@@ -29,36 +31,37 @@ Hold L when starting a game to skip any saved settings.
 
 ## Controls In Game
 
-DPAD - Move cursor
-A - Left-click
-B - Right-click
-Y - Middle-click
-L - Decrease current digit (some games)
-R - Increase current digit (some games)
-X - Enter current digit (some games)
-Start - Start Game / Pause Game / Enter Menu
-Power / Menu - Restart Game
-Fn / Select + L to Undo.
-Fn / Select + R to Redo.
-Fn / Select + DPAD Down to Solve (some games).
-L+R - Return to the list of games.
+- DPAD - Move cursor
+- A - Left-click
+- B - Right-click
+- Y - Middle-click
+- L - Decrease current digit (some games)
+- R - Increase current digit (some games)
+- X - Enter current digit (some games)
+- Start - Start Game / Pause Game / Enter Menu
+- Power / Menu - Restart Game
+- Fn / Select + L to Undo.
+- Fn / Select + R to Redo.
+- Fn / Select + DPAD Down to Solve (some games).
+- L+R - Return to the list of games.
 
 ### Controls In Menus
 
-DPAD - Move cursor
-A - Left-click
-B - Right-click
-Y - Middle-click
-X - Save Game Config
-L - Previous Save Slot
-R - Next Save Slot
-Fn / Select + L  - Save Game
-Fn / Select + R  - Load Game
-Start - Unpause Game / Leave Menu
-L+R - Return the list of games
+- DPAD - Move cursor
+- A - Left-click
+- B - Right-click
+- Y - Middle-click
+- X - Save Game Config
+- L - Previous Save Slot
+- R - Next Save Slot
+- Fn / Select + L  - Save Game
+- Fn / Select + R  - Load Game
+- Start - Unpause Game / Leave Menu
+- L+R - Return the list of games
 
 
 ========= ORIGNAL README =========
+
 This is STPPC2x, a port of Simon Tatham's Portable Puzzle Collection to the GP2X handheld console.
 
 Based on Simon Tatham's Portable Puzzle Collection - SVN r8446 - and ported to SDL, with a menu
