@@ -1,7 +1,7 @@
 # stppc2x Funkey / RG Nano version
 
 Simon Tatham's Portable Puzzle Collection SDL / GP2X version,
-Based on sources from ledov https://github.com/ledow/stppc2x and ported by joyrider3774
+Based on sources from [ledov](https://github.com/ledow/stppc2x) and ported by joyrider3774
 
 Original developpers page is still available at https://www.chiark.greenend.org.uk/~sgtatham/puzzles/
 
