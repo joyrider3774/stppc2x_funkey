@@ -45,7 +45,7 @@ Hold L when starting a game to skip any saved settings.
 - Fn / Select + DPAD Down to Solve (some games).
 - L+R - Return to the list of games.
 
-### Controls In Menus
+## Controls In Menus
 
 - DPAD - Move cursor
 - A - Left-click
@@ -60,7 +60,7 @@ Hold L when starting a game to skip any saved settings.
 - L+R - Return the list of games
 
 
-========= ORIGNAL README =========
+# ORIGNAL README
 
 This is STPPC2x, a port of Simon Tatham's Portable Puzzle Collection to the GP2X handheld console.
 
