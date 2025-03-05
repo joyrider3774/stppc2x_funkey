@@ -38,6 +38,7 @@ jobs:
       - name: Build Game
         shell: msys2 {0}
         run: |
+          export PATH=/${{matrix.sys}}/bin:$PATH
           make
 
       - name: Copy Game And Assets
