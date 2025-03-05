@@ -1,14 +1,14 @@
 In-menu Keys
 ============
 
-Joystick / Touchscreen / Mouse - Move cursor
+DPAD - Move cursor
 A - Left-click
 B - Right-click
 Y - Middle-click
 X - Save Game Config
 L - Previous Save Slot
 R - Next Save Slot
-Vol+ / Vol - Load Game
-Select - Save Game
+Fn / Select + L  - Save Game
+Fn / Select + R  - Load Game
 Start - Unpause Game / Leave Menu
 L+R - Return the list of games

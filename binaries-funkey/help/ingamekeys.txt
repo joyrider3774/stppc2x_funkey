@@ -1,7 +1,7 @@
 In-game Keys
 ============
 
-Joystick / Touchscreen / Mouse - Move cursor
+DPAD - Move cursor
 A - Left-click
 B - Right-click
 Y - Middle-click
@@ -9,10 +9,10 @@ L - Decrease current digit (some games)
 R - Increase current digit (some games)
 X - Enter current digit (some games)
 Start - Start Game / Pause Game / Enter Menu
-Select - Restart Game
-Hold L and Vol- to Undo.
-Hold L and Vol+ to Redo.
-Hold Vol- and press Vol+ to Solve (some games).
+Power / Menu - Restart Game
+Fn / Select + L to Undo.
+Fn / Select + R to Redo.
+Fn / Select + DPAD Down to Solve (some games).
 
 L+R - Return to the list of games.
 Hold L when starting a game to skip any saved settings.

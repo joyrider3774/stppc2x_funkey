@@ -140,7 +140,10 @@ typedef unsigned int uint;
 #define GP2X_BUTTON_START       (8)
 #define GP2X_BUTTON_SELECT      (9)
 #define GP2X_BUTTON_VOLUP       (16)
-#define GP2X_BUTTON_VOLDOWN	(17)
+#define GP2X_BUTTON_VOLDOWN	    (17)
+#define GP2X_BUTTON_L2	        (19)
+#define GP2X_BUTTON_R2	        (20)
+
 
 // GP2X Clock speed settings
 #define FCLK_200                        10
@@ -2722,14 +2725,6 @@ void Main_SDL_Loop(void *handle)
                         case GP2X_BUTTON_R:
                             bs->joy_r=0;
                             break;
-
-                        case GP2X_BUTTON_VOLDOWN:
-                            bs->joy_voldown=0;
-                            break;
-
-                        case GP2X_BUTTON_VOLUP:
-                            bs->joy_volup=0;
-                            break;
                     }; // switch(event.jbutton.button)
                     break; // switch( event.type ) case SDL_JOYBUTTONUP
     
@@ -3057,72 +3052,37 @@ void Main_SDL_Loop(void *handle)
                             };
                             break;
 
-                        case GP2X_BUTTON_VOLDOWN:
-                            // Solve (if pressed with Vol+)
-                            // Load (if in pause menu)
-
-                            bs->joy_voldown=1;
+                        case GP2X_BUTTON_L2:
                             if(current_screen != GAMELISTMENU)
-                            {
-                                // If we're holding the other volume button too...
-                                if(bs->joy_volup)
+                            {             
+                                if(fe->paused)
                                 {
-                                    if(fe->paused)
-                                    {
-                                        load_game(fe,current_save_slot);
-                                    }
-                                    else
-                                    {
-                                        // Solve the puzzle
-                                        sdl_status_bar(fe,"Solving...");
-                                        char *solve_error = midend_solve(fe->me);
-                                        if(solve_error)
-                                            sdl_status_bar(fe, solve_error);
-                                        else
-                                            sdl_status_bar(fe,"Solved.");
-                                    };
+                                    char *result;
+                                    result=save_game(fe,current_save_slot);
+                                    sdl_status_bar(fe, result);
+                                    sfree(result);   
                                 }
-                                // If we're holding the other L button too...
-                                else if(bs->joy_l)
+                                else
                                 {
                                     // Send the "Undo" key to the midend
                                     process_key(fe, 0, 0, 'u');
-                                };
-                            };
+                                }
+                            }
                             break;
 
-                        case GP2X_BUTTON_VOLUP:
-                            // Solve (if pressed with Vol-)
-    
-                            bs->joy_volup=1;
- 
+                        case GP2X_BUTTON_R2:
                             if(current_screen != GAMELISTMENU)
-                            {
-                                // If we're holding the other volume button too...
-                                if(bs->joy_voldown)
+                            {             
+                                if(fe->paused)
                                 {
-                                    if(fe->paused)
-                                    {
-                                        load_game(fe,current_save_slot);
-                                    }
-                                    else
-                                    {
-                                        // Solve the puzzle
-                                        sdl_status_bar(fe,"Solving...");
-                                        char *solve_error = midend_solve(fe->me);
-                                        if(solve_error)
-                                            sdl_status_bar(fe, solve_error);
-                                        else
-                                            sdl_status_bar(fe,"Solved.");
-                                    };
+                                    load_game(fe,current_save_slot);
                                 }
-                                // If we're holding the L button too...
-                                else if(bs->joy_l)
+                                else
                                 {
-                                    // Send the "Redo" key to the midend.
-                                    process_key(fe, 0, 0, '\x12');
-                                };
-                            };
+                                    // Send the "Redo" key to the midend
+                                    process_key(fe, 0, 0, '\x12');                                
+                                }
+                            }
                             break;
 
                         case GP2X_BUTTON_START:
@@ -3170,13 +3130,6 @@ void Main_SDL_Loop(void *handle)
                                 sdl_status_bar(fe,"Quitting...");
                                 cleanup_and_exit(fe, EXIT_SUCCESS);
                             }
-                            else if(current_screen == GAMEMENU)
-                            {
-                                char *result;
-                                result=save_game(fe,current_save_slot);
-                                sdl_status_bar(fe, result);
-                                sfree(result);
-                            }
                             else if(current_screen == INGAME)
                             {
                                 // Restart the current game
@@ -3187,65 +3140,18 @@ void Main_SDL_Loop(void *handle)
                             };
                             break;
 
-                        case GP2X_BUTTON_CLICK:
-                            if(global_config->screenshots_enabled)
+                        case GP2X_BUTTON_CLICK: //fn + down
+                            if(current_screen != GAMELISTMENU && !fe->paused)
                             {
-                            char save_filename[20];
-                            int i;
-                            for(i=0;i<10000;i++)
-                            {
-                                char *writeable_folder = generate_writeable_folder();
-                                sprintf(save_filename, SCREENSHOT_FILENAME,writeable_folder, i);
-                                sfree(writeable_folder);
-                                if(file_exists(save_filename) == FALSE)
-                                    break;
-                            };
-#ifdef DEBUG_FILE_ACCESS
-                            printf("Screenshot filename: %s\n",save_filename);
-#endif
-
-                            if(i != 10000)
-                            {
-                                if((bs->joy_l) || (bs->joy_r))
-                                {
-                                    if(current_screen == INGAME)
-                                    {
-                                        SDL_Surface *screenshot_surface;
-                                        SDL_Rect blit_rectangle;
-
-                                        if(!global_config->screenshots_include_cursor)
-                                            SDL_ShowCursor(SDL_DISABLE);
-
-                                        if(!global_config->screenshots_include_statusbar);
-                                            // Make the game redraw itself.	
-                                            midend_force_redraw(fe->me);
-       
-                                        screenshot_surface=SDL_CreateRGBSurface(SDL_SURFACE_FLAGS & (!SDL_DOUBLEBUF), fe->pw, fe->ph, SCREEN_DEPTH, 0, 0, 0, 0);
-                                        blit_rectangle.x=fe->ox;
-                                        blit_rectangle.y=fe->oy;
-                                        blit_rectangle.w=fe->pw;
-                                        blit_rectangle.h=fe->ph;
-
-                                        SDL_BlitSurface(screen, &blit_rectangle, screenshot_surface, NULL);
-                                        if(SDL_SaveBMP(screenshot_surface,save_filename) == 0)
-                                            sdl_status_bar(fe,"Game screenshot saved.");
-                                        else
-                                            sdl_status_bar(fe,"Error saving game screenshot.");
-
-                                        if(!global_config->screenshots_include_cursor)
-                                            SDL_ShowCursor(SDL_ENABLE);
-                                    };
-                                }
+                                // Solve the puzzle
+                                sdl_status_bar(fe,"Solving...");
+                                char *solve_error = midend_solve(fe->me);
+                                if(solve_error)
+                                    sdl_status_bar(fe, solve_error);
                                 else
-                                {
-                                    if(SDL_SaveBMP(fe->screen,save_filename) == 0)
-                                        sdl_status_bar(fe,"Entire screenshot saved.");
-                                    else
-                                        sdl_status_bar(fe,"Error saving entire screenshot.");
-                                };
+                                    sdl_status_bar(fe,"Solved.");
                             };
-                            }
-                            break;
+                 
                     }; // switch(event.jbutton.button)
                     break; // switch( event.type ) case SDL_JOYBUTTONDOWN
 
@@ -3255,7 +3161,7 @@ void Main_SDL_Loop(void *handle)
                 case SDL_KEYDOWN:
                     switch(event.key.keysym.sym)
                     {
-                        case SDLK_k:
+                        case SDLK_q: // power / menu
                             //�Simulate pressing the Select key
                             emulate_event(SDL_JOYBUTTONDOWN, 0, 0, GP2X_BUTTON_SELECT);
                             break;
@@ -3268,13 +3174,13 @@ void Main_SDL_Loop(void *handle)
                         case SDLK_v: //fn + l
                         case SDLK_PAGEDOWN:
                             //�Simulate pressing the Vol- key
-                            emulate_event(SDL_JOYBUTTONDOWN, 0, 0, GP2X_BUTTON_VOLDOWN);
+                            emulate_event(SDL_JOYBUTTONDOWN, 0, 0, GP2X_BUTTON_L2);
                             break;
 
                         case SDLK_o: //fn + r
                         case SDLK_PAGEUP:
                             //�Simulate pressing the Vol+ key
-                            emulate_event(SDL_JOYBUTTONDOWN, 0, 0, GP2X_BUTTON_VOLUP);
+                            emulate_event(SDL_JOYBUTTONDOWN, 0, 0, GP2X_BUTTON_R2);
                             break;
 
                         case SDLK_s:
@@ -3282,24 +3188,16 @@ void Main_SDL_Loop(void *handle)
                             emulate_event(SDL_JOYBUTTONDOWN, 0, 0, GP2X_BUTTON_START);
                             break;
 
-                        case SDLK_q:
+                        case SDLK_e:
                             clear_statusbar(fe);
                             sdl_status_bar(fe,"Quitting...");
                             cleanup_and_exit(fe, EXIT_SUCCESS);
                             break;
 
-                        case SDLK_e:
-                            //�Simulate pressing stick-click
-                            emulate_event(SDL_JOYBUTTONDOWN, 0, 0, GP2X_BUTTON_CLICK);
-                            break;
-
-                        case SDLK_f:
-                            //�Simulate pressing the Vol+ and Vol- keys
-                            emulate_event(SDL_JOYBUTTONDOWN, 0, 0, GP2X_BUTTON_VOLUP);
-                            emulate_event(SDL_JOYBUTTONDOWN, 0, 0, GP2X_BUTTON_VOLDOWN);
-                            emulate_event(SDL_JOYBUTTONUP, 0, 0, GP2X_BUTTON_VOLUP);
-                            emulate_event(SDL_JOYBUTTONUP, 0, 0, GP2X_BUTTON_VOLDOWN);
-                            break;
+                        case SDLK_h: // fn + down
+                             //�Simulate pressing stick-click
+                             emulate_event(SDL_JOYBUTTONDOWN, 0, 0, GP2X_BUTTON_CLICK);
+                             break;
 
                         case SDLK_m:
                             //�Simulate pressing the L key
@@ -3358,7 +3256,7 @@ void Main_SDL_Loop(void *handle)
                 case SDL_KEYUP:
                     switch(event.key.keysym.sym)
                     {
-                        case SDLK_k:
+                        case SDLK_q:
                             //�Simulate pressing the Select key
                             emulate_event(SDL_JOYBUTTONUP, 0, 0, GP2X_BUTTON_SELECT);
                             break;
