@@ -34,31 +34,10 @@ jobs:
             mingw-w64-${{matrix.env}}-libwebp
             mingw-w64-${{matrix.env}}-libtiff
             mingw-w64-${{matrix.env}}-libmikmod
-            
-      - name: Debug
-        shell: msys2 {0}
-        run: |
-            echo "Current directory:"
-            pwd
-            echo "Directory contents:"
-            ls -la
-            echo "Source directory contents:"
-            ls -la source
-            echo "Creating obj directory:"
-            mkdir -p obj
-            echo "Checking file existence:"
-            if [ -f "source/puzzles.c" ]; then
-              echo "puzzles.c exists"
-            else
-              echo "puzzles.c DOES NOT exist"
-            fi
-            echo "Make version:"
-            make --version
-            
+                       
       - name: Build Game
         shell: msys2 {0}
         run: |
-          export PATH=/${{matrix.sys}}/bin:$PATH
           make
 
       - name: Copy Game And Assets
