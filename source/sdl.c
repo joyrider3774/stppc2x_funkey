@@ -192,7 +192,7 @@ enum { RUN_GAME_TIMER_LOOP, RUN_MOUSE_TIMER_LOOP, RUN_SECOND_TIMER_LOOP};
 #define DEFAULT_MENU_FONT_SIZE      (12)
 
 // Font size of the help text
-#define DEFAULT_HELP_FONT_SIZE      (8)
+#define DEFAULT_HELP_FONT_SIZE      (10)
 
 // Maximum pixels of movement per mouse timer tick movement.
 #define MAX_MOUSE_ACCELERATION      (30)
@@ -484,6 +484,8 @@ uint current_music_track=0;
 uint music_track_changed=FALSE;
 
 uint helpfile_showing=FALSE;
+int helpfile_x_offset=0;
+char helpfile_current[260];
 
 enum{UNKNOWN, NOT_GP2X, GP2X_F100, GP2X_F200};
 
@@ -1469,7 +1471,11 @@ static void configure_area(int x, int y, void *data)
     // This calculates a new offset for the puzzle screen.
     // This would be used for "centering" the puzzle on the screen.
     fe->ox = (fe->w - fe->pw) / 2;
-    fe->oy = (fe->h - fe->ph) / 2;    
+    fe->oy = (fe->h - fe->ph) / 2;
+
+    //keep room for our bigger status bar text
+    if(fe->oy < STATUSBAR_FONT_SIZE)
+        fe->oy = STATUSBAR_FONT_SIZE;
 
 #ifdef DEBUG_DRAWING
     printf("New puzzle size is %u x %u\n", fe->pw, fe->ph);
@@ -1652,7 +1658,7 @@ int show_file_on_screen(frontend *fe, char *filename)
     char str_buf[buffer_length];
     int line=1;
     int i;
-	
+	strncpy(helpfile_current, filename, 260); 
     // Open the text file.
     textfile = fopen(filename, "r");
     if(textfile == NULL)
@@ -1686,7 +1692,7 @@ int show_file_on_screen(frontend *fe, char *filename)
             };
 		
             // Draw the buffer to the screen.
-            sdl_actual_draw_text(fe, 0, line * (HELP_FONT_SIZE+2), FONT_VARIABLE, HELP_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, str_buf);
+            sdl_actual_draw_text(fe, -helpfile_x_offset, line * (HELP_FONT_SIZE+2), FONT_VARIABLE, HELP_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, str_buf);
             line++;
         };
 
@@ -1712,6 +1718,7 @@ int read_game_helpfile(frontend *fe)
 
     filename=snewn(MAX_GAMENAME_SIZE + sizeof(MENU_HELPFILES) + 1,char);
     sprintf(filename, MENU_HELPFILES, fe->sanitised_game_name);
+    helpfile_x_offset = 0;
     result=show_file_on_screen(fe, filename);
     sfree(filename);
     return(result);
@@ -2099,6 +2106,7 @@ void draw_menu(frontend *fe, uint menu_index)
             break;
 
         case CREDITSMENU:
+            helpfile_x_offset = 0;
             if(!show_file_on_screen(fe, MENU_CREDITS_FILENAME))
                 sdl_status_bar(fe,"Could not open credits file.");
             break;
@@ -2547,9 +2555,27 @@ void Main_SDL_Loop(void *handle)
                                     if(bs->joy_downleft || bs->joy_down || bs->joy_downright)
                                         mouse_direction_y=1;
                                     if(bs->joy_upleft || bs->joy_left || bs->joy_downleft)
-                                        mouse_direction_x=-1;
+                                        if(helpfile_showing == TRUE)
+                                        {
+                                            helpfile_x_offset -= 2;
+                                            if(helpfile_x_offset < 0)
+                                                helpfile_x_offset = 0;
+                                            else
+                                                show_file_on_screen(fe, helpfile_current);
+                                        }
+                                        else
+                                            mouse_direction_x=-1;
                                     if(bs->joy_upright || bs->joy_right || bs->joy_downright)
-                                        mouse_direction_x=1;
+                                        if(helpfile_showing == TRUE)
+                                        {
+                                            helpfile_x_offset += 2;
+                                            if(helpfile_x_offset > screen_width)
+                                                helpfile_x_offset = screen_width;
+                                            else
+                                                show_file_on_screen(fe, helpfile_current);
+                                        }
+                                        else
+                                            mouse_direction_x=1;
 
                                     if(mouse_direction_x || mouse_direction_y)
                                     {
@@ -3576,6 +3602,7 @@ void Main_SDL_Loop(void *handle)
                                 }
                                 else if(current_line == 6)
                                 {
+                                    helpfile_x_offset = 0;
                                     if(show_file_on_screen(fe, MENU_INGAME_KEY_HELPFILE))
                                     {
                                         helpfile_showing=TRUE;
@@ -3587,6 +3614,7 @@ void Main_SDL_Loop(void *handle)
                                 }
                                 else if(current_line == 7)
                                 {
+                                    helpfile_x_offset = 0;
                                     if(show_file_on_screen(fe, MENU_KEY_HELPFILE))
                                     {
                                         helpfile_showing=TRUE;
