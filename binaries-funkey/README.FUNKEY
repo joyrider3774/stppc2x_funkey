@@ -1,0 +1,59 @@
+stppc2x funkey version
+======================
+Simon Tatham's Portable Puzzle Collection SDL / GP2X version,
+Based on sources from ledov https://github.com/ledow/stppc2x and ported by joyrider3774
+Original developpers page is still available at https://www.chiark.greenend.org.uk/~sgtatham/puzzles/
+
+funkey changes
+==============
+- Adjusted graphics and code for 240x240 screen
+- Changed key / button layout for funkey
+- Made large screen and small screen equal (funkey only supports 240x240), affects maze3d game
+- Added (horizontal) Scrollable help texts
+- Adjusted ini, save state paths etc to write into HOME folder if that env var exists as opk is readonly
+- Music is left out because funkey's sdl did not like mp3's and i did not know if i could convert music to ogg
+- Removed extra info columns in game list, game list only shows the game name
+- Removed Screenshot functionality (funkey has its own system)
+- Fixed bug related to drawing the end of the game list line
+- Fixed description on game list not showing for all games
+- Fixed a memory corruption bug making the game constantly crash
+- Added a puzzles.c and made 2 declaration inside puzzles.h extern to go around build issue i had
+- Increased status bar font size for funkey readability and made sure there is space to display it
+
+Controls Game List
+==================
+DPAD: scroll up / down the game list
+Start: start a game
+Power / Menu: Exit game
+
+Controls In Game
+================
+DPAD - Move cursor
+A - Left-click
+B - Right-click
+Y - Middle-click
+L - Decrease current digit (some games)
+R - Increase current digit (some games)
+X - Enter current digit (some games)
+Start - Start Game / Pause Game / Enter Menu
+Power / Menu - Restart Game
+Fn / Select + L to Undo.
+Fn / Select + R to Redo.
+Fn / Select + DPAD Down to Solve (some games).
+
+L+R - Return to the list of games.
+Hold L when starting a game to skip any saved settings.
+
+Controls In Menus
+=================
+DPAD - Move cursor
+A - Left-click
+B - Right-click
+Y - Middle-click
+X - Save Game Config
+L - Previous Save Slot
+R - Next Save Slot
+Fn / Select + L  - Save Game
+Fn / Select + R  - Load Game
+Start - Unpause Game / Leave Menu
+L+R - Return the list of games
