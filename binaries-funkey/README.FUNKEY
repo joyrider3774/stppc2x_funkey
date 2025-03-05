@@ -6,7 +6,7 @@ Original developpers page is still available at https://www.chiark.greenend.org.
 
 funkey changes
 ==============
-- Adjusted graphics and code for 240x240 screen
+- Adjusted graphics and code from 320x240 to funkey's 240x240 screen
 - Changed key / button layout for funkey
 - Made large screen and small screen equal (funkey only supports 240x240), affects maze3d game
 - Added (horizontal) Scrollable help texts
@@ -26,6 +26,8 @@ DPAD: scroll up / down the game list
 Start: start a game
 Power / Menu: Exit game
 
+Hold L when starting a game to skip any saved settings.
+
 Controls In Game
 ================
 DPAD - Move cursor
@@ -40,9 +42,7 @@ Power / Menu - Restart Game
 Fn / Select + L to Undo.
 Fn / Select + R to Redo.
 Fn / Select + DPAD Down to Solve (some games).
-
 L+R - Return to the list of games.
-Hold L when starting a game to skip any saved settings.
 
 Controls In Menus
 =================
