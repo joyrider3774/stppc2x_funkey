@@ -37,9 +37,26 @@ jobs:
           cp -r ./binaries-funkey/. opk/
 
           mksquashfs ./opk $GAME_NAME.opk -all-root -noappend -no-exports -no-xattrs
-               
+
+      - name: prepare release zip
+        env:
+          GAME_NAME: ${{env.GAME_NAME}}
+          GAME_SYS: ${{env.GAME_SYS}}
+        run: |
+          mkdir -p Release
+          cp $GAME_NAME.opk Release/$GAME_NAME.opk
+          cp -r ./binaries-funkey/documentation /Release/documentation
+          cp -r ./binaries-funkey/help /Release/help
+          cp -r ./binaries-funkey/licences /Release/licences
+          cp ./binaries-funkey/credits.txt /Release/credits.txt
+          cp ./binaries-funkey/CHANGELOG.GP2X /Release/CHANGELOG.GP2X
+          cp ./binaries-funkey/CHANGES_SINCE_VERSION_1-0 /Release/CHANGES_SINCE_VERSION_1-0
+          cp ./binaries-funkey/README.FUNKEY /Release/README.FUNKEY
+          cp ./binaries-funkey/README.GP2X /Release/README.GP2X
+          cp ./binaries-funkey/README.WIZ /Release/README.WIZ
+          
       - name: Store build
         uses: actions/upload-artifact@v4
         with:
           name: ${{env.GAME_NAME}}_${{env.GAME_SYS}}
-          path: ${{env.GAME_NAME}}.opk
+          path: Release
