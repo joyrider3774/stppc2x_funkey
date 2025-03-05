@@ -11,6 +11,12 @@ All puzzles include customizable difficulty settings.
 
 Original developpers page is still available [here](https://www.chiark.greenend.org.uk/~sgtatham/puzzles/)
 
+## Screenshots
+![screenshot 1](screenshots/screenshot1.gif)
+![screenshot 2](screenshots/screenshot2.png)
+![screenshot 3](screenshots/screenshot3.png)
+![screenshot 4](screenshots/screenshot4.png)
+
 ## Funkey / RG Nano Changes
 
 - Adjusted graphics and code from 320x240 to funkey's 240x240 screen
