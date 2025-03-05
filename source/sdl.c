@@ -15,7 +15,7 @@
 // #define DEBUG_MISC          // Config options, etc.
 // #define DEBUG_FUNCTIONS     // Function calls
 
-#define SCALELARGESCREEN
+//#define SCALELARGESCREEN
 #define BACKGROUND_MUSIC
 
 // Define this to implement kludges for certain game-specific options
