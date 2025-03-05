@@ -1,7 +1,7 @@
 # stppc2x Funkey / RG Nano version
 
 Simon Tatham's Portable Puzzle Collection SDL / GP2X version ported for Funkey / RG Nano by joyrider3774,
-Based on sources from [ledow](https://github.com/ledow/stppc2x)
+Based on sources from [Lee Dowling (ledow)](https://github.com/ledow/stppc2x)
 
 It is is a free collection of logic puzzles and brain teasers created by British programmer Simon Tatham. 
 It features various puzzle types such as Sudoku, minesweeper, light-up, and bridges. 
@@ -73,7 +73,7 @@ Hold L when starting a game to skip any saved settings.
 
 ---
 
-ORIGNAL README FROM LEDOW
+ORIGNAL README FROM LEE DOWLING (LEDOW)
 
 ---
 
