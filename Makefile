@@ -1,6 +1,6 @@
 DEBUG = 1
 SRC_DIR = source
-OBJ_DIR = ./obj
+OBJ_DIR = obj
 EXE=stppc2x
 
 SRCF=puzzles.c blackbox.c bridges.c combi.c cube.c dictionary.c divvy.c dominosa.c drawing.c dsf.c \
