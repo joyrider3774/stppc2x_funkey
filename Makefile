@@ -41,6 +41,9 @@ $(OBJ_DIR)/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c
 	mkdir -p $(@D)
 	$(CC) $(CFLAGS) -c $< -o $@
 
+$(OBJ_DIR)/$(SRC_DIR):
+	mkdir -p $@
+
 $(OBJ_DIR):
 	mkdir -p $@
 
