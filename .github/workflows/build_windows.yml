@@ -38,7 +38,7 @@ jobs:
       - name: Build Game
         shell: msys2 {0}
         run: |
-          make "EXE=\"${{matrix.name}}.exe\"" "PREFIX=/${{matrix.sys}}" "CFLAGS=-I/${{matrix.sys}}/include -I/${{matrix.sys}}/include/SDL -D_GNU_SOURCE=1 -Dmain=SDL_main" "LDFLAGS=-mwindows -L/${{matrix.sys}}/lib -lmingw32 -lSDLmain -lSDL -lSDL_image -lSDL_ttf -lSDL_mixer -lSDL_gfx -lm"
+          make
 
       - name: Copy Game And Assets
         shell: msys2 {0}
