@@ -1,17 +1,18 @@
 DEBUG = 1
 SRC_DIR = source
 OBJ_DIR = obj
-EXE=stppc2x
+EXE = stppc2x
 
-SRCF=puzzles.c blackbox.c bridges.c combi.c cube.c dictionary.c divvy.c dominosa.c drawing.c dsf.c \
-		fastevents.c fifteen.c filling.c flip.c galaxies.c grid.c guess.c inertia.c \
-		iniparser.c latin.c lightup.c list.c loopy.c malloc.c map.c maxflow.c maze3d.c \
-		maze3dc.c midend.c mines.c misc.c mosco.c net.c netslide.c pattern.c pegs.c \
-		random.c rect.c samegame.c sdl.c sixteen.c slant.c slide.c sokoban.c \
-		solo.c tents.c tree234.c twiddle.c unequal.c untangle.c version.c
+SRCF = puzzles.c blackbox.c bridges.c combi.c cube.c dictionary.c divvy.c dominosa.c drawing.c dsf.c \
+       fastevents.c fifteen.c filling.c flip.c galaxies.c grid.c guess.c inertia.c \
+       iniparser.c latin.c lightup.c list.c loopy.c malloc.c map.c maxflow.c maze3d.c \
+       maze3dc.c midend.c mines.c misc.c mosco.c net.c netslide.c pattern.c pegs.c \
+       random.c rect.c samegame.c sdl.c sixteen.c slant.c slide.c sokoban.c \
+       solo.c tents.c tree234.c twiddle.c unequal.c untangle.c version.c
 
-SRC=$(addprefix $(SRC_DIR)/, $(SRCF))
-OBJS=$(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(SRC))
+# Create object file names directly without using source paths
+OBJF = $(SRCF:.c=.o)
+OBJECTS = $(addprefix $(OBJ_DIR)/, $(OBJF))
 
 CC ?= gcc
 SDLCONFIG ?= sdl-config
@@ -31,17 +32,17 @@ LDFLAGS += `$(SDLCONFIG) --libs`
 
 .PHONY: all clean
 
-all: $(OBJ_DIR) $(EXE)
+all: prepare $(EXE)
 
-$(EXE): $(OBJS)
-	$(CC) $(CFLAGS) $(TARGET_ARCH) $^ $(LDFLAGS) -o $@ 
+prepare:
+	mkdir -p $(OBJ_DIR)
 
+$(EXE): $(OBJECTS)
+	$(CC) $(CFLAGS) $(TARGET_ARCH) $^ $(LDFLAGS) -o $@
+
+# Direct and explicit rule for each object file
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
-	mkdir -p $(@D)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(OBJ_DIR):
-	mkdir -p $@
-
 clean:
-	$(RM) -rv *~ $(OBJS) $(EXE)
+	rm -rf $(OBJ_DIR) $(EXE)
