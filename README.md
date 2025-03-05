@@ -23,9 +23,9 @@ Original developpers page is still available at https://www.chiark.greenend.org.
 
 ## Controls Game List
 
-DPAD: scroll up / down the game list
-Start: start a game
-Power / Menu: Exit game
+- DPAD: scroll up / down the game list
+- Start: start a game
+- Power / Menu: Exit game
 
 Hold L when starting a game to skip any saved settings.
 
