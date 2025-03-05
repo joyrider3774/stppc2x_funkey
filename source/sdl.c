@@ -5634,11 +5634,11 @@ void redraw_gamelist_menu(frontend *fe)
     }
     else
     {
-        sdl_actual_draw_text(fe, 80, 2*MENU_FONT_SIZE+2, FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HCENTRE, fe->black_colour, UNICODE_UP_ARROW);
-        sdl_actual_draw_text(fe, 100, 2*MENU_FONT_SIZE+2, FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "?");
-        sdl_actual_draw_text(fe, 115, 2*MENU_FONT_SIZE+2, FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, UNICODE_NUMERO);
+        sdl_actual_draw_text(fe, 75, 2*MENU_FONT_SIZE+2, FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HCENTRE, fe->black_colour, UNICODE_UP_ARROW);
+        sdl_actual_draw_text(fe, 7, 2*MENU_FONT_SIZE+2, FONT_VARIABLE, MENU_FONT_SIZE-2, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, UNICODE_NUMERO);
+        sdl_actual_draw_text(fe, 14, 2*MENU_FONT_SIZE+2, FONT_VARIABLE, MENU_FONT_SIZE-2, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "?");        
 #ifdef OPTION_SHOW_IF_MOUSE_NEEDED
-        sdl_actual_draw_text(fe, 135, 2*MENU_FONT_SIZE+2, FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, UNICODE_KEYBOARD);
+        sdl_actual_draw_text(fe, 0, 2*MENU_FONT_SIZE+2, FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, UNICODE_KEYBOARD);
 #endif
 
         // Search through the list of games in the combined executable and look for a match.
@@ -5647,7 +5647,7 @@ void redraw_gamelist_menu(frontend *fe)
         {
             if((i == (gamecount-1)) && (j<13))
             {
-                sdl_actual_draw_line(fe, 10, current_y, 70, current_y, fe->black_colour);
+                sdl_actual_draw_line(fe, 5, current_y, 75, current_y, fe->black_colour);
             };
 
             if((int) i == current_game_index)
@@ -5688,20 +5688,20 @@ void redraw_gamelist_menu(frontend *fe)
             };
             if(current_y < (MENU_FONT_SIZE+2)*16)
             {
-                sdl_actual_draw_text(fe, 10, current_y, FONT_FIXED, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, text_colour, (char *)gamelist[i]->name);
+                sdl_actual_draw_text(fe, 20, current_y, FONT_FIXED, MENU_FONT_SIZE-2, ALIGN_VNORMAL | ALIGN_HLEFT, text_colour, (char *)gamelist[i]->name);
 #ifdef OPTION_SHOW_IF_MOUSE_NEEDED
                 if(!(gamelist[i]->flags & REQUIRE_MOUSE_INPUT))
-                    sdl_actual_draw_text(fe, 140, current_y, FONT_FIXED, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, text_colour, UNICODE_TICK_CHAR);
+                    sdl_actual_draw_text(fe, 0, current_y, FONT_FIXED, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, text_colour, UNICODE_TICK_CHAR);
 #endif
-//                if(gamelist[i]->flags & REQUIRE_NUMPAD)
-//                    sdl_actual_draw_text(fe, 120, current_y, FONT_FIXED, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, text_colour, UNICODE_TICK_CHAR);
-//                if(gamelist[i]->can_solve)
-//                    sdl_actual_draw_text(fe, 100, current_y, FONT_FIXED, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, text_colour, UNICODE_TICK_CHAR);
+                if(gamelist[i]->flags & REQUIRE_NUMPAD)
+                    sdl_actual_draw_text(fe, 7, current_y, FONT_FIXED, MENU_FONT_SIZE-2, ALIGN_VNORMAL | ALIGN_HLEFT, text_colour, UNICODE_TICK_CHAR);
+                if(gamelist[i]->can_solve)
+                    sdl_actual_draw_text(fe, 14, current_y, FONT_FIXED, MENU_FONT_SIZE-2, ALIGN_VNORMAL | ALIGN_HLEFT, text_colour, UNICODE_TICK_CHAR);
             }
             current_y+=(MENU_FONT_SIZE+2);
         };
 
-        sdl_actual_draw_text(fe, 80, (MENU_FONT_SIZE+2)*16, FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HCENTRE, fe->black_colour, UNICODE_DOWN_ARROW);
+        sdl_actual_draw_text(fe, 75, (MENU_FONT_SIZE+2)*16, FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HCENTRE, fe->black_colour, UNICODE_DOWN_ARROW);
 
         preview_filename=snewn(MAX_GAMENAME_SIZE+sizeof(MENU_PREVIEW_IMAGES)+1,char);
         sanitised_game_name=sanitise_game_name((char *) gamelist[current_game_index]->htmlhelp_topic);
