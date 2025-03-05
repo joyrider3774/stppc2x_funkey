@@ -6,7 +6,7 @@ EXE=stppc2x
 SRCF=puzzles.c blackbox.c bridges.c combi.c cube.c dictionary.c divvy.c dominosa.c drawing.c dsf.c \
 		fastevents.c fifteen.c filling.c flip.c galaxies.c grid.c guess.c inertia.c \
 		iniparser.c latin.c lightup.c list.c loopy.c malloc.c map.c maxflow.c maze3d.c \
-		maze3dc.c midend.c mines.c misc.c mosco.c net.c netslide.c pattern.o pegs.c \
+		maze3dc.c midend.c mines.c misc.c mosco.c net.c netslide.c pattern.c pegs.c \
 		random.c rect.c samegame.c sdl.c sixteen.c slant.c slide.c sokoban.c \
 		solo.c tents.c tree234.c twiddle.c unequal.c untangle.c version.c
 
@@ -37,7 +37,7 @@ all: $(EXE)
 $(EXE): $(OBJS)
 	$(CC) $(CFLAGS) $(TARGET_ARCH) $^ $(LDFLAGS) -o $@ 
 
-$(OBJ_DIR)/%.o: %.c
+$(OBJ_DIR)/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c
 	mkdir -p $(@D)
 	$(CC) $(CFLAGS) -c $< -o $@
 
