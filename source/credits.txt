@@ -18,3 +18,6 @@ SDL_gfx: Andreas Schiffler (www.ferzkopp.net)
 Fast SDL Events: Bob Pendleton (Bob@Pendleton.com)
 INI Parser: Nicolas Devillard (ndevilla.free.fr)
 Fonts: DejaVu Project (dejavu.sourceforge.net)
+
+WIZ release: crow::riot (http://crow.riot.org/)
+Funkey Release: joyrider3774 (github.com/joyrider3774)
