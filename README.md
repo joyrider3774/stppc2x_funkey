@@ -3,6 +3,12 @@
 Simon Tatham's Portable Puzzle Collection SDL / GP2X version,
 Based on sources from [ledov](https://github.com/ledow/stppc2x) and ported by joyrider3774
 
+It is is a free collection of logic puzzles and brain teasers created by British programmer Simon Tatham. 
+It features various puzzle types such as Sudoku, minesweeper, light-up, and bridges. 
+The collection is designed to be portable across multiple platforms (Windows, macOS, Linux, Android, iOS) and 
+each puzzle features randomly generated content, providing virtually unlimited gameplay. 
+All puzzles include customizable difficulty settings.
+
 Original developpers page is still available at https://www.chiark.greenend.org.uk/~sgtatham/puzzles/
 
 ## Funkey / RG Nano Changes
