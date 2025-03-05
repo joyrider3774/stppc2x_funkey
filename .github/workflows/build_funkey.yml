@@ -45,9 +45,9 @@ jobs:
         run: |
           mkdir -p Release
           cp $GAME_NAME.opk Release/$GAME_NAME.opk
-          cp -r ./binaries-funkey/documentation /Release/documentation
-          cp -r ./binaries-funkey/help /Release/help
-          cp -r ./binaries-funkey/licences /Release/licences
+          cp -r ./binaries-funkey/documentation /Release/
+          cp -r ./binaries-funkey/help /Release/
+          cp -r ./binaries-funkey/licences /Release/
           cp ./binaries-funkey/credits.txt /Release/credits.txt
           cp ./binaries-funkey/CHANGELOG.GP2X /Release/CHANGELOG.GP2X
           cp ./binaries-funkey/CHANGES_SINCE_VERSION_1-0 /Release/CHANGES_SINCE_VERSION_1-0
