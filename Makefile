@@ -11,8 +11,7 @@ SRCF=puzzles.c blackbox.c bridges.c combi.c cube.c dictionary.c divvy.c dominosa
 		solo.c tents.c tree234.c twiddle.c unequal.c untangle.c version.c
 
 SRC=$(addprefix $(SRC_DIR)/, $(SRCF))
-OBJS=$(addprefix $(OBJ_DIR)/, $(SRC:.c=.o))
-
+OBJS=$(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(SRC))
 
 CC ?= gcc
 SDLCONFIG ?= sdl-config
@@ -32,17 +31,14 @@ LDFLAGS += `$(SDLCONFIG) --libs`
 
 .PHONY: all clean
 
-all: $(EXE)
+all: $(OBJ_DIR) $(EXE)
 
 $(EXE): $(OBJS)
 	$(CC) $(CFLAGS) $(TARGET_ARCH) $^ $(LDFLAGS) -o $@ 
 
-$(OBJ_DIR)/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
 	mkdir -p $(@D)
 	$(CC) $(CFLAGS) -c $< -o $@
-
-$(OBJ_DIR)/$(SRC_DIR):
-	mkdir -p $@
 
 $(OBJ_DIR):
 	mkdir -p $@
