@@ -9,7 +9,7 @@ The collection is designed to be portable across multiple platforms (Windows, ma
 each puzzle features randomly generated content, providing virtually unlimited gameplay. 
 All puzzles include customizable difficulty settings.
 
-Original developpers page is still available [here](https://www.chiark.greenend.org.uk/~sgtatham/puzzles/)
+Original developper's (Simon Tatham) page is still available [here](https://www.chiark.greenend.org.uk/~sgtatham/puzzles/)
 
 ## Screenshots
 ![screenshot 1](screenshots/screenshot1.gif)
