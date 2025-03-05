@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect x="0" y="0" width="32" height="32" fill="#006064"/>
+  <rect x="4" y="4" width="24" height="24" fill="#00838f" stroke="#e0f7fa" stroke-width="1"/>
+  <text x="16" y="18" font-family="Arial" font-weight="bold" font-size="14" text-anchor="middle" fill="#e0f7fa">ST</text>
+  <rect x="6" y="22" width="20" height="8" fill="#00838f" stroke="#e0f7fa" stroke-width="1"/>
+  <text x="16" y="28" font-family="Arial" font-weight="bold" font-size="7" text-anchor="middle" fill="#ffab40">PPC</text>
+</svg>
