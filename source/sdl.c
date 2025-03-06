@@ -5635,8 +5635,8 @@ void redraw_gamelist_menu(frontend *fe)
     else
     {
         sdl_actual_draw_text(fe, 75, 2*MENU_FONT_SIZE+2, FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HCENTRE, fe->black_colour, UNICODE_UP_ARROW);
-        sdl_actual_draw_text(fe, 7, 2*MENU_FONT_SIZE+2, FONT_VARIABLE, MENU_FONT_SIZE-2, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, UNICODE_NUMERO);
-        sdl_actual_draw_text(fe, 14, 2*MENU_FONT_SIZE+2, FONT_VARIABLE, MENU_FONT_SIZE-2, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "?");        
+        sdl_actual_draw_text(fe, 5, 2*MENU_FONT_SIZE+2, FONT_VARIABLE, MENU_FONT_SIZE-2, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, UNICODE_NUMERO);
+        sdl_actual_draw_text(fe, 16, 2*MENU_FONT_SIZE+2, FONT_VARIABLE, MENU_FONT_SIZE-2, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, "?");        
 #ifdef OPTION_SHOW_IF_MOUSE_NEEDED
         sdl_actual_draw_text(fe, 0, 2*MENU_FONT_SIZE+2, FONT_VARIABLE, MENU_FONT_SIZE, ALIGN_VNORMAL | ALIGN_HLEFT, fe->white_colour, UNICODE_KEYBOARD);
 #endif
