@@ -25,7 +25,7 @@ Original developper's (Simon Tatham) page is still available [here](https://www.
 - Added (horizontal) Scrollable help texts
 - Adjusted ini, save state paths etc to write into HOME folder if that env var exists as opk is readonly
 - Music is left out because funkey's sdl did not like mp3's and i did not know if i could convert music to ogg
-- Removed extra info columns in game list, game list only shows the game name
+- Adjusted extra info columns in game list and slightly smaller game list text size
 - Removed Screenshot functionality (funkey has its own system)
 - Fixed bug related to drawing the end of the game list line
 - Fixed description on game list not showing for all games
