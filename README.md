@@ -17,6 +17,9 @@ Original developper's (Simon Tatham) page is still available [here](https://www.
 ![screenshot 3](screenshots/screenshot3.png)
 ![screenshot 4](screenshots/screenshot4.png)
 
+## RetroFe Preview Image
+![Preview](Stppc2x.png)
+
 ## Funkey / RG Nano Changes
 
 - Adjusted graphics and code from 320x240 to funkey's 240x240 screen
