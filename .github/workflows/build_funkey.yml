@@ -48,7 +48,7 @@ jobs:
           cp -r ./binaries-funkey/documentation Release/
           cp -r ./binaries-funkey/help Release/
           cp -r ./binaries-funkey/licences Release/
-          cp ./binaries-funkey/Stppc2x.png Release/Stppc2x.png
+          cp ./Stppc2x.png Release/Stppc2x.png
           cp ./binaries-funkey/credits.txt Release/credits.txt
           cp ./binaries-funkey/CHANGELOG.GP2X Release/CHANGELOG.GP2X
           cp ./binaries-funkey/CHANGES_SINCE_VERSION_1-0 Release/CHANGES_SINCE_VERSION_1-0
