@@ -37,6 +37,18 @@ Original developper's (Simon Tatham) page is still available [here](https://www.
 - Added a puzzles.c and made 2 declaration inside puzzles.h extern to go around build issue i had
 - Increased status bar font size for funkey readability and made sure there is space to display it
 
+## Extra Information
+
+- In the game list the 1st check mark means the game requires number input (L/R button and X and so), the 2nd checkmark means the game has a solver (fn + down)
+- when you started a game you can pause the game using start then goto global settings and you can switch between mouse emulation input OR key input which may be easier to control than the mouse emulation. The mouse emulation was the default though and mouse emulation remains in the pause menu
+- when you start a game and you pause, you can select different game options in configure game which get applied when you start a new game, and there are also presets, plus you can save a preset with your own settings, generally in this menu on nr's and so, left click (A) means decrease nr / setting, right click (B) means increase number
+- the games have undo systems FN + L for undo FN + R for redo
+- To Exit the game return to game list (L + R) and press menu / power button
+- Maze3d game may be bugged and hard to read, it normally required 640x480
+- There is no music included as somehow sdl_mixer on funkey did not want to play mp3's and i was not sure the license of the music allowed me to convert them ogg, the original game also had only music, so it's normal that you hear no sound / music
+- for each game you can pause the game and select Help then Game Help to see how to play the games, and you can scroll here horizontally left / right
+- you can enable auto save / load in global settings as well so that whenever you quit and restart a game you continue where you left of the previous time you played that game
+
 ## Controls Game List
 
 - DPAD: scroll up / down the game list
